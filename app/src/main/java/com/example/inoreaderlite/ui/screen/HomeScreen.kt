@@ -66,10 +66,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
@@ -105,6 +107,7 @@ fun HomeScreen(
     val folders by viewModel.folders.collectAsState()
     val selectedSource by viewModel.selectedSource.collectAsState()
     val markAsReadOnScroll by viewModel.markAsReadOnScroll.collectAsState()
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
@@ -114,6 +117,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     ModalNavigationDrawer(
+        modifier = Modifier.fillMaxSize(),
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
@@ -196,6 +200,7 @@ fun HomeScreen(
         }
     ) {
         Scaffold(
+            modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
                     title = { 
@@ -228,7 +233,9 @@ fun HomeScreen(
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = { viewModel.sync() },
-                modifier = Modifier.padding(padding)
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
             ) {
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
@@ -281,7 +288,9 @@ fun HomeScreen(
                 SettingsDialog(
                     onDismiss = { showSettingsDialog = false },
                     markAsReadOnScroll = markAsReadOnScroll,
-                    onToggleMarkAsReadOnScroll = { viewModel.toggleMarkAsReadOnScroll(it) }
+                    onToggleMarkAsReadOnScroll = { viewModel.toggleMarkAsReadOnScroll(it) },
+                    isDarkMode = isDarkMode,
+                    onToggleDarkMode = { viewModel.toggleDarkMode(it) }
                 )
             }
         }
@@ -292,22 +301,38 @@ fun HomeScreen(
 fun SettingsDialog(
     onDismiss: () -> Unit,
     markAsReadOnScroll: Boolean,
-    onToggleMarkAsReadOnScroll: (Boolean) -> Unit
+    onToggleMarkAsReadOnScroll: (Boolean) -> Unit,
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Settings") },
         text = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Mark as read on scroll")
-                Switch(
-                    checked = markAsReadOnScroll,
-                    onCheckedChange = onToggleMarkAsReadOnScroll
-                )
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Dark Mode")
+                    Switch(
+                        checked = isDarkMode,
+                        onCheckedChange = onToggleDarkMode
+                    )
+                }
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Mark as read on scroll")
+                    Switch(
+                        checked = markAsReadOnScroll,
+                        onCheckedChange = onToggleMarkAsReadOnScroll
+                    )
+                }
             }
         },
         confirmButton = {
@@ -507,6 +532,8 @@ fun ArticleList(
 ) {
     val listState = rememberLazyListState()
 
+    val currentArticles by rememberUpdatedState(articles)
+
     if (markAsReadOnScroll) {
         LaunchedEffect(listState) {
             snapshotFlow { listState.firstVisibleItemIndex }
@@ -514,8 +541,12 @@ fun ArticleList(
                 .filter { it > 0 }
                 .collect { firstIndex ->
                     for (i in 0 until firstIndex) {
-                        if (i < articles.size) {
-                            onMarkAsRead(articles[i].link)
+                        // Check bounds and only mark if NOT already read to avoid valid ANR loop
+                        if (i < currentArticles.size) {
+                            val article = currentArticles[i]
+                            if (!article.isRead) {
+                                onMarkAsRead(article.link)
+                            }
                         }
                     }
                 }
@@ -525,7 +556,8 @@ fun ArticleList(
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize()
     ) {
         items(articles, key = { it.link }) { article ->
             ArticleItem(article, onArticleClick)
@@ -537,7 +569,9 @@ fun ArticleList(
 fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
     Card(
         onClick = { onClick(article.link, article.isRead) },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (article.isRead) 0.5f else 1f)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             if (article.imageUrl != null) {

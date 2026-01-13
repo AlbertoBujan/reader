@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -50,48 +51,75 @@ class MainViewModel @Inject constructor(
     private val _markAsReadOnScroll = MutableStateFlow(false)
     val markAsReadOnScroll: StateFlow<Boolean> = _markAsReadOnScroll.asStateFlow()
 
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    // Enlaces de artículos que deben estar ocultos (ya estaban leídos en la última recarga)
+    private val _hiddenArticleLinks = MutableStateFlow<Set<String>>(emptySet())
+
     val sources: StateFlow<List<SourceEntity>> = getAllSourcesUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val folders: StateFlow<List<FolderEntity>> = feedDao.getAllFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        // Carga inicial de artículos para ocultar
+        updateHiddenArticles()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<FeedUiState> = _selectedSource
-        .flatMapLatest { selector ->
-            when {
-                selector == null -> getArticlesUseCase()
-                selector.startsWith("folder:") -> {
-                    val folderName = selector.removePrefix("folder:")
-                    feedDao.getArticlesByFolder(folderName)
-                }
-                else -> getArticlesUseCase(selector)
+    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks) { selector, hiddenLinks ->
+        selector to hiddenLinks
+    }
+    .flatMapLatest { (selector, hiddenLinks) ->
+        val articlesFlow = when {
+            selector == null -> getArticlesUseCase()
+            selector.startsWith("folder:") -> {
+                val folderName = selector.removePrefix("folder:")
+                feedDao.getArticlesByFolder(folderName)
             }
+            else -> getArticlesUseCase(selector)
         }
-        .map<List<ArticleEntity>, FeedUiState> { articles ->
-            FeedUiState.Success(articles.filter { !it.isRead })
+        articlesFlow.map<List<ArticleEntity>, FeedUiState> { articles ->
+            // Filtramos solo los que estaban leídos al momento de la última recarga/navegación
+            FeedUiState.Success(articles.filter { it.link !in hiddenLinks })
         }
-        .catch { emit(FeedUiState.Error(it.message ?: "Unknown error")) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = FeedUiState.Loading
-        )
+    }
+    .catch { emit(FeedUiState.Error(it.message ?: "Unknown error")) }
+    .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = FeedUiState.Loading
+    )
+
+    private fun updateHiddenArticles() {
+        viewModelScope.launch {
+            val readLinks = feedDao.getReadArticleLinks()
+            _hiddenArticleLinks.value = readLinks.toSet()
+        }
+    }
 
     fun getArticle(url: String): Flow<ArticleEntity?> {
         return feedDao.getArticleByLink(url)
     }
 
     fun selectSource(url: String?) {
+        updateHiddenArticles()
         _selectedSource.value = url
     }
 
     fun selectFolder(name: String) {
+        updateHiddenArticles()
         _selectedSource.value = "folder:$name"
     }
 
     fun toggleMarkAsReadOnScroll(enabled: Boolean) {
         _markAsReadOnScroll.value = enabled
+    }
+
+    fun toggleDarkMode(enabled: Boolean) {
+        _isDarkMode.value = enabled
     }
 
     fun addSource(url: String) {
@@ -130,6 +158,8 @@ class MainViewModel @Inject constructor(
             _isRefreshing.value = true
             try {
                 syncFeedsUseCase()
+                // Al terminar la sincronización, actualizamos qué artículos ocultar
+                updateHiddenArticles()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {

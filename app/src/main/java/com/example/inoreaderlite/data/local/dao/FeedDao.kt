@@ -30,6 +30,9 @@ interface FeedDao {
     @Query("SELECT * FROM articles WHERE link = :link LIMIT 1")
     fun getArticleByLink(link: String): Flow<ArticleEntity?>
 
+    @Query("SELECT link FROM articles WHERE isRead = 1")
+    suspend fun getReadArticleLinks(): List<String>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticles(articles: List<ArticleEntity>)
 
