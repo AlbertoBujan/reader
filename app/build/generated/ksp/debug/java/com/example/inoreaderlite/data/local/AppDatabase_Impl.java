@@ -18,6 +18,7 @@ import java.lang.Override;
 import java.lang.String;
 import java.lang.SuppressWarnings;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,19 +34,22 @@ public final class AppDatabase_Impl extends AppDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(1) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(2) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `articles` (`link` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `pubDate` INTEGER NOT NULL, `sourceUrl` TEXT NOT NULL, `imageUrl` TEXT, `isRead` INTEGER NOT NULL, `isSaved` INTEGER NOT NULL, PRIMARY KEY(`link`))");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `sources` (`url` TEXT NOT NULL, `title` TEXT NOT NULL, `iconUrl` TEXT, PRIMARY KEY(`url`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `sources` (`url` TEXT NOT NULL, `title` TEXT NOT NULL, `iconUrl` TEXT, `folderName` TEXT, PRIMARY KEY(`url`), FOREIGN KEY(`folderName`) REFERENCES `folders`(`name`) ON UPDATE NO ACTION ON DELETE SET NULL )");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sources_folderName` ON `sources` (`folderName`)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `folders` (`name` TEXT NOT NULL, PRIMARY KEY(`name`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1a3777820d88b7dc4ed1a7c87f7a2ac7')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2ef5dcf2c41c3a6f09ae74330e35c12e')");
       }
 
       @Override
       public void dropAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("DROP TABLE IF EXISTS `articles`");
         db.execSQL("DROP TABLE IF EXISTS `sources`");
+        db.execSQL("DROP TABLE IF EXISTS `folders`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -67,6 +71,7 @@ public final class AppDatabase_Impl extends AppDatabase {
       @Override
       public void onOpen(@NonNull final SupportSQLiteDatabase db) {
         mDatabase = db;
+        db.execSQL("PRAGMA foreign_keys = ON");
         internalInitInvalidationTracker(db);
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
@@ -107,12 +112,15 @@ public final class AppDatabase_Impl extends AppDatabase {
                   + " Expected:\n" + _infoArticles + "\n"
                   + " Found:\n" + _existingArticles);
         }
-        final HashMap<String, TableInfo.Column> _columnsSources = new HashMap<String, TableInfo.Column>(3);
+        final HashMap<String, TableInfo.Column> _columnsSources = new HashMap<String, TableInfo.Column>(4);
         _columnsSources.put("url", new TableInfo.Column("url", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSources.put("title", new TableInfo.Column("title", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSources.put("iconUrl", new TableInfo.Column("iconUrl", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        final HashSet<TableInfo.ForeignKey> _foreignKeysSources = new HashSet<TableInfo.ForeignKey>(0);
-        final HashSet<TableInfo.Index> _indicesSources = new HashSet<TableInfo.Index>(0);
+        _columnsSources.put("folderName", new TableInfo.Column("folderName", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysSources = new HashSet<TableInfo.ForeignKey>(1);
+        _foreignKeysSources.add(new TableInfo.ForeignKey("folders", "SET NULL", "NO ACTION", Arrays.asList("folderName"), Arrays.asList("name")));
+        final HashSet<TableInfo.Index> _indicesSources = new HashSet<TableInfo.Index>(1);
+        _indicesSources.add(new TableInfo.Index("index_sources_folderName", false, Arrays.asList("folderName"), Arrays.asList("ASC")));
         final TableInfo _infoSources = new TableInfo("sources", _columnsSources, _foreignKeysSources, _indicesSources);
         final TableInfo _existingSources = TableInfo.read(db, "sources");
         if (!_infoSources.equals(_existingSources)) {
@@ -120,9 +128,20 @@ public final class AppDatabase_Impl extends AppDatabase {
                   + " Expected:\n" + _infoSources + "\n"
                   + " Found:\n" + _existingSources);
         }
+        final HashMap<String, TableInfo.Column> _columnsFolders = new HashMap<String, TableInfo.Column>(1);
+        _columnsFolders.put("name", new TableInfo.Column("name", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysFolders = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesFolders = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoFolders = new TableInfo("folders", _columnsFolders, _foreignKeysFolders, _indicesFolders);
+        final TableInfo _existingFolders = TableInfo.read(db, "folders");
+        if (!_infoFolders.equals(_existingFolders)) {
+          return new RoomOpenHelper.ValidationResult(false, "folders(com.example.inoreaderlite.data.local.entity.FolderEntity).\n"
+                  + " Expected:\n" + _infoFolders + "\n"
+                  + " Found:\n" + _existingFolders);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "1a3777820d88b7dc4ed1a7c87f7a2ac7", "a8b89b3778f68d056c3a099977edd3d0");
+    }, "2ef5dcf2c41c3a6f09ae74330e35c12e", "79e591171ba8d5528a761f1b5155f604");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -133,20 +152,31 @@ public final class AppDatabase_Impl extends AppDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "articles","sources");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "articles","sources","folders");
   }
 
   @Override
   public void clearAllTables() {
     super.assertNotMainThread();
     final SupportSQLiteDatabase _db = super.getOpenHelper().getWritableDatabase();
+    final boolean _supportsDeferForeignKeys = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP;
     try {
+      if (!_supportsDeferForeignKeys) {
+        _db.execSQL("PRAGMA foreign_keys = FALSE");
+      }
       super.beginTransaction();
+      if (_supportsDeferForeignKeys) {
+        _db.execSQL("PRAGMA defer_foreign_keys = TRUE");
+      }
       _db.execSQL("DELETE FROM `articles`");
       _db.execSQL("DELETE FROM `sources`");
+      _db.execSQL("DELETE FROM `folders`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
+      if (!_supportsDeferForeignKeys) {
+        _db.execSQL("PRAGMA foreign_keys = TRUE");
+      }
       _db.query("PRAGMA wal_checkpoint(FULL)").close();
       if (!_db.inTransaction()) {
         _db.execSQL("VACUUM");

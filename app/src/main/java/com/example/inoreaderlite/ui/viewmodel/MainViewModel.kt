@@ -2,7 +2,10 @@ package com.example.inoreaderlite.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.inoreaderlite.data.local.dao.FeedDao
 import com.example.inoreaderlite.data.local.entity.ArticleEntity
+import com.example.inoreaderlite.data.local.entity.FolderEntity
+import com.example.inoreaderlite.data.local.entity.SourceEntity
 import com.example.inoreaderlite.domain.usecase.AddSourceUseCase
 import com.example.inoreaderlite.domain.usecase.GetAllSourcesUseCase
 import com.example.inoreaderlite.domain.usecase.GetArticlesUseCase
@@ -33,6 +36,7 @@ class MainViewModel @Inject constructor(
     private val addSourceUseCase: AddSourceUseCase,
     private val syncFeedsUseCase: SyncFeedsUseCase,
     private val markArticleReadUseCase: MarkArticleReadUseCase,
+    private val feedDao: FeedDao, // Directly using DAO for simplicity in this implementation
     getAllSourcesUseCase: GetAllSourcesUseCase
 ) : ViewModel() {
 
@@ -42,7 +46,10 @@ class MainViewModel @Inject constructor(
     private val _selectedSource = MutableStateFlow<String?>(null)
     val selectedSource: StateFlow<String?> = _selectedSource.asStateFlow()
 
-    val sources = getAllSourcesUseCase()
+    val sources: StateFlow<List<SourceEntity>> = getAllSourcesUseCase()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val folders: StateFlow<List<FolderEntity>> = feedDao.getAllFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -67,9 +74,20 @@ class MainViewModel @Inject constructor(
             try {
                 addSourceUseCase(url)
             } catch (e: Exception) {
-                // Handle specific error, maybe expose via another flow or event
                 e.printStackTrace()
             }
+        }
+    }
+
+    fun addFolder(name: String) {
+        viewModelScope.launch {
+            feedDao.insertFolder(FolderEntity(name))
+        }
+    }
+
+    fun moveSourceToFolder(url: String, folderName: String?) {
+        viewModelScope.launch {
+            feedDao.updateSourceFolder(url, folderName)
         }
     }
 

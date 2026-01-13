@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.example.inoreaderlite.data.local.entity.ArticleEntity
+import com.example.inoreaderlite.data.local.entity.FolderEntity
 import com.example.inoreaderlite.data.local.entity.SourceEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -31,7 +32,6 @@ interface FeedDao {
     @Query("SELECT * FROM sources")
     fun getAllSources(): Flow<List<SourceEntity>>
     
-    // Helper to get sources synchronously (if needed for one-shot ops, though Flow is preferred)
     @Query("SELECT * FROM sources")
     suspend fun getAllSourcesList(): List<SourceEntity>
 
@@ -40,4 +40,17 @@ interface FeedDao {
 
     @Query("DELETE FROM sources WHERE url = :url")
     suspend fun deleteSource(url: String)
+
+    @Query("UPDATE sources SET folderName = :folderName WHERE url = :url")
+    suspend fun updateSourceFolder(url: String, folderName: String?)
+
+    // Folder Management
+    @Query("SELECT * FROM folders")
+    fun getAllFolders(): Flow<List<FolderEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertFolder(folder: FolderEntity)
+
+    @Query("DELETE FROM folders WHERE name = :name")
+    suspend fun deleteFolder(name: String)
 }

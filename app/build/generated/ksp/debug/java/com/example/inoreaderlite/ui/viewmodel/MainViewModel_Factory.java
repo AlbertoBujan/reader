@@ -1,5 +1,6 @@
 package com.example.inoreaderlite.ui.viewmodel;
 
+import com.example.inoreaderlite.data.local.dao.FeedDao;
 import com.example.inoreaderlite.domain.usecase.AddSourceUseCase;
 import com.example.inoreaderlite.domain.usecase.GetAllSourcesUseCase;
 import com.example.inoreaderlite.domain.usecase.GetArticlesUseCase;
@@ -35,23 +36,27 @@ public final class MainViewModel_Factory implements Factory<MainViewModel> {
 
   private final Provider<MarkArticleReadUseCase> markArticleReadUseCaseProvider;
 
+  private final Provider<FeedDao> feedDaoProvider;
+
   private final Provider<GetAllSourcesUseCase> getAllSourcesUseCaseProvider;
 
   public MainViewModel_Factory(Provider<GetArticlesUseCase> getArticlesUseCaseProvider,
       Provider<AddSourceUseCase> addSourceUseCaseProvider,
       Provider<SyncFeedsUseCase> syncFeedsUseCaseProvider,
       Provider<MarkArticleReadUseCase> markArticleReadUseCaseProvider,
+      Provider<FeedDao> feedDaoProvider,
       Provider<GetAllSourcesUseCase> getAllSourcesUseCaseProvider) {
     this.getArticlesUseCaseProvider = getArticlesUseCaseProvider;
     this.addSourceUseCaseProvider = addSourceUseCaseProvider;
     this.syncFeedsUseCaseProvider = syncFeedsUseCaseProvider;
     this.markArticleReadUseCaseProvider = markArticleReadUseCaseProvider;
+    this.feedDaoProvider = feedDaoProvider;
     this.getAllSourcesUseCaseProvider = getAllSourcesUseCaseProvider;
   }
 
   @Override
   public MainViewModel get() {
-    return newInstance(getArticlesUseCaseProvider.get(), addSourceUseCaseProvider.get(), syncFeedsUseCaseProvider.get(), markArticleReadUseCaseProvider.get(), getAllSourcesUseCaseProvider.get());
+    return newInstance(getArticlesUseCaseProvider.get(), addSourceUseCaseProvider.get(), syncFeedsUseCaseProvider.get(), markArticleReadUseCaseProvider.get(), feedDaoProvider.get(), getAllSourcesUseCaseProvider.get());
   }
 
   public static MainViewModel_Factory create(
@@ -59,13 +64,15 @@ public final class MainViewModel_Factory implements Factory<MainViewModel> {
       Provider<AddSourceUseCase> addSourceUseCaseProvider,
       Provider<SyncFeedsUseCase> syncFeedsUseCaseProvider,
       Provider<MarkArticleReadUseCase> markArticleReadUseCaseProvider,
+      Provider<FeedDao> feedDaoProvider,
       Provider<GetAllSourcesUseCase> getAllSourcesUseCaseProvider) {
-    return new MainViewModel_Factory(getArticlesUseCaseProvider, addSourceUseCaseProvider, syncFeedsUseCaseProvider, markArticleReadUseCaseProvider, getAllSourcesUseCaseProvider);
+    return new MainViewModel_Factory(getArticlesUseCaseProvider, addSourceUseCaseProvider, syncFeedsUseCaseProvider, markArticleReadUseCaseProvider, feedDaoProvider, getAllSourcesUseCaseProvider);
   }
 
   public static MainViewModel newInstance(GetArticlesUseCase getArticlesUseCase,
       AddSourceUseCase addSourceUseCase, SyncFeedsUseCase syncFeedsUseCase,
-      MarkArticleReadUseCase markArticleReadUseCase, GetAllSourcesUseCase getAllSourcesUseCase) {
-    return new MainViewModel(getArticlesUseCase, addSourceUseCase, syncFeedsUseCase, markArticleReadUseCase, getAllSourcesUseCase);
+      MarkArticleReadUseCase markArticleReadUseCase, FeedDao feedDao,
+      GetAllSourcesUseCase getAllSourcesUseCase) {
+    return new MainViewModel(getArticlesUseCase, addSourceUseCase, syncFeedsUseCase, markArticleReadUseCase, feedDao, getAllSourcesUseCase);
   }
 }

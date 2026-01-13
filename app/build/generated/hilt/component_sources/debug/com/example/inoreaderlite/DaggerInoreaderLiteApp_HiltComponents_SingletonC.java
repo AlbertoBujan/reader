@@ -494,7 +494,7 @@ public final class DaggerInoreaderLiteApp_HiltComponents_SingletonC {
       public T get() {
         switch (id) {
           case 0: // com.example.inoreaderlite.ui.viewmodel.MainViewModel 
-          return (T) new MainViewModel(viewModelCImpl.getArticlesUseCase(), viewModelCImpl.addSourceUseCase(), viewModelCImpl.syncFeedsUseCase(), viewModelCImpl.markArticleReadUseCase(), viewModelCImpl.getAllSourcesUseCase());
+          return (T) new MainViewModel(viewModelCImpl.getArticlesUseCase(), viewModelCImpl.addSourceUseCase(), viewModelCImpl.syncFeedsUseCase(), viewModelCImpl.markArticleReadUseCase(), singletonCImpl.provideFeedDaoProvider.get(), viewModelCImpl.getAllSourcesUseCase());
 
           default: throw new AssertionError(id);
         }

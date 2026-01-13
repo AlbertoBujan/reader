@@ -12,6 +12,7 @@ import androidx.room.util.CursorUtil;
 import androidx.room.util.DBUtil;
 import androidx.sqlite.db.SupportSQLiteStatement;
 import com.example.inoreaderlite.data.local.entity.ArticleEntity;
+import com.example.inoreaderlite.data.local.entity.FolderEntity;
 import com.example.inoreaderlite.data.local.entity.SourceEntity;
 import java.lang.Class;
 import java.lang.Exception;
@@ -37,11 +38,17 @@ public final class FeedDao_Impl implements FeedDao {
 
   private final EntityInsertionAdapter<SourceEntity> __insertionAdapterOfSourceEntity;
 
+  private final EntityInsertionAdapter<FolderEntity> __insertionAdapterOfFolderEntity;
+
   private final SharedSQLiteStatement __preparedStmtOfClearAllArticles;
 
   private final SharedSQLiteStatement __preparedStmtOfMarkArticleAsRead;
 
   private final SharedSQLiteStatement __preparedStmtOfDeleteSource;
+
+  private final SharedSQLiteStatement __preparedStmtOfUpdateSourceFolder;
+
+  private final SharedSQLiteStatement __preparedStmtOfDeleteFolder;
 
   public FeedDao_Impl(@NonNull final RoomDatabase __db) {
     this.__db = __db;
@@ -79,7 +86,7 @@ public final class FeedDao_Impl implements FeedDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `sources` (`url`,`title`,`iconUrl`) VALUES (?,?,?)";
+        return "INSERT OR REPLACE INTO `sources` (`url`,`title`,`iconUrl`,`folderName`) VALUES (?,?,?,?)";
       }
 
       @Override
@@ -92,6 +99,24 @@ public final class FeedDao_Impl implements FeedDao {
         } else {
           statement.bindString(3, entity.getIconUrl());
         }
+        if (entity.getFolderName() == null) {
+          statement.bindNull(4);
+        } else {
+          statement.bindString(4, entity.getFolderName());
+        }
+      }
+    };
+    this.__insertionAdapterOfFolderEntity = new EntityInsertionAdapter<FolderEntity>(__db) {
+      @Override
+      @NonNull
+      protected String createQuery() {
+        return "INSERT OR IGNORE INTO `folders` (`name`) VALUES (?)";
+      }
+
+      @Override
+      protected void bind(@NonNull final SupportSQLiteStatement statement,
+          @NonNull final FolderEntity entity) {
+        statement.bindString(1, entity.getName());
       }
     };
     this.__preparedStmtOfClearAllArticles = new SharedSQLiteStatement(__db) {
@@ -115,6 +140,22 @@ public final class FeedDao_Impl implements FeedDao {
       @NonNull
       public String createQuery() {
         final String _query = "DELETE FROM sources WHERE url = ?";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfUpdateSourceFolder = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "UPDATE sources SET folderName = ? WHERE url = ?";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfDeleteFolder = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "DELETE FROM folders WHERE name = ?";
         return _query;
       }
     };
@@ -149,6 +190,25 @@ public final class FeedDao_Impl implements FeedDao {
         __db.beginTransaction();
         try {
           __insertionAdapterOfSourceEntity.insert(source);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object insertFolder(final FolderEntity folder,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __insertionAdapterOfFolderEntity.insert(folder);
           __db.setTransactionSuccessful();
           return Unit.INSTANCE;
         } finally {
@@ -226,6 +286,63 @@ public final class FeedDao_Impl implements FeedDao {
           }
         } finally {
           __preparedStmtOfDeleteSource.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateSourceFolder(final String url, final String folderName,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfUpdateSourceFolder.acquire();
+        int _argIndex = 1;
+        if (folderName == null) {
+          _stmt.bindNull(_argIndex);
+        } else {
+          _stmt.bindString(_argIndex, folderName);
+        }
+        _argIndex = 2;
+        _stmt.bindString(_argIndex, url);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfUpdateSourceFolder.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object deleteFolder(final String name, final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteFolder.acquire();
+        int _argIndex = 1;
+        _stmt.bindString(_argIndex, name);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfDeleteFolder.release(_stmt);
         }
       }
     }, $completion);
@@ -376,6 +493,7 @@ public final class FeedDao_Impl implements FeedDao {
           final int _cursorIndexOfUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "url");
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfIconUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "iconUrl");
+          final int _cursorIndexOfFolderName = CursorUtil.getColumnIndexOrThrow(_cursor, "folderName");
           final List<SourceEntity> _result = new ArrayList<SourceEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final SourceEntity _item;
@@ -389,7 +507,13 @@ public final class FeedDao_Impl implements FeedDao {
             } else {
               _tmpIconUrl = _cursor.getString(_cursorIndexOfIconUrl);
             }
-            _item = new SourceEntity(_tmpUrl,_tmpTitle,_tmpIconUrl);
+            final String _tmpFolderName;
+            if (_cursor.isNull(_cursorIndexOfFolderName)) {
+              _tmpFolderName = null;
+            } else {
+              _tmpFolderName = _cursor.getString(_cursorIndexOfFolderName);
+            }
+            _item = new SourceEntity(_tmpUrl,_tmpTitle,_tmpIconUrl,_tmpFolderName);
             _result.add(_item);
           }
           return _result;
@@ -419,6 +543,7 @@ public final class FeedDao_Impl implements FeedDao {
           final int _cursorIndexOfUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "url");
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfIconUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "iconUrl");
+          final int _cursorIndexOfFolderName = CursorUtil.getColumnIndexOrThrow(_cursor, "folderName");
           final List<SourceEntity> _result = new ArrayList<SourceEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final SourceEntity _item;
@@ -432,7 +557,13 @@ public final class FeedDao_Impl implements FeedDao {
             } else {
               _tmpIconUrl = _cursor.getString(_cursorIndexOfIconUrl);
             }
-            _item = new SourceEntity(_tmpUrl,_tmpTitle,_tmpIconUrl);
+            final String _tmpFolderName;
+            if (_cursor.isNull(_cursorIndexOfFolderName)) {
+              _tmpFolderName = null;
+            } else {
+              _tmpFolderName = _cursor.getString(_cursorIndexOfFolderName);
+            }
+            _item = new SourceEntity(_tmpUrl,_tmpTitle,_tmpIconUrl,_tmpFolderName);
             _result.add(_item);
           }
           return _result;
@@ -442,6 +573,38 @@ public final class FeedDao_Impl implements FeedDao {
         }
       }
     }, $completion);
+  }
+
+  @Override
+  public Flow<List<FolderEntity>> getAllFolders() {
+    final String _sql = "SELECT * FROM folders";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
+    return CoroutinesRoom.createFlow(__db, false, new String[] {"folders"}, new Callable<List<FolderEntity>>() {
+      @Override
+      @NonNull
+      public List<FolderEntity> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
+          final List<FolderEntity> _result = new ArrayList<FolderEntity>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final FolderEntity _item;
+            final String _tmpName;
+            _tmpName = _cursor.getString(_cursorIndexOfName);
+            _item = new FolderEntity(_tmpName);
+            _result.add(_item);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+        }
+      }
+
+      @Override
+      protected void finalize() {
+        _statement.release();
+      }
+    });
   }
 
   @NonNull
