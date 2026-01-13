@@ -1,0 +1,32 @@
+# Compilación y binarios (Esto eliminará el "cristo" de tu imagen)
+build/
+bin/
+gen/
+out/
+*.class
+*.apk
+*.aar
+*.ap_
+*.der
+
+# Archivos de configuración local (Contienen rutas de tu PC o claves)
+local.properties
+.gradle/
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Configuración de Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+.shelf/
+
+# Archivos del Sistema Operativo
+*.DS_Store
+Thumbs.db
+
+# Logs y archivos temporales
+*.log*.hprof
