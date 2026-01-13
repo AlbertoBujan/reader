@@ -29,4 +29,5 @@ captures/
 Thumbs.db
 
 # Logs y archivos temporales
-*.log*.hprof
+*.log
+*.hprof
