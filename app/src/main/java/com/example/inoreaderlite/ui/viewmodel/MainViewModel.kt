@@ -36,7 +36,7 @@ class MainViewModel @Inject constructor(
     private val addSourceUseCase: AddSourceUseCase,
     private val syncFeedsUseCase: SyncFeedsUseCase,
     private val markArticleReadUseCase: MarkArticleReadUseCase,
-    private val feedDao: FeedDao, // Directly using DAO for simplicity in this implementation
+    private val feedDao: FeedDao,
     getAllSourcesUseCase: GetAllSourcesUseCase
 ) : ViewModel() {
 
@@ -54,7 +54,16 @@ class MainViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<FeedUiState> = _selectedSource
-        .flatMapLatest { source -> getArticlesUseCase(source) }
+        .flatMapLatest { selector ->
+            when {
+                selector == null -> getArticlesUseCase()
+                selector.startsWith("folder:") -> {
+                    val folderName = selector.removePrefix("folder:")
+                    feedDao.getArticlesByFolder(folderName)
+                }
+                else -> getArticlesUseCase(selector)
+            }
+        }
         .map<List<ArticleEntity>, FeedUiState> { articles ->
             FeedUiState.Success(articles.filter { !it.isRead })
         }
@@ -67,6 +76,10 @@ class MainViewModel @Inject constructor(
 
     fun selectSource(url: String?) {
         _selectedSource.value = url
+    }
+
+    fun selectFolder(name: String) {
+        _selectedSource.value = "folder:$name"
     }
 
     fun addSource(url: String) {

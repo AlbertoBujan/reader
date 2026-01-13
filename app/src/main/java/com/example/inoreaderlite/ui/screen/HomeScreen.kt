@@ -3,9 +3,10 @@ package com.example.inoreaderlite.ui.screen
 import android.content.ClipData
 import android.content.ClipDescription
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
@@ -43,14 +45,13 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,7 +66,6 @@ import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,21 +98,6 @@ fun HomeScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val pullToRefreshState = rememberPullToRefreshState()
-    
-    LaunchedEffect(pullToRefreshState.isRefreshing) {
-        if (pullToRefreshState.isRefreshing) {
-            viewModel.sync()
-        }
-    }
-
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) {
-            pullToRefreshState.startRefresh()
-        } else {
-            pullToRefreshState.endRefresh()
-        }
-    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -131,7 +116,7 @@ fun HomeScreen(
                 }
                 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    item {
+                    item(key = "all_feeds") {
                         NavigationDrawerItem(
                             icon = { Icon(Icons.Filled.RssFeed, null) },
                             label = { Text("All Feeds") },
@@ -145,12 +130,16 @@ fun HomeScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     }
 
-                    // Folders and their sources
-                    items(folders) { folder ->
+                    // Folders and their sources - Added keys to prevent state reuse issues
+                    items(folders, key = { it.name }) { folder ->
                         FolderItem(
                             folderName = folder.name,
                             sources = sources.filter { it.folderName == folder.name },
                             selectedSource = selectedSource,
+                            onFolderClick = { name ->
+                                viewModel.selectFolder(name)
+                                scope.launch { drawerState.close() }
+                            },
                             onSourceClick = { url ->
                                 viewModel.selectSource(url)
                                 scope.launch { drawerState.close() }
@@ -162,7 +151,7 @@ fun HomeScreen(
                     }
 
                     // Sources without folder
-                    item {
+                    item(key = "uncategorized_header") {
                         val orphanSources = sources.filter { it.folderName == null }
                         if (orphanSources.isNotEmpty()) {
                             Text(
@@ -186,7 +175,15 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(if (selectedSource == null) "Inoreader Lite" else "Filtered Feed") },
+                    title = { 
+                        Text(
+                            when {
+                                selectedSource == null -> "Inoreader Lite"
+                                selectedSource!!.startsWith("folder:") -> "Folder: ${selectedSource!!.removePrefix("folder:")}"
+                                else -> "Filtered Feed"
+                            }
+                        ) 
+                    },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
@@ -205,10 +202,10 @@ fun HomeScreen(
                 }
             }
         ) { padding ->
-            Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .nestedScroll(pullToRefreshState.nestedScrollConnection)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.sync() },
+                modifier = Modifier.padding(padding)
             ) {
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
@@ -233,11 +230,6 @@ fun HomeScreen(
                         }
                     }
                 }
-                
-                PullToRefreshContainer(
-                    state = pullToRefreshState,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
             }
 
             if (showAddDialog) {
@@ -269,24 +261,28 @@ fun FolderItem(
     folderName: String,
     sources: List<SourceEntity>,
     selectedSource: String?,
+    onFolderClick: (String) -> Unit,
     onSourceClick: (String) -> Unit,
     onDrop: (String) -> Unit
 ) {
     var isOver by remember { mutableStateOf(false) }
+    val isFolderSelected = selectedSource == "folder:$folderName"
     
-    val dndTarget = remember {
+    // Remember the target specifically for THIS folderName
+    val dndTarget = remember(folderName) {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 val clipData = event.toAndroidDragEvent().clipData
-                val item = clipData.getItemAt(0)
-                val sourceUrl = item.text.toString()
-                onDrop(sourceUrl)
+                if (clipData != null && clipData.itemCount > 0) {
+                    val sourceUrl = clipData.getItemAt(0).text.toString()
+                    onDrop(sourceUrl)
+                }
                 isOver = false
                 return true
             }
-            override fun onStarted(event: DragAndDropEvent) { isOver = true }
-            override fun onEnded(event: DragAndDropEvent) { isOver = false }
+            override fun onEntered(event: DragAndDropEvent) { isOver = true }
             override fun onExited(event: DragAndDropEvent) { isOver = false }
+            override fun onEnded(event: DragAndDropEvent) { isOver = false }
         }
     }
 
@@ -304,19 +300,21 @@ fun FolderItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable { onFolderClick(folderName) }
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Filled.Folder, 
                 contentDescription = null, 
-                tint = if (isOver) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                tint = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.width(12.dp))
             Text(
                 text = folderName, 
                 style = MaterialTheme.typography.titleSmall,
-                color = if (isOver) MaterialTheme.colorScheme.primary else Color.Unspecified
+                fontWeight = if (isOver || isFolderSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else Color.Unspecified
             )
         }
         
@@ -329,31 +327,50 @@ fun FolderItem(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SourceDrawerItem(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
-    NavigationDrawerItem(
-        label = { Text(source.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        selected = isSelected,
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
         onClick = { onClick(source.url) },
-        icon = {
-            if (source.iconUrl != null) {
-                AsyncImage(model = source.iconUrl, contentDescription = null, modifier = Modifier.size(24.dp))
-            } else {
-                Icon(Icons.Filled.RssFeed, null, modifier = Modifier.size(20.dp))
-            }
-        },
+        shape = CircleShape,
+        color = backgroundColor,
+        contentColor = contentColor,
         modifier = Modifier
+            .fillMaxWidth()
             .padding(NavigationDrawerItemDefaults.ItemPadding)
             .dragAndDropSource {
-                detectTapGestures(
-                    onLongPress = {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
                         startTransfer(
                             DragAndDropTransferData(
                                 clipData = ClipData.newPlainText("sourceUrl", source.url)
                             )
                         )
-                    }
+                    },
+                    onDrag = { _, _ -> },
+                    onDragEnd = { },
+                    onDragCancel = { }
                 )
             }
-    )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (source.iconUrl != null) {
+                AsyncImage(model = source.iconUrl, contentDescription = null, modifier = Modifier.size(24.dp))
+            } else {
+                Icon(Icons.Filled.RssFeed, null, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = source.title,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
 }
 
 @Composable

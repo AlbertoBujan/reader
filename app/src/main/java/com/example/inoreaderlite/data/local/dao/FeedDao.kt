@@ -19,6 +19,14 @@ interface FeedDao {
     @Query("SELECT * FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC")
     fun getArticlesBySource(sourceUrl: String): Flow<List<ArticleEntity>>
 
+    @Query("""
+        SELECT articles.* FROM articles 
+        INNER JOIN sources ON articles.sourceUrl = sources.url 
+        WHERE sources.folderName = :folderName 
+        ORDER BY pubDate DESC
+    """)
+    fun getArticlesByFolder(folderName: String): Flow<List<ArticleEntity>>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticles(articles: List<ArticleEntity>)
 
