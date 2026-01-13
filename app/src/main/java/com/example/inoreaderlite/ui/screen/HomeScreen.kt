@@ -126,97 +126,109 @@ fun HomeScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "Subscriptions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Row {
-                        IconButton(onClick = { showSettingsDialog = true }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Spacer(Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Subscriptions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Row {
+                                IconButton(onClick = { showSettingsDialog = true }) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                                }
+                                IconButton(onClick = { showFolderDialog = true }) {
+                                    Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
+                                }
+                            }
                         }
-                        IconButton(onClick = { showFolderDialog = true }) {
-                            Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
-                        }
-                    }
-                }
-                
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    item(key = "all_feeds") {
-                        val totalUnread = unreadCounts.values.sum()
-                        NavigationDrawerItem(
-                            icon = { Icon(Icons.Filled.RssFeed, null) },
-                            label = { 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("All Feeds")
-                                    if (totalUnread > 0) {
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            text = totalUnread.toString(),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary
+                        
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            item(key = "all_feeds") {
+                                val totalUnread = unreadCounts.values.sum()
+                                NavigationDrawerItem(
+                                    icon = { Icon(Icons.Filled.RssFeed, null) },
+                                    label = { 
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("All Feeds")
+                                            if (totalUnread > 0) {
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(
+                                                    text = totalUnread.toString(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    },
+                                    selected = selectedSource == null,
+                                    onClick = {
+                                        viewModel.selectSource(null)
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            }
+
+                            items(folders, key = { it.name }) { folder ->
+                                val folderSources = sources.filter { it.folderName == folder.name }
+                                val folderUnread = folderSources.sumOf { unreadCounts[it.url] ?: 0 }
+                                FolderItem(
+                                    folderName = folder.name,
+                                    sources = folderSources,
+                                    folderUnreadCount = folderUnread,
+                                    selectedSource = selectedSource,
+                                    onFolderClick = { name ->
+                                        viewModel.selectFolder(name)
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    onSourceClick = { url ->
+                                        viewModel.selectSource(url)
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    onDeleteSource = { viewModel.deleteSource(it) },
+                                    onRenameSource = { renamingSource = it },
+                                    onDrop = { sourceUrl ->
+                                        viewModel.moveSourceToFolder(sourceUrl, folder.name)
+                                    }
+                                )
+                            }
+
+                            item(key = "uncategorized_header") {
+                                val orphanSources = sources.filter { it.folderName == null }
+                                if (orphanSources.isNotEmpty()) {
+                                    Text(
+                                        text = "Uncategorized",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 8.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    orphanSources.forEach { source ->
+                                        SwipeableSourceItem(
+                                            source = source,
+                                            isSelected = selectedSource == source.url,
+                                            onClick = {
+                                                viewModel.selectSource(source.url)
+                                                scope.launch { drawerState.close() }
+                                            },
+                                            onDelete = { viewModel.deleteSource(it) },
+                                            onRename = { renamingSource = it }
                                         )
                                     }
                                 }
-                            },
-                            selected = selectedSource == null,
-                            onClick = {
-                                viewModel.selectSource(null)
-                                scope.launch { drawerState.close() }
-                            },
-                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    }
-
-                    items(folders, key = { it.name }) { folder ->
-                        val folderSources = sources.filter { it.folderName == folder.name }
-                        val folderUnread = folderSources.sumOf { unreadCounts[it.url] ?: 0 }
-                        FolderItem(
-                            folderName = folder.name,
-                            sources = folderSources,
-                            folderUnreadCount = folderUnread,
-                            selectedSource = selectedSource,
-                            onFolderClick = { name ->
-                                viewModel.selectFolder(name)
-                                scope.launch { drawerState.close() }
-                            },
-                            onSourceClick = { url ->
-                                viewModel.selectSource(url)
-                                scope.launch { drawerState.close() }
-                            },
-                            onDeleteSource = { viewModel.deleteSource(it) },
-                            onRenameSource = { renamingSource = it },
-                            onDrop = { sourceUrl ->
-                                viewModel.moveSourceToFolder(sourceUrl, folder.name)
-                            }
-                        )
-                    }
-
-                    item(key = "uncategorized_header") {
-                        val orphanSources = sources.filter { it.folderName == null }
-                        if (orphanSources.isNotEmpty()) {
-                            Text(
-                                text = "Uncategorized",
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 8.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            orphanSources.forEach { source ->
-                                SwipeableSourceItem(
-                                    source = source,
-                                    isSelected = selectedSource == source.url,
-                                    onClick = {
-                                        viewModel.selectSource(source.url)
-                                        scope.launch { drawerState.close() }
-                                    },
-                                    onDelete = { viewModel.deleteSource(it) },
-                                    onRename = { renamingSource = it }
-                                )
                             }
                         }
+                    }
+                    FloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Source")
                     }
                 }
             }
@@ -257,18 +269,8 @@ fun HomeScreen(
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
-                    },
-                    actions = {
-                        IconButton(onClick = { viewModel.sync() }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Sync")
-                        }
                     }
                 )
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { showAddDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Source")
-                }
             }
         ) { padding ->
             PullToRefreshBox(
@@ -308,8 +310,8 @@ fun HomeScreen(
             if (showAddDialog) {
                 AddSourceDialog(
                     onDismiss = { showAddDialog = false },
-                    onAdd = { url ->
-                        viewModel.addSource(url)
+                    onAdd = { url, title ->
+                        viewModel.addSource(url, title)
                         showAddDialog = false
                     }
                 )
@@ -708,21 +710,31 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
 }
 
 @Composable
-fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
+fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String, String?) -> Unit) {
+    var url by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add RSS Feed") },
         text = {
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("URL") },
-                singleLine = true
-            )
+            Column {
+                TextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title (Optional)") },
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("URL") },
+                    singleLine = true
+                )
+            }
         },
         confirmButton = {
-            Button(onClick = { onAdd(text) }) {
+            Button(onClick = { if (url.isNotBlank()) onAdd(url, if(title.isBlank()) null else title) }) {
                 Text("Add")
             }
         },

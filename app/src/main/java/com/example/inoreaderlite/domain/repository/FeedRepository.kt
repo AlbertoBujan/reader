@@ -8,7 +8,7 @@ interface FeedRepository {
     fun getAllArticles(): Flow<List<ArticleEntity>>
     fun getArticlesBySource(sourceUrl: String): Flow<List<ArticleEntity>>
     fun getAllSources(): Flow<List<SourceEntity>>
-    suspend fun addSource(url: String)
+    suspend fun addSource(url: String, title: String?)
     suspend fun syncFeeds()
     suspend fun markAsRead(link: String)
 }

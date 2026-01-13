@@ -136,10 +136,10 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun addSource(url: String) {
+    fun addSource(url: String, title: String?) {
         viewModelScope.launch {
             try {
-                addSourceUseCase(url)
+                addSourceUseCase(url, title)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
