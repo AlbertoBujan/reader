@@ -27,6 +27,9 @@ interface FeedDao {
     """)
     fun getArticlesByFolder(folderName: String): Flow<List<ArticleEntity>>
 
+    @Query("SELECT * FROM articles WHERE link = :link LIMIT 1")
+    fun getArticleByLink(link: String): Flow<ArticleEntity?>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticles(articles: List<ArticleEntity>)
 

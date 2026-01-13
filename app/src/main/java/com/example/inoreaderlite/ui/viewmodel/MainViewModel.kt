@@ -13,6 +13,7 @@ import com.example.inoreaderlite.domain.usecase.MarkArticleReadUseCase
 import com.example.inoreaderlite.domain.usecase.SyncFeedsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +47,9 @@ class MainViewModel @Inject constructor(
     private val _selectedSource = MutableStateFlow<String?>(null)
     val selectedSource: StateFlow<String?> = _selectedSource.asStateFlow()
 
+    private val _markAsReadOnScroll = MutableStateFlow(false)
+    val markAsReadOnScroll: StateFlow<Boolean> = _markAsReadOnScroll.asStateFlow()
+
     val sources: StateFlow<List<SourceEntity>> = getAllSourcesUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -74,12 +78,20 @@ class MainViewModel @Inject constructor(
             initialValue = FeedUiState.Loading
         )
 
+    fun getArticle(url: String): Flow<ArticleEntity?> {
+        return feedDao.getArticleByLink(url)
+    }
+
     fun selectSource(url: String?) {
         _selectedSource.value = url
     }
 
     fun selectFolder(name: String) {
         _selectedSource.value = "folder:$name"
+    }
+
+    fun toggleMarkAsReadOnScroll(enabled: Boolean) {
+        _markAsReadOnScroll.value = enabled
     }
 
     fun addSource(url: String) {

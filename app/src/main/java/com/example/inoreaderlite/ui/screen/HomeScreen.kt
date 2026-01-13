@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -46,18 +48,22 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -76,6 +82,8 @@ import com.example.inoreaderlite.data.local.entity.ArticleEntity
 import com.example.inoreaderlite.data.local.entity.SourceEntity
 import com.example.inoreaderlite.ui.viewmodel.FeedUiState
 import com.example.inoreaderlite.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -92,9 +100,11 @@ fun HomeScreen(
     val sources by viewModel.sources.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val selectedSource by viewModel.selectedSource.collectAsState()
+    val markAsReadOnScroll by viewModel.markAsReadOnScroll.collectAsState()
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -110,8 +120,13 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = "Subscriptions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = { showFolderDialog = true }) {
-                        Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
+                    Row {
+                        IconButton(onClick = { showSettingsDialog = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                        IconButton(onClick = { showFolderDialog = true }) {
+                            Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
+                        }
                     }
                 }
                 
@@ -130,7 +145,6 @@ fun HomeScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     }
 
-                    // Folders and their sources - Added keys to prevent state reuse issues
                     items(folders, key = { it.name }) { folder ->
                         FolderItem(
                             folderName = folder.name,
@@ -150,7 +164,6 @@ fun HomeScreen(
                         )
                     }
 
-                    // Sources without folder
                     item(key = "uncategorized_header") {
                         val orphanSources = sources.filter { it.folderName == null }
                         if (orphanSources.isNotEmpty()) {
@@ -218,6 +231,8 @@ fun HomeScreen(
                     is FeedUiState.Success -> {
                         ArticleList(
                             articles = state.articles, 
+                            markAsReadOnScroll = markAsReadOnScroll,
+                            onMarkAsRead = { viewModel.markAsRead(it) },
                             onArticleClick = { link, isRead ->
                                 if (!isRead) viewModel.markAsRead(link)
                                 onArticleClick(link, isRead)
@@ -251,8 +266,44 @@ fun HomeScreen(
                     }
                 )
             }
+
+            if (showSettingsDialog) {
+                SettingsDialog(
+                    onDismiss = { showSettingsDialog = false },
+                    markAsReadOnScroll = markAsReadOnScroll,
+                    onToggleMarkAsReadOnScroll = { viewModel.toggleMarkAsReadOnScroll(it) }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun SettingsDialog(
+    onDismiss: () -> Unit,
+    markAsReadOnScroll: Boolean,
+    onToggleMarkAsReadOnScroll: (Boolean) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Settings") },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Mark as read on scroll")
+                Switch(
+                    checked = markAsReadOnScroll,
+                    onCheckedChange = onToggleMarkAsReadOnScroll
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -268,7 +319,6 @@ fun FolderItem(
     var isOver by remember { mutableStateOf(false) }
     val isFolderSelected = selectedSource == "folder:$folderName"
     
-    // Remember the target specifically for THIS folderName
     val dndTarget = remember(folderName) {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
@@ -392,12 +442,36 @@ fun AddFolderDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
 }
 
 @Composable
-fun ArticleList(articles: List<ArticleEntity>, onArticleClick: (String, Boolean) -> Unit) {
+fun ArticleList(
+    articles: List<ArticleEntity>, 
+    markAsReadOnScroll: Boolean,
+    onMarkAsRead: (String) -> Unit,
+    onArticleClick: (String, Boolean) -> Unit
+) {
+    val listState = rememberLazyListState()
+
+    if (markAsReadOnScroll) {
+        LaunchedEffect(listState) {
+            snapshotFlow { listState.firstVisibleItemIndex }
+                .distinctUntilChanged()
+                .filter { it > 0 }
+                .collect { firstIndex ->
+                    // Mark articles above the current first visible item as read
+                    for (i in 0 until firstIndex) {
+                        if (i < articles.size) {
+                            onMarkAsRead(articles[i].link)
+                        }
+                    }
+                }
+        }
+    }
+
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(articles) { article ->
+        items(articles, key = { it.link }) { article ->
             ArticleItem(article, onArticleClick)
         }
     }
