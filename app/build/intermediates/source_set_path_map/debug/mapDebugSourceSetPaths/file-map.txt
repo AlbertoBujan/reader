@@ -1,0 +1,64 @@
+com.example.inoreaderlite.app-sqlite-framework-2.4.0-0 /home/alberto/.gradle/caches/8.13/transforms/015086c621d1cbaafb7646bc4a92e712/transformed/sqlite-framework-2.4.0/res
+com.example.inoreaderlite.app-jetified-lifecycle-process-2.7.0-1 /home/alberto/.gradle/caches/8.13/transforms/0560340a02e545739f97408dd9dc5927/transformed/jetified-lifecycle-process-2.7.0/res
+com.example.inoreaderlite.app-jetified-navigation-compose-2.7.7-2 /home/alberto/.gradle/caches/8.13/transforms/0b34a77a5d2a7fffcdbaefb9c188bef3/transformed/jetified-navigation-compose-2.7.7/res
+com.example.inoreaderlite.app-jetified-material-icons-core-release-3 /home/alberto/.gradle/caches/8.13/transforms/0ebf8df232629e16e230d56f6cf8c2cf/transformed/jetified-material-icons-core-release/res
+com.example.inoreaderlite.app-jetified-material-ripple-release-4 /home/alberto/.gradle/caches/8.13/transforms/152ff4f402f8508c3802647f91377c35/transformed/jetified-material-ripple-release/res
+com.example.inoreaderlite.app-jetified-ui-geometry-release-5 /home/alberto/.gradle/caches/8.13/transforms/16824bd06640be02123ef21afa9def65/transformed/jetified-ui-geometry-release/res
+com.example.inoreaderlite.app-core-runtime-2.2.0-6 /home/alberto/.gradle/caches/8.13/transforms/19217f75359d7377ece3a876544f286b/transformed/core-runtime-2.2.0/res
+com.example.inoreaderlite.app-jetified-ui-release-7 /home/alberto/.gradle/caches/8.13/transforms/19acb7f8bdc694113311d7c8b4c80704/transformed/jetified-ui-release/res
+com.example.inoreaderlite.app-navigation-runtime-ktx-2.7.7-8 /home/alberto/.gradle/caches/8.13/transforms/1be3ee47ff25e9093e58dfd9eb3e2b24/transformed/navigation-runtime-ktx-2.7.7/res
+com.example.inoreaderlite.app-jetified-animation-release-9 /home/alberto/.gradle/caches/8.13/transforms/1e62da510241b7566969c60a7b95e877/transformed/jetified-animation-release/res
+com.example.inoreaderlite.app-lifecycle-livedata-core-2.7.0-10 /home/alberto/.gradle/caches/8.13/transforms/1f9ca568d5c4c004fd107cf3a59f9aad/transformed/lifecycle-livedata-core-2.7.0/res
+com.example.inoreaderlite.app-jetified-ui-text-release-11 /home/alberto/.gradle/caches/8.13/transforms/222cb8155eebbf1db55c81eb76be1b64/transformed/jetified-ui-text-release/res
+com.example.inoreaderlite.app-jetified-ui-tooling-release-12 /home/alberto/.gradle/caches/8.13/transforms/31930117482c2aadf3267360ee4fa23f/transformed/jetified-ui-tooling-release/res
+com.example.inoreaderlite.app-jetified-startup-runtime-1.1.1-13 /home/alberto/.gradle/caches/8.13/transforms/31e2571baf71ce4949c5c475d9903872/transformed/jetified-startup-runtime-1.1.1/res
+com.example.inoreaderlite.app-lifecycle-runtime-2.7.0-14 /home/alberto/.gradle/caches/8.13/transforms/370e1a4a679ea2431bf2c5e0d8c9966e/transformed/lifecycle-runtime-2.7.0/res
+com.example.inoreaderlite.app-jetified-activity-ktx-1.8.2-15 /home/alberto/.gradle/caches/8.13/transforms/3815d7bd57171da32eafb634c46e0611/transformed/jetified-activity-ktx-1.8.2/res
+com.example.inoreaderlite.app-jetified-hilt-navigation-compose-1.2.0-16 /home/alberto/.gradle/caches/8.13/transforms/39006457138f84fb54e3c72a3a66bc56/transformed/jetified-hilt-navigation-compose-1.2.0/res
+com.example.inoreaderlite.app-jetified-ui-util-release-17 /home/alberto/.gradle/caches/8.13/transforms/3dc8f53ba00338e16c5221f818619bc6/transformed/jetified-ui-util-release/res
+com.example.inoreaderlite.app-jetified-runtime-saveable-release-18 /home/alberto/.gradle/caches/8.13/transforms/3f4fa3bd38744d64baf195925a2e076f/transformed/jetified-runtime-saveable-release/res
+com.example.inoreaderlite.app-jetified-lifecycle-viewmodel-compose-2.7.0-19 /home/alberto/.gradle/caches/8.13/transforms/3fbb61ba41066e6be73a2e5f2f7e7a25/transformed/jetified-lifecycle-viewmodel-compose-2.7.0/res
+com.example.inoreaderlite.app-jetified-activity-compose-1.8.2-20 /home/alberto/.gradle/caches/8.13/transforms/4c159689eade7b88a8f206dbb34525f1/transformed/jetified-activity-compose-1.8.2/res
+com.example.inoreaderlite.app-jetified-foundation-layout-release-21 /home/alberto/.gradle/caches/8.13/transforms/4fcc082a5479a3a7eb8f5fd791d6f7b9/transformed/jetified-foundation-layout-release/res
+com.example.inoreaderlite.app-jetified-runtime-release-22 /home/alberto/.gradle/caches/8.13/transforms/55d1a8dd2278286cc7622617234d61ed/transformed/jetified-runtime-release/res
+com.example.inoreaderlite.app-jetified-foundation-release-23 /home/alberto/.gradle/caches/8.13/transforms/5b32e9b44401d86c72a7dbb13bc92620/transformed/jetified-foundation-release/res
+com.example.inoreaderlite.app-jetified-lifecycle-livedata-core-ktx-2.7.0-24 /home/alberto/.gradle/caches/8.13/transforms/5d9826624254603b54d2b3023b08e7ad/transformed/jetified-lifecycle-livedata-core-ktx-2.7.0/res
+com.example.inoreaderlite.app-jetified-animation-core-release-25 /home/alberto/.gradle/caches/8.13/transforms/5e2ee72b718a354dcd583e693f53a6c1/transformed/jetified-animation-core-release/res
+com.example.inoreaderlite.app-jetified-savedstate-1.2.1-26 /home/alberto/.gradle/caches/8.13/transforms/7138519636437861c33b86b370c6e2f9/transformed/jetified-savedstate-1.2.1/res
+com.example.inoreaderlite.app-navigation-common-2.7.7-27 /home/alberto/.gradle/caches/8.13/transforms/7323021a30675fc51b0db7567cff9e45/transformed/navigation-common-2.7.7/res
+com.example.inoreaderlite.app-jetified-coil-base-2.6.0-28 /home/alberto/.gradle/caches/8.13/transforms/7485e0b870744f81ccf2d89b61f50e10/transformed/jetified-coil-base-2.6.0/res
+com.example.inoreaderlite.app-jetified-hilt-navigation-1.2.0-29 /home/alberto/.gradle/caches/8.13/transforms/7e3e1b336ea1b01237be7f9a76ab63be/transformed/jetified-hilt-navigation-1.2.0/res
+com.example.inoreaderlite.app-sqlite-2.4.0-30 /home/alberto/.gradle/caches/8.13/transforms/7ea2a120851865261530e272f9e4eaa4/transformed/sqlite-2.4.0/res
+com.example.inoreaderlite.app-jetified-profileinstaller-1.3.1-31 /home/alberto/.gradle/caches/8.13/transforms/7f7a15c539d981a590c96ee6f114e770/transformed/jetified-profileinstaller-1.3.1/res
+com.example.inoreaderlite.app-jetified-ui-test-manifest-1.6.7-32 /home/alberto/.gradle/caches/8.13/transforms/7fc69721c18450f6c91482b77b7e7b2b/transformed/jetified-ui-test-manifest-1.6.7/res
+com.example.inoreaderlite.app-navigation-common-ktx-2.7.7-33 /home/alberto/.gradle/caches/8.13/transforms/8a9fe410482db0b25138b6f04a7e5755/transformed/navigation-common-ktx-2.7.7/res
+com.example.inoreaderlite.app-jetified-activity-1.8.2-34 /home/alberto/.gradle/caches/8.13/transforms/8af49057ba3125c7998fb638b4c9963f/transformed/jetified-activity-1.8.2/res
+com.example.inoreaderlite.app-jetified-lifecycle-runtime-ktx-2.7.0-35 /home/alberto/.gradle/caches/8.13/transforms/90f51f9dea465df91f33d6b294c2de0f/transformed/jetified-lifecycle-runtime-ktx-2.7.0/res
+com.example.inoreaderlite.app-jetified-ui-tooling-preview-release-36 /home/alberto/.gradle/caches/8.13/transforms/9229d6ccc41524a99aa3278917d75cd7/transformed/jetified-ui-tooling-preview-release/res
+com.example.inoreaderlite.app-navigation-runtime-2.7.7-37 /home/alberto/.gradle/caches/8.13/transforms/971fd34b63f22c0c3445734acc19f53f/transformed/navigation-runtime-2.7.7/res
+com.example.inoreaderlite.app-jetified-lifecycle-viewmodel-ktx-2.7.0-38 /home/alberto/.gradle/caches/8.13/transforms/975929ce99ca609a949cfc251eaa244d/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/res
+com.example.inoreaderlite.app-jetified-material3-release-39 /home/alberto/.gradle/caches/8.13/transforms/9a129491d6e19976b5f45a96a991fd86/transformed/jetified-material3-release/res
+com.example.inoreaderlite.app-jetified-ui-tooling-data-release-40 /home/alberto/.gradle/caches/8.13/transforms/9ef08cf3c74b11d337379eb0a3a0f750/transformed/jetified-ui-tooling-data-release/res
+com.example.inoreaderlite.app-jetified-core-ktx-1.12.0-41 /home/alberto/.gradle/caches/8.13/transforms/a0986092c629ced9ebbb202b2d775c5a/transformed/jetified-core-ktx-1.12.0/res
+com.example.inoreaderlite.app-fragment-1.5.1-42 /home/alberto/.gradle/caches/8.13/transforms/a44454815139a990b5bccb9dfd13907e/transformed/fragment-1.5.1/res
+com.example.inoreaderlite.app-jetified-ui-graphics-release-43 /home/alberto/.gradle/caches/8.13/transforms/a621d2786a9cb84068688321423b7c38/transformed/jetified-ui-graphics-release/res
+com.example.inoreaderlite.app-jetified-annotation-experimental-1.4.0-44 /home/alberto/.gradle/caches/8.13/transforms/afe790c7725946f1c898a589ae07366c/transformed/jetified-annotation-experimental-1.4.0/res
+com.example.inoreaderlite.app-core-1.12.0-45 /home/alberto/.gradle/caches/8.13/transforms/b3dc39bb47681903c3ea2cb5c5dbef78/transformed/core-1.12.0/res
+com.example.inoreaderlite.app-jetified-customview-poolingcontainer-1.0.0-46 /home/alberto/.gradle/caches/8.13/transforms/bf3a22bd411315bf1a4ddce20836c53e/transformed/jetified-customview-poolingcontainer-1.0.0/res
+com.example.inoreaderlite.app-jetified-material-release-47 /home/alberto/.gradle/caches/8.13/transforms/c04c4370e32513e105747748629b3a67/transformed/jetified-material-release/res
+com.example.inoreaderlite.app-jetified-lifecycle-viewmodel-savedstate-2.7.0-48 /home/alberto/.gradle/caches/8.13/transforms/c3197cc60375dc5171127ad75ff9de13/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/res
+com.example.inoreaderlite.app-jetified-room-ktx-2.6.1-49 /home/alberto/.gradle/caches/8.13/transforms/c58be6a540e5b8c1732171c8bee33db2/transformed/jetified-room-ktx-2.6.1/res
+com.example.inoreaderlite.app-jetified-emoji2-1.3.0-50 /home/alberto/.gradle/caches/8.13/transforms/d54d43773c9da702a9e5d55cd93d005f/transformed/jetified-emoji2-1.3.0/res
+com.example.inoreaderlite.app-jetified-ui-unit-release-51 /home/alberto/.gradle/caches/8.13/transforms/df05b7f4d211df91c05ade308398f70e/transformed/jetified-ui-unit-release/res
+com.example.inoreaderlite.app-lifecycle-livedata-2.7.0-52 /home/alberto/.gradle/caches/8.13/transforms/e2690ab2fc446657bd8439287b048175/transformed/lifecycle-livedata-2.7.0/res
+com.example.inoreaderlite.app-jetified-savedstate-ktx-1.2.1-53 /home/alberto/.gradle/caches/8.13/transforms/ea272b1bf8de1a09dc45a6d7240ffe30/transformed/jetified-savedstate-ktx-1.2.1/res
+com.example.inoreaderlite.app-lifecycle-viewmodel-2.7.0-54 /home/alberto/.gradle/caches/8.13/transforms/eadd67fafbd51508eecd7bd8eb9ead1c/transformed/lifecycle-viewmodel-2.7.0/res
+com.example.inoreaderlite.app-jetified-appcompat-resources-1.6.1-55 /home/alberto/.gradle/caches/8.13/transforms/f4e974b41073e7fd09369cfab0b3c884/transformed/jetified-appcompat-resources-1.6.1/res
+com.example.inoreaderlite.app-room-runtime-2.6.1-56 /home/alberto/.gradle/caches/8.13/transforms/f91b0946d818d348dabc9d9d6dffa0bb/transformed/room-runtime-2.6.1/res
+com.example.inoreaderlite.app-resValues-57 /home/alberto/Documentos/Proyectos git/reader/app/build/generated/res/resValues/debug
+com.example.inoreaderlite.app-updated_navigation_xml-58 /home/alberto/Documentos/Proyectos git/reader/app/build/generated/updated_navigation_xml/debug
+com.example.inoreaderlite.app-packageDebugResources-59 /home/alberto/Documentos/Proyectos git/reader/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.example.inoreaderlite.app-packageDebugResources-60 /home/alberto/Documentos/Proyectos git/reader/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.example.inoreaderlite.app-debug-61 /home/alberto/Documentos/Proyectos git/reader/app/build/intermediates/merged_res/debug/mergeDebugResources
+com.example.inoreaderlite.app-debug-62 /home/alberto/Documentos/Proyectos git/reader/app/src/debug/res
+com.example.inoreaderlite.app-main-63 /home/alberto/Documentos/Proyectos git/reader/app/src/main/res

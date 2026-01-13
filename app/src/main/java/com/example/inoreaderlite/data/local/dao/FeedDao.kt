@@ -1,0 +1,40 @@
+package com.example.inoreaderlite.data.local.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import com.example.inoreaderlite.data.local.entity.ArticleEntity
+import com.example.inoreaderlite.data.local.entity.SourceEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface FeedDao {
+
+    @Query("SELECT * FROM articles ORDER BY pubDate DESC")
+    fun getAllArticles(): Flow<List<ArticleEntity>>
+
+    @Query("SELECT * FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC")
+    fun getArticlesBySource(sourceUrl: String): Flow<List<ArticleEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertArticles(articles: List<ArticleEntity>)
+
+    @Query("DELETE FROM articles")
+    suspend fun clearAllArticles()
+
+    // Source Management
+    @Query("SELECT * FROM sources")
+    fun getAllSources(): Flow<List<SourceEntity>>
+    
+    // Helper to get sources synchronously (if needed for one-shot ops, though Flow is preferred)
+    @Query("SELECT * FROM sources")
+    suspend fun getAllSourcesList(): List<SourceEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSource(source: SourceEntity)
+
+    @Query("DELETE FROM sources WHERE url = :url")
+    suspend fun deleteSource(url: String)
+}
