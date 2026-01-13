@@ -33,6 +33,9 @@ interface FeedDao {
     @Query("SELECT link FROM articles WHERE isRead = 1")
     suspend fun getReadArticleLinks(): List<String>
 
+    @Query("SELECT sourceUrl, COUNT(*) as count FROM articles WHERE isRead = 0 GROUP BY sourceUrl")
+    fun getUnreadCountsBySource(): Flow<List<SourceUnreadCount>>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticles(articles: List<ArticleEntity>)
 
@@ -58,6 +61,9 @@ interface FeedDao {
     @Query("UPDATE sources SET folderName = :folderName WHERE url = :url")
     suspend fun updateSourceFolder(url: String, folderName: String?)
 
+    @Query("UPDATE sources SET title = :newTitle WHERE url = :url")
+    suspend fun updateSourceTitle(url: String, newTitle: String)
+
     // Folder Management
     @Query("SELECT * FROM folders")
     fun getAllFolders(): Flow<List<FolderEntity>>
@@ -68,3 +74,8 @@ interface FeedDao {
     @Query("DELETE FROM folders WHERE name = :name")
     suspend fun deleteFolder(name: String)
 }
+
+data class SourceUnreadCount(
+    val sourceUrl: String,
+    val count: Int
+)

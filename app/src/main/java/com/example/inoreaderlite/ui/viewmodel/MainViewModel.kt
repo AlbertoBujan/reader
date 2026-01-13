@@ -2,6 +2,7 @@ package com.example.inoreaderlite.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.inoreaderlite.data.local.PreferencesManager
 import com.example.inoreaderlite.data.local.dao.FeedDao
 import com.example.inoreaderlite.data.local.entity.ArticleEntity
 import com.example.inoreaderlite.data.local.entity.FolderEntity
@@ -39,6 +40,7 @@ class MainViewModel @Inject constructor(
     private val syncFeedsUseCase: SyncFeedsUseCase,
     private val markArticleReadUseCase: MarkArticleReadUseCase,
     private val feedDao: FeedDao,
+    private val preferencesManager: PreferencesManager,
     getAllSourcesUseCase: GetAllSourcesUseCase
 ) : ViewModel() {
 
@@ -48,10 +50,10 @@ class MainViewModel @Inject constructor(
     private val _selectedSource = MutableStateFlow<String?>(null)
     val selectedSource: StateFlow<String?> = _selectedSource.asStateFlow()
 
-    private val _markAsReadOnScroll = MutableStateFlow(false)
+    private val _markAsReadOnScroll = MutableStateFlow(preferencesManager.isMarkAsReadOnScroll())
     val markAsReadOnScroll: StateFlow<Boolean> = _markAsReadOnScroll.asStateFlow()
 
-    private val _isDarkMode = MutableStateFlow(false)
+    private val _isDarkMode = MutableStateFlow(preferencesManager.isDarkMode())
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
     // Enlaces de artículos que deben estar ocultos (ya estaban leídos en la última recarga)
@@ -62,6 +64,10 @@ class MainViewModel @Inject constructor(
 
     val folders: StateFlow<List<FolderEntity>> = feedDao.getAllFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val unreadCounts: StateFlow<Map<String, Int>> = feedDao.getUnreadCountsBySource()
+        .map { list -> list.associate { it.sourceUrl to it.count } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         // Carga inicial de artículos para ocultar
@@ -116,10 +122,18 @@ class MainViewModel @Inject constructor(
 
     fun toggleMarkAsReadOnScroll(enabled: Boolean) {
         _markAsReadOnScroll.value = enabled
+        preferencesManager.setMarkAsReadOnScroll(enabled)
     }
 
     fun toggleDarkMode(enabled: Boolean) {
         _isDarkMode.value = enabled
+        preferencesManager.setDarkMode(enabled)
+    }
+
+    fun renameSource(url: String, newTitle: String) {
+        viewModelScope.launch {
+            feedDao.updateSourceTitle(url, newTitle)
+        }
     }
 
     fun addSource(url: String) {

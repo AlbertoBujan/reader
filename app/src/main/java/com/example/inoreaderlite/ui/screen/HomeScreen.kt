@@ -28,12 +28,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -108,10 +111,12 @@ fun HomeScreen(
     val selectedSource by viewModel.selectedSource.collectAsState()
     val markAsReadOnScroll by viewModel.markAsReadOnScroll.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
+    val unreadCounts by viewModel.unreadCounts.collectAsState()
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var renamingSource by remember { mutableStateOf<SourceEntity?>(null) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -140,9 +145,22 @@ fun HomeScreen(
                 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item(key = "all_feeds") {
+                        val totalUnread = unreadCounts.values.sum()
                         NavigationDrawerItem(
                             icon = { Icon(Icons.Filled.RssFeed, null) },
-                            label = { Text("All Feeds") },
+                            label = { 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("All Feeds")
+                                    if (totalUnread > 0) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = totalUnread.toString(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            },
                             selected = selectedSource == null,
                             onClick = {
                                 viewModel.selectSource(null)
@@ -154,9 +172,12 @@ fun HomeScreen(
                     }
 
                     items(folders, key = { it.name }) { folder ->
+                        val folderSources = sources.filter { it.folderName == folder.name }
+                        val folderUnread = folderSources.sumOf { unreadCounts[it.url] ?: 0 }
                         FolderItem(
                             folderName = folder.name,
-                            sources = sources.filter { it.folderName == folder.name },
+                            sources = folderSources,
+                            folderUnreadCount = folderUnread,
                             selectedSource = selectedSource,
                             onFolderClick = { name ->
                                 viewModel.selectFolder(name)
@@ -167,6 +188,7 @@ fun HomeScreen(
                                 scope.launch { drawerState.close() }
                             },
                             onDeleteSource = { viewModel.deleteSource(it) },
+                            onRenameSource = { renamingSource = it },
                             onDrop = { sourceUrl ->
                                 viewModel.moveSourceToFolder(sourceUrl, folder.name)
                             }
@@ -190,7 +212,8 @@ fun HomeScreen(
                                         viewModel.selectSource(source.url)
                                         scope.launch { drawerState.close() }
                                     },
-                                    onDelete = { viewModel.deleteSource(it) }
+                                    onDelete = { viewModel.deleteSource(it) },
+                                    onRename = { renamingSource = it }
                                 )
                             }
                         }
@@ -204,13 +227,31 @@ fun HomeScreen(
             topBar = {
                 TopAppBar(
                     title = { 
-                        Text(
-                            when {
-                                selectedSource == null -> "Inoreader Lite"
-                                selectedSource!!.startsWith("folder:") -> "Folder: ${selectedSource!!.removePrefix("folder:")}"
-                                else -> "Filtered Feed"
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                when {
+                                    selectedSource == null -> "Inoreader Lite"
+                                    selectedSource!!.startsWith("folder:") -> "Folder: ${selectedSource!!.removePrefix("folder:")}"
+                                    else -> sources.find { it.url == selectedSource }?.title ?: "Filtered Feed"
+                                }
+                            )
+                            val currentUnread = when {
+                                selectedSource == null -> unreadCounts.values.sum()
+                                selectedSource!!.startsWith("folder:") -> {
+                                    val folderName = selectedSource!!.removePrefix("folder:")
+                                    sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
+                                }
+                                else -> unreadCounts[selectedSource] ?: 0
                             }
-                        ) 
+                            if (currentUnread > 0) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "($currentUnread)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
@@ -293,8 +334,37 @@ fun HomeScreen(
                     onToggleDarkMode = { viewModel.toggleDarkMode(it) }
                 )
             }
+
+            renamingSource?.let { source ->
+                RenameSourceDialog(
+                    initialTitle = source.title,
+                    onDismiss = { renamingSource = null },
+                    onConfirm = { newTitle ->
+                        viewModel.renameSource(source.url, newTitle)
+                        renamingSource = null
+                    }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun RenameSourceDialog(initialTitle: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(initialTitle) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename Feed") },
+        text = {
+            TextField(value = text, onValueChange = { text = it }, label = { Text("Feed Title") }, singleLine = true)
+        },
+        confirmButton = {
+            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text("Rename") }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -346,10 +416,12 @@ fun SettingsDialog(
 fun FolderItem(
     folderName: String,
     sources: List<SourceEntity>,
+    folderUnreadCount: Int,
     selectedSource: String?,
     onFolderClick: (String) -> Unit,
     onSourceClick: (String) -> Unit,
     onDeleteSource: (String) -> Unit,
+    onRenameSource: (SourceEntity) -> Unit,
     onDrop: (String) -> Unit
 ) {
     var isOver by remember { mutableStateOf(false) }
@@ -400,8 +472,16 @@ fun FolderItem(
                 text = folderName, 
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isOver || isFolderSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else Color.Unspecified
+                color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                modifier = Modifier.weight(1f)
             )
+            if (folderUnreadCount > 0) {
+                Text(
+                    text = folderUnreadCount.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         
         sources.forEach { source ->
@@ -409,7 +489,8 @@ fun FolderItem(
                 source = source,
                 isSelected = selectedSource == source.url,
                 onClick = onSourceClick,
-                onDelete = onDeleteSource
+                onDelete = onDeleteSource,
+                onRename = onRenameSource
             )
         }
     }
@@ -421,34 +502,57 @@ fun SwipeableSourceItem(
     source: SourceEntity,
     isSelected: Boolean,
     onClick: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onRename: (SourceEntity) -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart) {
-                onDelete(source.url)
-                true
-            } else false
+            when (it) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDelete(source.url)
+                    true
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onRename(source)
+                    false // Snap back
+                }
+                else -> false
+            }
         }
     )
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = false,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
         backgroundContent = {
-            val color = when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.EndToStart -> Color.Red
-                else -> Color.Transparent
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(NavigationDrawerItemDefaults.ItemPadding)
-                    .background(color, CircleShape)
-                    .padding(horizontal = 20.dp),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+            val direction = dismissState.dismissDirection
+            when (direction) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(NavigationDrawerItemDefaults.ItemPadding)
+                            .background(Color.Red, CircleShape)
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                    }
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(NavigationDrawerItemDefaults.ItemPadding)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "Rename", tint = Color.White)
+                    }
+                }
+                else -> {}
             }
         }
     ) {
@@ -499,7 +603,8 @@ fun SourceDrawerItem(source: SourceEntity, isSelected: Boolean, onClick: (String
                 text = source.title,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
     }
