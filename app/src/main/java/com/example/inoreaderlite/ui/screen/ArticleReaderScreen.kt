@@ -3,8 +3,12 @@ package com.example.inoreaderlite.ui.screen
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.padding
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,6 +25,7 @@ fun ArticleReaderScreen(
     url: String,
     onBack: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -28,6 +33,14 @@ fun ArticleReaderScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        context.startActivity(intent)
+                    }) {
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Open in Browser")
                     }
                 }
             )

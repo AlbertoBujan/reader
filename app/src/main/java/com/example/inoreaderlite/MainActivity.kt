@@ -32,7 +32,7 @@ fun InoreaderLiteMain() {
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
             HomeScreen(
-                onArticleClick = { link ->
+                onArticleClick = { link, _ ->
                      val encodedUrl = URLEncoder.encode(link, StandardCharsets.UTF_8.toString())
                      navController.navigate("reader/$encodedUrl")
                 }

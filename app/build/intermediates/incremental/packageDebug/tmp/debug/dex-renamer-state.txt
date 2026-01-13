@@ -1,4 +1,4 @@
-#Tue Jan 13 14:09:41 CET 2026
+#Tue Jan 13 15:11:25 CET 2026
 base.0=/home/alberto/Documentos/Proyectos git/reader/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex
 base.1=/home/alberto/Documentos/Proyectos git/reader/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex
 base.10=/home/alberto/Documentos/Proyectos git/reader/app/build/intermediates/dex/debug/mergeProjectDexDebug/9/classes.dex

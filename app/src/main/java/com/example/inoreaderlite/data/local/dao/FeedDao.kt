@@ -24,6 +24,9 @@ interface FeedDao {
     @Query("DELETE FROM articles")
     suspend fun clearAllArticles()
 
+    @Query("UPDATE articles SET isRead = 1 WHERE link = :link")
+    suspend fun markArticleAsRead(link: String)
+
     // Source Management
     @Query("SELECT * FROM sources")
     fun getAllSources(): Flow<List<SourceEntity>>

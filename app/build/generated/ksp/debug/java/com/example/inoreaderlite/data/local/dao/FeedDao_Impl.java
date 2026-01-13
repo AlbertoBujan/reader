@@ -39,6 +39,8 @@ public final class FeedDao_Impl implements FeedDao {
 
   private final SharedSQLiteStatement __preparedStmtOfClearAllArticles;
 
+  private final SharedSQLiteStatement __preparedStmtOfMarkArticleAsRead;
+
   private final SharedSQLiteStatement __preparedStmtOfDeleteSource;
 
   public FeedDao_Impl(@NonNull final RoomDatabase __db) {
@@ -97,6 +99,14 @@ public final class FeedDao_Impl implements FeedDao {
       @NonNull
       public String createQuery() {
         final String _query = "DELETE FROM articles";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfMarkArticleAsRead = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "UPDATE articles SET isRead = 1 WHERE link = ?";
         return _query;
       }
     };
@@ -166,6 +176,31 @@ public final class FeedDao_Impl implements FeedDao {
           }
         } finally {
           __preparedStmtOfClearAllArticles.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object markArticleAsRead(final String link, final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfMarkArticleAsRead.acquire();
+        int _argIndex = 1;
+        _stmt.bindString(_argIndex, link);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfMarkArticleAsRead.release(_stmt);
         }
       }
     }, $completion);

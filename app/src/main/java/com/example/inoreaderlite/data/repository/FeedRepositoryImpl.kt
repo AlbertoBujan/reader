@@ -16,6 +16,8 @@ class FeedRepositoryImpl(
 
     override fun getAllArticles() = feedDao.getAllArticles()
 
+    override fun getArticlesBySource(sourceUrl: String) = feedDao.getArticlesBySource(sourceUrl)
+
     override fun getAllSources() = feedDao.getAllSources()
 
     override suspend fun addSource(url: String) {
@@ -40,6 +42,10 @@ class FeedRepositoryImpl(
         for (source in sources) {
             syncSource(source)
         }
+    }
+
+    override suspend fun markAsRead(link: String) {
+        feedDao.markArticleAsRead(link)
     }
     
     suspend fun syncSource(source: SourceEntity) {
