@@ -3,6 +3,7 @@ package com.example.inoreaderlite.ui.screen
 import android.content.ClipData
 import android.content.ClipDescription
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
@@ -48,16 +50,18 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -158,6 +162,7 @@ fun HomeScreen(
                                 viewModel.selectSource(url)
                                 scope.launch { drawerState.close() }
                             },
+                            onDeleteSource = { viewModel.deleteSource(it) },
                             onDrop = { sourceUrl ->
                                 viewModel.moveSourceToFolder(sourceUrl, folder.name)
                             }
@@ -174,10 +179,15 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             orphanSources.forEach { source ->
-                                SourceDrawerItem(source, selectedSource == source.url) {
-                                    viewModel.selectSource(source.url)
-                                    scope.launch { drawerState.close() }
-                                }
+                                SwipeableSourceItem(
+                                    source = source,
+                                    isSelected = selectedSource == source.url,
+                                    onClick = {
+                                        viewModel.selectSource(source.url)
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    onDelete = { viewModel.deleteSource(it) }
+                                )
                             }
                         }
                     }
@@ -314,6 +324,7 @@ fun FolderItem(
     selectedSource: String?,
     onFolderClick: (String) -> Unit,
     onSourceClick: (String) -> Unit,
+    onDeleteSource: (String) -> Unit,
     onDrop: (String) -> Unit
 ) {
     var isOver by remember { mutableStateOf(false) }
@@ -369,8 +380,54 @@ fun FolderItem(
         }
         
         sources.forEach { source ->
-            SourceDrawerItem(source, selectedSource == source.url, onSourceClick)
+            SwipeableSourceItem(
+                source = source,
+                isSelected = selectedSource == source.url,
+                onClick = onSourceClick,
+                onDelete = onDeleteSource
+            )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeableSourceItem(
+    source: SourceEntity,
+    isSelected: Boolean,
+    onClick: (String) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == SwipeToDismissBoxValue.EndToStart) {
+                onDelete(source.url)
+                true
+            } else false
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            val color = when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.EndToStart -> Color.Red
+                else -> Color.Transparent
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(NavigationDrawerItemDefaults.ItemPadding)
+                    .background(color, CircleShape)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+            }
+        }
+    ) {
+        SourceDrawerItem(source, isSelected, onClick)
     }
 }
 
@@ -456,7 +513,6 @@ fun ArticleList(
                 .distinctUntilChanged()
                 .filter { it > 0 }
                 .collect { firstIndex ->
-                    // Mark articles above the current first visible item as read
                     for (i in 0 until firstIndex) {
                         if (i < articles.size) {
                             onMarkAsRead(articles[i].link)

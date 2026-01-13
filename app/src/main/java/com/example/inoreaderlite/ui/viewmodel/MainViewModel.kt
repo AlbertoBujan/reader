@@ -104,6 +104,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun deleteSource(url: String) {
+        viewModelScope.launch {
+            feedDao.deleteSource(url)
+            if (_selectedSource.value == url) {
+                _selectedSource.value = null
+            }
+        }
+    }
+
     fun addFolder(name: String) {
         viewModelScope.launch {
             feedDao.insertFolder(FolderEntity(name))
