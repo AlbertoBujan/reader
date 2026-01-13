@@ -28,7 +28,9 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "inoreader_lite.db"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides

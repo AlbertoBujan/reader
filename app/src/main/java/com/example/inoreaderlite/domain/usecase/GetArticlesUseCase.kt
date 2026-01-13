@@ -8,7 +8,11 @@ import javax.inject.Inject
 class GetArticlesUseCase @Inject constructor(
     private val repository: FeedRepository
 ) {
-    operator fun invoke(): Flow<List<ArticleEntity>> {
-        return repository.getAllArticles()
+    operator fun invoke(sourceUrl: String? = null): Flow<List<ArticleEntity>> {
+        return if (sourceUrl == null) {
+            repository.getAllArticles()
+        } else {
+            repository.getArticlesBySource(sourceUrl)
+        }
     }
 }

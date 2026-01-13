@@ -16,17 +16,18 @@ class FeedRepositoryImpl(
 
     override fun getAllArticles() = feedDao.getAllArticles()
 
+    override fun getArticlesBySource(sourceUrl: String) = feedDao.getArticlesBySource(sourceUrl)
+
     override fun getAllSources() = feedDao.getAllSources()
 
-    override suspend fun addSource(url: String) {
+    override suspend fun addSource(url: String, title: String?) {
         try {
             val response = feedService.fetchFeed(url)
             val articles = rssParser.parse(response.byteStream(), url)
             
-            // Basic title extraction
-            val title = "Feed from $url" 
+            val sourceTitle = if (!title.isNullOrBlank()) title else "Feed from $url" 
             
-            val source = SourceEntity(url = url, title = title, iconUrl = null)
+            val source = SourceEntity(url = url, title = sourceTitle, iconUrl = null)
             feedDao.insertSource(source)
             feedDao.insertArticles(articles)
         } catch (e: Exception) {
@@ -40,6 +41,10 @@ class FeedRepositoryImpl(
         for (source in sources) {
             syncSource(source)
         }
+    }
+
+    override suspend fun markAsRead(link: String) {
+        feedDao.markArticleAsRead(link)
     }
     
     suspend fun syncSource(source: SourceEntity) {

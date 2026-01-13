@@ -1,9 +1,22 @@
 package com.example.inoreaderlite.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "articles")
+@Entity(
+    tableName = "articles",
+    foreignKeys = [
+        ForeignKey(
+            entity = SourceEntity::class,
+            parentColumns = ["url"],
+            childColumns = ["sourceUrl"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["sourceUrl"])]
+)
 data class ArticleEntity(
     @PrimaryKey(autoGenerate = false)
     val link: String,
