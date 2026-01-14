@@ -2,6 +2,7 @@ package com.example.inoreaderlite.ui.screen
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -30,6 +31,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
@@ -97,6 +101,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -128,6 +133,7 @@ fun HomeScreen(
     val markAsReadOnScroll by viewModel.markAsReadOnScroll.collectAsState()
     val unreadCounts by viewModel.unreadCounts.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
+    val savedCount by viewModel.savedCount.collectAsState()
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
@@ -137,6 +143,7 @@ fun HomeScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // Manejo del botón atrás de Android
     BackHandler(enabled = drawerState.isOpen) {
@@ -195,6 +202,31 @@ fun HomeScreen(
                                     selected = selectedSource == null,
                                     onClick = {
                                         viewModel.selectSource(null)
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                )
+                            }
+
+                            item(key = "read_later") {
+                                NavigationDrawerItem(
+                                    icon = { Icon(Icons.Default.Bookmark, null) },
+                                    label = { 
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Read Later")
+                                            if (savedCount > 0) {
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(
+                                                    text = savedCount.toString(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    },
+                                    selected = selectedSource == "saved",
+                                    onClick = {
+                                        viewModel.selectSaved()
                                         scope.launch { drawerState.close() }
                                     },
                                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -274,12 +306,14 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 when {
+                                    selectedSource == "saved" -> "Read Later"
                                     selectedSource == null -> "Riffle"
                                     selectedSource!!.startsWith("folder:") -> "Folder: ${selectedSource!!.removePrefix("folder:")}"
                                     else -> sources.find { it.url == selectedSource }?.title ?: "Filtered Feed"
                                 }
                             )
                             val currentUnread = when {
+                                selectedSource == "saved" -> 0
                                 selectedSource == null -> unreadCounts.values.sum()
                                 selectedSource!!.startsWith("folder:") -> {
                                     val folderName = selectedSource!!.removePrefix("folder:")
@@ -326,10 +360,16 @@ fun HomeScreen(
                             markAsReadOnScroll = markAsReadOnScroll,
                             onMarkAsRead = { viewModel.markAsRead(it) },
                             onMarkAllAsRead = { viewModel.markAllAsRead() },
+                            onToggleSave = { link, isSaved -> 
+                                viewModel.toggleSaveArticle(link, isSaved)
+                                val message = if (isSaved) "Removed from Read Later" else "Added to Read Later"
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            },
                             onArticleClick = { link, isRead ->
                                 if (!isRead) viewModel.markAsRead(link)
                                 onArticleClick(link, isRead)
-                            }
+                            },
+                            isReadLaterView = selectedSource == "saved"
                         )
                     }
                     is FeedUiState.Error -> {
@@ -757,7 +797,9 @@ fun ArticleList(
     markAsReadOnScroll: Boolean,
     onMarkAsRead: (String) -> Unit,
     onMarkAllAsRead: () -> Unit,
-    onArticleClick: (String, Boolean) -> Unit
+    onToggleSave: (String, Boolean) -> Unit,
+    onArticleClick: (String, Boolean) -> Unit,
+    isReadLaterView: Boolean = false
 ) {
     val listState = rememberLazyListState()
 
@@ -789,14 +831,71 @@ fun ArticleList(
         modifier = Modifier.fillMaxSize()
     ) {
         items(articles, key = { it.link }) { article ->
-            ArticleItem(article, onArticleClick)
+            SwipeableArticleItem(
+                article = article,
+                onToggleSave = { onToggleSave(article.link, article.isSaved) },
+                onArticleClick = onArticleClick,
+                isReadLaterView = isReadLaterView
+            )
         }
         
-        if (articles.isNotEmpty()) {
+        if (articles.isNotEmpty() && !isReadLaterView) {
             item {
                 MarkAllAsReadButton(onMarkAllAsRead)
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeableArticleItem(
+    article: ArticleEntity,
+    onToggleSave: () -> Unit,
+    onArticleClick: (String, Boolean) -> Unit,
+    isReadLaterView: Boolean
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == SwipeToDismissBoxValue.StartToEnd || it == SwipeToDismissBoxValue.EndToStart) {
+                onToggleSave()
+                false // No queremos que desaparezca el item de la lista, solo togglear el estado
+            } else {
+                false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+        backgroundContent = {
+            val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
+            val color = if (isReadLaterView) Color(0xFFE53935) else Color(0xFFFFD600) // Rojo para borrar, Amarillo para guardar
+            val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+            val icon = when {
+                isReadLaterView -> Icons.Default.BookmarkRemove
+                article.isSaved -> Icons.Default.Bookmark
+                else -> Icons.Default.BookmarkBorder
+            }
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = alignment
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isReadLaterView) Color.White else Color.Black,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    ) {
+        ArticleItem(article, onArticleClick)
     }
 }
 
@@ -830,11 +929,14 @@ fun MarkAllAsReadButton(onMarkAllAsRead: () -> Unit) {
 fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
     Card(
         onClick = { onClick(article.link, article.isRead) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(if (article.isRead) 0.5f else 1f)
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(modifier = Modifier.padding(16.dp)) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .alpha(if (article.isRead) 0.5f else 1f)
+        ) {
             if (article.imageUrl != null) {
                 AsyncImage(
                     model = article.imageUrl,
@@ -846,13 +948,24 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
             }
             
             Column {
-                Text(
-                    text = article.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (article.isRead) Color.Gray else Color.Unspecified,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = article.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (article.isRead) Color.Gray else Color.Unspecified,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (article.isSaved) {
+                        Icon(
+                            Icons.Default.Bookmark, 
+                            contentDescription = "Saved",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp).padding(start = 4.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${formatDate(article.pubDate)} • ${article.sourceUrl}",

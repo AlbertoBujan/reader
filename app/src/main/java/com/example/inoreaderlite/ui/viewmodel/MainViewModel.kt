@@ -69,6 +69,9 @@ class MainViewModel @Inject constructor(
         .map { list -> list.associate { it.sourceUrl to it.count } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    val savedCount: StateFlow<Int> = feedDao.getSavedCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     init {
         // Carga inicial de artículos para ocultar
         updateHiddenArticles()
@@ -80,6 +83,7 @@ class MainViewModel @Inject constructor(
     }
     .flatMapLatest { (selector, hiddenLinks) ->
         val articlesFlow = when {
+            selector == "saved" -> feedDao.getSavedArticles()
             selector == null -> getArticlesUseCase()
             selector.startsWith("folder:") -> {
                 val folderName = selector.removePrefix("folder:")
@@ -89,7 +93,12 @@ class MainViewModel @Inject constructor(
         }
         articlesFlow.map<List<ArticleEntity>, FeedUiState> { articles ->
             // Filtramos solo los que estaban leídos al momento de la última recarga/navegación
-            FeedUiState.Success(articles.filter { it.link !in hiddenLinks })
+            // EXCEPTO si estamos en la vista de "saved", donde mostramos todo independientemente de si es leído
+            if (selector == "saved") {
+                FeedUiState.Success(articles)
+            } else {
+                FeedUiState.Success(articles.filter { it.link !in hiddenLinks })
+            }
         }
     }
     .catch { emit(FeedUiState.Error(it.message ?: "Unknown error")) }
@@ -113,6 +122,10 @@ class MainViewModel @Inject constructor(
     fun selectSource(url: String?) {
         updateHiddenArticles()
         _selectedSource.value = url
+    }
+
+    fun selectSaved() {
+        _selectedSource.value = "saved"
     }
 
     fun selectFolder(name: String) {
@@ -210,6 +223,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val selector = _selectedSource.value
             when {
+                selector == "saved" -> return@launch // No marcamos todo como leído en saved (opcional)
                 selector == null -> feedDao.markAllArticlesAsRead()
                 selector.startsWith("folder:") -> {
                     val folderName = selector.removePrefix("folder:")
@@ -218,7 +232,13 @@ class MainViewModel @Inject constructor(
                 else -> feedDao.markArticlesAsReadBySource(selector)
             }
             updateHiddenArticles()
-            sync() // Recargamos el feed después de marcar como leído
+            sync() 
+        }
+    }
+
+    fun toggleSaveArticle(link: String, isSaved: Boolean) {
+        viewModelScope.launch {
+            feedDao.updateArticleSavedStatus(link, !isSaved)
         }
     }
 }

@@ -27,6 +27,9 @@ interface FeedDao {
     """)
     fun getArticlesByFolder(folderName: String): Flow<List<ArticleEntity>>
 
+    @Query("SELECT * FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC")
+    fun getSavedArticles(): Flow<List<ArticleEntity>>
+
     @Query("SELECT * FROM articles WHERE link = :link LIMIT 1")
     fun getArticleByLink(link: String): Flow<ArticleEntity?>
 
@@ -35,6 +38,9 @@ interface FeedDao {
 
     @Query("SELECT sourceUrl, COUNT(*) as count FROM articles WHERE isRead = 0 GROUP BY sourceUrl")
     fun getUnreadCountsBySource(): Flow<List<SourceUnreadCount>>
+
+    @Query("SELECT COUNT(*) FROM articles WHERE isSaved = 1")
+    fun getSavedCount(): Flow<Int>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertArticles(articles: List<ArticleEntity>)
@@ -57,6 +63,9 @@ interface FeedDao {
 
     @Query("UPDATE articles SET isRead = 1 WHERE isRead = 0")
     suspend fun markAllArticlesAsRead()
+
+    @Query("UPDATE articles SET isSaved = :isSaved WHERE link = :link")
+    suspend fun updateArticleSavedStatus(link: String, isSaved: Boolean)
 
     // Source Management
     @Query("SELECT * FROM sources")
