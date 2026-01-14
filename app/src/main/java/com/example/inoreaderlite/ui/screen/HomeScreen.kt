@@ -958,11 +958,11 @@ fun SwipeableArticleItem(
         confirmValueChange = {
             when (it) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    if (isReadLaterView) onToggleSave() else onShare()
+                    onShare()
                     false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    if (isReadLaterView) onShare() else onToggleSave()
+                    onToggleSave()
                     false
                 }
                 else -> false
@@ -976,13 +976,16 @@ fun SwipeableArticleItem(
         backgroundContent = {
             val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
             
-            val isSharing = (direction == SwipeToDismissBoxValue.StartToEnd && !isReadLaterView) || 
-                            (direction == SwipeToDismissBoxValue.EndToStart && isReadLaterView)
+            // Standardized actions:
+            // StartToEnd (Right) -> Share
+            // EndToStart (Left) -> Toggle Save (Delete in Read Later)
+            
+            val isSharing = direction == SwipeToDismissBoxValue.StartToEnd
             
             val color = when {
-                isSharing -> Color(0xFF4CAF50) // Verde para compartir
-                isReadLaterView -> Color(0xFFE53935) // Rojo para borrar en Read Later
-                else -> Color(0xFFFFD600) // Amarillo para guardar
+                isSharing -> Color(0xFF4CAF50) // Share (Green)
+                isReadLaterView -> Color(0xFFE53935) // Delete from Read Later (Red)
+                else -> Color(0xFFFFD600) // Save to Read Later (Yellow)
             }
             
             val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
