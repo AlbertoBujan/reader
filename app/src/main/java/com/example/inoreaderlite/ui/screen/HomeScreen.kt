@@ -105,13 +105,17 @@ import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.inoreaderlite.data.local.entity.ArticleEntity
@@ -825,9 +829,39 @@ fun SwipeableSourceItem(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    var isDragging by remember { mutableStateOf(false) }
+    val backgroundColor = when {
+        isDragging -> MaterialTheme.colorScheme.primaryContainer // Highlight for dragging
+        isSelected -> MaterialTheme.colorScheme.secondaryContainer
+        else -> Color.Transparent
+    }
+    val contentColor = if (isSelected || isDragging) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     val haptic = LocalHapticFeedback.current
+    
+    // Preparation for custom drag shadow drawing
+    val density = LocalDensity.current
+    val textPaint = remember(contentColor, density) {
+        android.graphics.Paint().apply {
+            color = contentColor.toArgb()
+            textSize = with(density) { 14.sp.toPx() } // Approximate labelLarge size
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+    }
+    
+    // Shadow color should match the "Dragging" highlight color
+    val shadowContainerColor = MaterialTheme.colorScheme.primaryContainer
+
+    // Target to detect when drag ends to reset state (since source gesture gets cancelled)
+    val dndCallback = remember {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean = false
+            override fun onEnded(event: DragAndDropEvent) {
+                isDragging = false
+            }
+        }
+    }
 
     Surface(
         onClick = { onClick(source.url) },
@@ -836,9 +870,33 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
         contentColor = contentColor,
         modifier = Modifier
             .fillMaxWidth()
-            .dragAndDropSource {
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { true },
+                target = dndCallback
+            )
+            .dragAndDropSource(
+                drawDragDecoration = {
+                    // Draw the specialized highlight shadow
+                    
+                    // 1. Draw Background Pill
+                    drawRoundRect(
+                        color = shadowContainerColor,
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
+                        size = size
+                    )
+                    
+                    // 2. Draw Text (Centered)
+                    drawContext.canvas.nativeCanvas.drawText(
+                        source.title,
+                        size.width / 2,
+                        (size.height / 2) - ((textPaint.descent() + textPaint.ascent()) / 2),
+                        textPaint
+                    )
+                }
+            ) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
+                        isDragging = true
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         startTransfer(
                             DragAndDropTransferData(
@@ -847,8 +905,8 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
                         )
                     },
                     onDrag = { _, _ -> },
-                    onDragEnd = { },
-                    onDragCancel = { }
+                    onDragEnd = { isDragging = false },
+                    onDragCancel = { isDragging = false }
                 )
             }
     ) {
