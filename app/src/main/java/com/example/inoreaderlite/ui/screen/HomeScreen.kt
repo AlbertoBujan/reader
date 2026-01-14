@@ -5,6 +5,7 @@ import android.content.ClipDescription
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -26,9 +27,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
@@ -40,6 +43,8 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -117,6 +122,7 @@ fun HomeScreen(
     var showFolderDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var renamingSource by remember { mutableStateOf<SourceEntity?>(null) }
+    var renamingFolder by remember { mutableStateOf<String?>(null) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -183,7 +189,6 @@ fun HomeScreen(
                                     selectedSource = selectedSource,
                                     onFolderClick = { name ->
                                         viewModel.selectFolder(name)
-                                        scope.launch { drawerState.close() }
                                     },
                                     onSourceClick = { url ->
                                         viewModel.selectSource(url)
@@ -191,6 +196,8 @@ fun HomeScreen(
                                     },
                                     onDeleteSource = { viewModel.deleteSource(it) },
                                     onRenameSource = { renamingSource = it },
+                                    onRenameFolder = { renamingFolder = it },
+                                    onDeleteFolder = { viewModel.deleteFolder(it) },
                                     onDrop = { sourceUrl ->
                                         viewModel.moveSourceToFolder(sourceUrl, folder.name)
                                     }
@@ -347,6 +354,17 @@ fun HomeScreen(
                     }
                 )
             }
+
+            renamingFolder?.let { folderName ->
+                RenameFolderDialog(
+                    initialName = folderName,
+                    onDismiss = { renamingFolder = null },
+                    onConfirm = { newName ->
+                        viewModel.renameFolder(folderName, newName)
+                        renamingFolder = null
+                    }
+                )
+            }
         }
     }
 }
@@ -359,6 +377,24 @@ fun RenameSourceDialog(initialTitle: String, onDismiss: () -> Unit, onConfirm: (
         title = { Text("Rename Feed") },
         text = {
             TextField(value = text, onValueChange = { text = it }, label = { Text("Feed Title") }, singleLine = true)
+        },
+        confirmButton = {
+            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text("Rename") }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+fun RenameFolderDialog(initialName: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(initialName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename Folder") },
+        text = {
+            TextField(value = text, onValueChange = { text = it }, label = { Text("Folder Name") }, singleLine = true)
         },
         confirmButton = {
             Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text("Rename") }
@@ -424,10 +460,21 @@ fun FolderItem(
     onSourceClick: (String) -> Unit,
     onDeleteSource: (String) -> Unit,
     onRenameSource: (SourceEntity) -> Unit,
+    onRenameFolder: (String) -> Unit,
+    onDeleteFolder: (String) -> Unit,
     onDrop: (String) -> Unit
 ) {
     var isOver by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     val isFolderSelected = selectedSource == "folder:$folderName"
+    val isAnySourceSelected = remember(sources, selectedSource) { sources.any { it.url == selectedSource } }
+    var isExpanded by remember { mutableStateOf(isFolderSelected || isAnySourceSelected) }
+
+    LaunchedEffect(isFolderSelected, isAnySourceSelected) {
+        if (isFolderSelected || isAnySourceSelected) {
+            isExpanded = true
+        }
+    }
     
     val dndTarget = remember(folderName) {
         object : DragAndDropTarget {
@@ -457,43 +504,82 @@ fun FolderItem(
             )
             .padding(vertical = 4.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onFolderClick(folderName) }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Filled.Folder, 
-                contentDescription = null, 
-                tint = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = folderName, 
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (isOver || isFolderSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                modifier = Modifier.weight(1f)
-            )
-            if (folderUnreadCount > 0) {
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = { 
+                            isExpanded = !isExpanded
+                            onFolderClick(folderName) 
+                        },
+                        onLongClick = { showMenu = true }
+                    )
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    if (isExpanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    Icons.Filled.Folder, 
+                    contentDescription = null, 
+                    tint = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(12.dp))
                 Text(
-                    text = folderUnreadCount.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    text = folderName, 
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (isOver || isFolderSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                    modifier = Modifier.weight(1f)
+                )
+                if (folderUnreadCount > 0) {
+                    Text(
+                        text = folderUnreadCount.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Rename Folder") },
+                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                    onClick = {
+                        showMenu = false
+                        onRenameFolder(folderName)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete Folder & Feeds") },
+                    leadingIcon = { Icon(Icons.Default.Delete, null) },
+                    onClick = {
+                        showMenu = false
+                        onDeleteFolder(folderName)
+                    }
                 )
             }
         }
         
-        sources.forEach { source ->
-            SwipeableSourceItem(
-                source = source,
-                isSelected = selectedSource == source.url,
-                onClick = onSourceClick,
-                onDelete = onDeleteSource,
-                onRename = onRenameSource
-            )
+        if (isExpanded) {
+            sources.forEach { source ->
+                SwipeableSourceItem(
+                    source = source,
+                    isSelected = selectedSource == source.url,
+                    onClick = onSourceClick,
+                    onDelete = onDeleteSource,
+                    onRename = onRenameSource
+                )
+            }
         }
     }
 }

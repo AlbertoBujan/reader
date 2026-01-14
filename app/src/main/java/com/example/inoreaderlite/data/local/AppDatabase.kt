@@ -9,7 +9,7 @@ import com.example.inoreaderlite.data.local.entity.SourceEntity
 
 @Database(
     entities = [ArticleEntity::class, SourceEntity::class, FolderEntity::class],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

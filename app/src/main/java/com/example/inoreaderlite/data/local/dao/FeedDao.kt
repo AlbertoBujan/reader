@@ -73,6 +73,9 @@ interface FeedDao {
 
     @Query("DELETE FROM folders WHERE name = :name")
     suspend fun deleteFolder(name: String)
+
+    @Query("UPDATE folders SET name = :newName WHERE name = :oldName")
+    suspend fun renameFolder(oldName: String, newName: String)
 }
 
 data class SourceUnreadCount(

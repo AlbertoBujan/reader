@@ -161,6 +161,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun deleteFolder(name: String) {
+        viewModelScope.launch {
+            feedDao.deleteFolder(name)
+            if (_selectedSource.value == "folder:$name") {
+                _selectedSource.value = null
+            }
+        }
+    }
+
+    fun renameFolder(oldName: String, newName: String) {
+        viewModelScope.launch {
+            feedDao.renameFolder(oldName, newName)
+            if (_selectedSource.value == "folder:$oldName") {
+                _selectedSource.value = "folder:$newName"
+            }
+        }
+    }
+
     fun moveSourceToFolder(url: String, folderName: String?) {
         viewModelScope.launch {
             feedDao.updateSourceFolder(url, folderName)
