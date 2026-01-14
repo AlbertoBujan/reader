@@ -45,6 +45,19 @@ interface FeedDao {
     @Query("UPDATE articles SET isRead = 1 WHERE link = :link")
     suspend fun markArticleAsRead(link: String)
 
+    @Query("UPDATE articles SET isRead = 1 WHERE sourceUrl = :sourceUrl AND isRead = 0")
+    suspend fun markArticlesAsReadBySource(sourceUrl: String)
+
+    @Query("""
+        UPDATE articles SET isRead = 1 
+        WHERE sourceUrl IN (SELECT url FROM sources WHERE folderName = :folderName)
+        AND isRead = 0
+    """)
+    suspend fun markArticlesAsReadByFolder(folderName: String)
+
+    @Query("UPDATE articles SET isRead = 1 WHERE isRead = 0")
+    suspend fun markAllArticlesAsRead()
+
     // Source Management
     @Query("SELECT * FROM sources")
     fun getAllSources(): Flow<List<SourceEntity>>

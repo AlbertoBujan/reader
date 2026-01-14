@@ -205,4 +205,20 @@ class MainViewModel @Inject constructor(
             markArticleReadUseCase(link)
         }
     }
+
+    fun markAllAsRead() {
+        viewModelScope.launch {
+            val selector = _selectedSource.value
+            when {
+                selector == null -> feedDao.markAllArticlesAsRead()
+                selector.startsWith("folder:") -> {
+                    val folderName = selector.removePrefix("folder:")
+                    feedDao.markArticlesAsReadByFolder(folderName)
+                }
+                else -> feedDao.markArticlesAsReadBySource(selector)
+            }
+            updateHiddenArticles()
+            sync() // Recargamos el feed después de marcar como leído
+        }
+    }
 }

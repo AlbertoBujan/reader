@@ -27,11 +27,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
@@ -43,6 +45,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -322,6 +325,7 @@ fun HomeScreen(
                             articles = state.articles, 
                             markAsReadOnScroll = markAsReadOnScroll,
                             onMarkAsRead = { viewModel.markAsRead(it) },
+                            onMarkAllAsRead = { viewModel.markAllAsRead() },
                             onArticleClick = { link, isRead ->
                                 if (!isRead) viewModel.markAsRead(link)
                                 onArticleClick(link, isRead)
@@ -750,6 +754,7 @@ fun ArticleList(
     articles: List<ArticleEntity>, 
     markAsReadOnScroll: Boolean,
     onMarkAsRead: (String) -> Unit,
+    onMarkAllAsRead: () -> Unit,
     onArticleClick: (String, Boolean) -> Unit
 ) {
     val listState = rememberLazyListState()
@@ -783,6 +788,38 @@ fun ArticleList(
     ) {
         items(articles, key = { it.link }) { article ->
             ArticleItem(article, onArticleClick)
+        }
+        
+        if (articles.isNotEmpty()) {
+            item {
+                MarkAllAsReadButton(onMarkAllAsRead)
+            }
+        }
+    }
+}
+
+@Composable
+fun MarkAllAsReadButton(onMarkAllAsRead: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Button(
+            onClick = onMarkAllAsRead,
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Mark everything as read")
+            }
         }
     }
 }
