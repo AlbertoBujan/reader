@@ -987,16 +987,18 @@ fun ArticleList(
 
         LaunchedEffect(listState, currentArticles) {
             snapshotFlow { 
+                // Optimize: Map to indices to avoid triggering on every pixel scroll (offset changes)
+                val visibleIndices = listState.layoutInfo.visibleItemsInfo.map { it.index }
                 Triple(
                     listState.firstVisibleItemIndex,
-                    listState.layoutInfo.visibleItemsInfo,
+                    visibleIndices,
                     listState.isScrollInProgress
                 )
             }
-                .collect { (firstIndex, visibleItems, isScrolling) ->
+                .distinctUntilChanged() 
+                .collect { (firstIndex, visibleIndices, isScrolling) ->
                     // 1. Add currently visible items to seen set
-                    visibleItems.forEach { item ->
-                        val index = item.index
+                    visibleIndices.forEach { index ->
                         if (index in currentArticles.indices) {
                             seenArticles.add(currentArticles[index].link)
                         }
@@ -1130,8 +1132,19 @@ fun MarkAllAsReadButton(modifier: Modifier = Modifier, onMarkAllAsRead: () -> Un
     }
 }
 
+// Optimization: Reuse formatter. Note: SimpleDateFormat is not thread-safe, but strictly used on Main thread for UI is usually fine.
+// For absolute safety, we'd use ThreadLocal or just create it once per ViewModel/Screen.
+// Here we use a remember inside the composable, effectively reusing a cached instance if we wanted, 
+// but actually, just remembering the String result is enough to avoid re-formatting.
+// To avoid creating SDF every time, we can place it in a companion object or top level.
+private val DateFormatter = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
+
 @Composable
 fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
+    val formattedDate = remember(article.pubDate) {
+        DateFormatter.format(Date(article.pubDate))
+    }
+
     Card(
         onClick = { onClick(article.link, article.isRead) },
         shape = RoundedCornerShape(12.dp),
@@ -1173,7 +1186,7 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${formatDate(article.pubDate)} • ${article.sourceUrl}",
+                    text = "$formattedDate • ${article.sourceUrl}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -1218,7 +1231,4 @@ fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String, String?) -> Unit) {
     )
 }
 
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
-}
+
