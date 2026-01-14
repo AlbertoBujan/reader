@@ -13,6 +13,7 @@ import com.example.inoreaderlite.domain.usecase.GetArticlesUseCase
 import com.example.inoreaderlite.domain.usecase.MarkArticleReadUseCase
 import com.example.inoreaderlite.domain.usecase.SyncFeedsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,13 +26,26 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
+import java.net.URL
+import java.security.cert.X509Certificate
 import javax.inject.Inject
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 sealed interface FeedUiState {
     data object Loading : FeedUiState
     data class Success(val articles: List<ArticleEntity>) : FeedUiState
     data class Error(val message: String) : FeedUiState
 }
+
+data class DiscoveredFeed(
+    val title: String,
+    val url: String
+)
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -55,6 +69,12 @@ class MainViewModel @Inject constructor(
 
     private val _isDarkMode = MutableStateFlow(preferencesManager.isDarkMode())
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    private val _discoveredFeeds = MutableStateFlow<List<DiscoveredFeed>>(emptyList())
+    val discoveredFeeds: StateFlow<List<DiscoveredFeed>> = _discoveredFeeds.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
     // Enlaces de artículos que deben estar ocultos (ya estaban leídos en la última recarga)
     private val _hiddenArticleLinks = MutableStateFlow<Set<String>>(emptySet())
@@ -240,5 +260,108 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             feedDao.updateArticleSavedStatus(link, !isSaved)
         }
+    }
+
+    fun searchFeeds(query: String) {
+        viewModelScope.launch {
+            _isSearching.value = true
+            _discoveredFeeds.value = emptyList()
+            try {
+                val discovered = withContext(Dispatchers.IO) {
+                    val results = mutableListOf<DiscoveredFeed>()
+                    val cleanQuery = query.trim().lowercase()
+                    
+                    // Lista de URLs a probar
+                    val urlsToTry = mutableListOf<String>()
+                    if (cleanQuery.startsWith("http")) {
+                        urlsToTry.add(cleanQuery)
+                    } else {
+                        urlsToTry.add("https://$cleanQuery")
+                        urlsToTry.add("https://www.$cleanQuery")
+                        urlsToTry.add("http://$cleanQuery")
+                    }
+
+                    for (baseUrl in urlsToTry) {
+                        try {
+                            val doc = Jsoup.connect(baseUrl)
+                                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                                .timeout(8000)
+                                .sslSocketFactory(createTrustAllSslSocketFactory())
+                                .followRedirects(true)
+                                .get()
+
+                            // 1. Buscar en etiquetas <link> del head
+                            doc.select("link[type*=rss], link[type*=atom], link[type*=xml][rel=alternate]").forEach { element ->
+                                val href = element.attr("abs:href")
+                                val title = element.attr("title").ifBlank { doc.title() }
+                                if (href.isNotBlank()) {
+                                    results.add(DiscoveredFeed(title, href))
+                                }
+                            }
+
+                            // 2. Si no hay nada, buscar en enlaces <a> con texto sospechoso
+                            if (results.isEmpty()) {
+                                doc.select("a[href*=rss], a[href*=feed]").forEach { element ->
+                                    val href = element.attr("abs:href")
+                                    if (href.contains(".xml") || href.contains("rss") || href.contains("feed")) {
+                                        results.add(DiscoveredFeed(element.text().ifBlank { "Feed: ${doc.title()}" }, href))
+                                    }
+                                }
+                            }
+                            
+                            // Si encontramos algo en esta URL, paramos de probar otras bases
+                            if (results.isNotEmpty()) break
+                            
+                        } catch (e: Exception) {
+                            // Silently fail during auto-discovery to clean up logs
+                        }
+                    }
+
+                    // 3. Fallback: Probar rutas directas comunes si seguimos sin nada
+                    if (results.isEmpty()) {
+                        val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml")
+                        val domain = if (cleanQuery.startsWith("http")) {
+                            try { URL(cleanQuery).host } catch (e: Exception) { cleanQuery }
+                        } else {
+                            cleanQuery
+                        }
+                        
+                        for (path in commonPaths) {
+                            val testUrl = "https://$domain$path"
+                            try {
+                                val response = Jsoup.connect(testUrl)
+                                    .userAgent("Mozilla/5.0")
+                                    .timeout(3000)
+                                    .sslSocketFactory(createTrustAllSslSocketFactory())
+                                    .ignoreContentType(true)
+                                    .execute()
+                                if (response.contentType()?.contains("xml") == true) {
+                                    results.add(DiscoveredFeed("Direct Feed: $path", testUrl))
+                                }
+                            } catch (e: Exception) { /* ignore */ }
+                        }
+                    }
+
+                    results.distinctBy { it.url }
+                }
+                _discoveredFeeds.value = discovered
+            } catch (e: Exception) {
+                // Silently ignore top level search errors
+            } finally {
+                _isSearching.value = false
+            }
+        }
+    }
+
+    private fun createTrustAllSslSocketFactory(): SSLSocketFactory {
+        val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        })
+
+        val sslContext = SSLContext.getInstance("SSL")
+        sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+        return sslContext.socketFactory
     }
 }

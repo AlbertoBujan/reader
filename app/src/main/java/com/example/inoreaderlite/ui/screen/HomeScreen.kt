@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -60,6 +61,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -109,6 +111,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.inoreaderlite.data.local.entity.ArticleEntity
 import com.example.inoreaderlite.data.local.entity.SourceEntity
+import com.example.inoreaderlite.ui.viewmodel.DiscoveredFeed
 import com.example.inoreaderlite.ui.viewmodel.FeedUiState
 import com.example.inoreaderlite.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -137,6 +140,7 @@ fun HomeScreen(
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var renamingSource by remember { mutableStateOf<SourceEntity?>(null) }
     var renamingFolder by remember { mutableStateOf<String?>(null) }
@@ -174,6 +178,9 @@ fun HomeScreen(
                             Row {
                                 IconButton(onClick = { showSettingsDialog = true }) {
                                     Icon(Icons.Default.Settings, contentDescription = "Settings")
+                                }
+                                IconButton(onClick = { showSearchDialog = true }) {
+                                    Icon(Icons.Default.Search, contentDescription = "Search Feeds")
                                 }
                                 IconButton(onClick = { showFolderDialog = true }) {
                                     Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
@@ -400,6 +407,13 @@ fun HomeScreen(
                 )
             }
 
+            if (showSearchDialog) {
+                SearchFeedDialog(
+                    onDismiss = { showSearchDialog = false },
+                    viewModel = viewModel
+                )
+            }
+
             if (showSettingsDialog) {
                 SettingsDialog(
                     onDismiss = { showSettingsDialog = false },
@@ -433,6 +447,62 @@ fun HomeScreen(
             }
         }
     }
+}
+
+@Composable
+fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
+    var query by remember { mutableStateOf("") }
+    val feeds by viewModel.discoveredFeeds.collectAsState()
+    val isSearching by viewModel.isSearching.collectAsState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Search Feeds") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("URL or Domain (e.g. xataka.com)") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    IconButton(onClick = { viewModel.searchFeeds(query) }, enabled = query.isNotBlank() && !isSearching) {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (isSearching) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.height(300.dp)) {
+                        items(feeds) { feed ->
+                            ListItem(
+                                headlineContent = { Text(feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                supportingContent = { Text(feed.url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                trailingContent = {
+                                    IconButton(onClick = { 
+                                        viewModel.addSource(feed.url, feed.title)
+                                        onDismiss()
+                                    }) {
+                                        Icon(Icons.Default.Add, contentDescription = "Add")
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }
 
 @Composable
