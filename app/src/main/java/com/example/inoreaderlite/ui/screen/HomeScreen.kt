@@ -105,7 +105,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -824,6 +826,7 @@ fun SwipeableSourceItem(
 fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val haptic = LocalHapticFeedback.current
 
     Surface(
         onClick = { onClick(source.url) },
@@ -835,6 +838,7 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
             .dragAndDropSource {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         startTransfer(
                             DragAndDropTransferData(
                                 clipData = ClipData.newPlainText("sourceUrl", source.url)
