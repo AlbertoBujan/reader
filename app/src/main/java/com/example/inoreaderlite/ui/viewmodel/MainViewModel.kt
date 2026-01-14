@@ -349,27 +349,34 @@ class MainViewModel @Inject constructor(
 
                         // Fallback: Probar rutas directas comunes
                         if (results.isEmpty()) {
-                            val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml")
-                            val host = if (domain.startsWith("http")) {
+                            val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml", "/atom.xml", "/feed.xml")
+                            var host = if (domain.startsWith("http")) {
                                 try { URL(domain).host } catch (e: Exception) { domain }
                             } else {
                                 domain
                             }
+                            // Normalize host
+                            host = host.removePrefix("www.")
                             
-                            for (path in commonPaths) {
-                                val testUrl = "https://$host$path"
-                                try {
-                                    Log.d("FeedSearch", "Trying common path: $testUrl")
-                                    val response = Jsoup.connect(testUrl)
-                                        .userAgent("Mozilla/5.0")
-                                        .timeout(3000)
-                                        .sslSocketFactory(createTrustAllSslSocketFactory())
-                                        .ignoreContentType(true)
-                                        .execute()
-                                    if (response.contentType()?.contains("xml") == true) {
-                                        results.add(DiscoveredFeed("Direct Feed: $path", testUrl, queryIconUrl, clearbitName))
-                                    }
-                                } catch (e: Exception) { }
+                            val hostsToTry = listOf(host, "www.$host")
+                            
+                            for (h in hostsToTry) {
+                                for (path in commonPaths) {
+                                    val testUrl = "https://$h$path"
+                                    try {
+                                        Log.d("FeedSearch", "Trying common path: $testUrl")
+                                        val response = Jsoup.connect(testUrl)
+                                            .userAgent("Mozilla/5.0")
+                                            .timeout(3000)
+                                            .sslSocketFactory(createTrustAllSslSocketFactory())
+                                            .ignoreContentType(true)
+                                            .execute()
+                                        if (response.contentType()?.contains("xml") == true) {
+                                            results.add(DiscoveredFeed("Direct Feed: $path", testUrl, queryIconUrl, clearbitName))
+                                        }
+                                    } catch (e: Exception) { }
+                                }
+                                if (results.isNotEmpty()) break
                             }
                         }
                         
