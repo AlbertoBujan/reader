@@ -178,14 +178,11 @@ fun HomeScreen(
                         ) {
                             Text(text = "Subscriptions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Row {
-                                IconButton(onClick = { showSettingsDialog = true }) {
-                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                                IconButton(onClick = { showFolderDialog = true }) {
+                                    Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
                                 }
                                 IconButton(onClick = { showSearchDialog = true }) {
                                     Icon(Icons.Default.Search, contentDescription = "Search Feeds")
-                                }
-                                IconButton(onClick = { showFolderDialog = true }) {
-                                    Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
                                 }
                             }
                         }
@@ -302,6 +299,14 @@ fun HomeScreen(
                             .padding(16.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Add Source")
+                    }
+                    IconButton(
+                        onClick = { showSettingsDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
             }
@@ -475,7 +480,7 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                     TextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text("URL or Domain (e.g. xataka.com)") },
+                        label = { Text("Search websites...") },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
