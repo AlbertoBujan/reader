@@ -86,6 +86,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -910,19 +911,48 @@ fun ArticleList(
     val listState = rememberLazyListState()
 
     val currentArticles by rememberUpdatedState(articles)
+    
+    // Logic to scroll to top when new articles arrive (newer than what we've seen)
+    var lastMaxPubDate by remember { mutableLongStateOf(0L) }
+    
+    LaunchedEffect(articles) {
+        val maxPubDate = articles.maxOfOrNull { it.pubDate } ?: 0L
+        if (lastMaxPubDate > 0 && maxPubDate > lastMaxPubDate) {
+            listState.animateScrollToItem(0)
+        }
+        lastMaxPubDate = maxPubDate
+    }
 
     if (markAsReadOnScroll) {
-        LaunchedEffect(listState) {
-            snapshotFlow { listState.firstVisibleItemIndex }
-                .distinctUntilChanged()
-                .filter { it > 0 }
-                .collect { firstIndex ->
-                    for (i in 0 until firstIndex) {
-                        // Check bounds and only mark if NOT already read to avoid valid ANR loop
-                        if (i < currentArticles.size) {
-                            val article = currentArticles[i]
-                            if (!article.isRead) {
-                                onMarkAsRead(article.link)
+        // Track articles that have actually been visible on screen
+        val seenArticles = remember { mutableSetOf<String>() }
+
+        LaunchedEffect(listState, currentArticles) {
+            snapshotFlow { 
+                Triple(
+                    listState.firstVisibleItemIndex,
+                    listState.layoutInfo.visibleItemsInfo,
+                    listState.isScrollInProgress
+                )
+            }
+                .collect { (firstIndex, visibleItems, isScrolling) ->
+                    // 1. Add currently visible items to seen set
+                    visibleItems.forEach { item ->
+                        val index = item.index
+                        if (index in currentArticles.indices) {
+                            seenArticles.add(currentArticles[index].link)
+                        }
+                    }
+
+                    // 2. Mark items above as read ONLY if they have been seen and we are scrolling
+                    if (firstIndex > 0 && isScrolling) {
+                        for (i in 0 until firstIndex) {
+                            if (i < currentArticles.size) {
+                                val article = currentArticles[i]
+                                // Critical fix: Only mark as read if we have established that the user SAW this article
+                                if (!article.isRead && article.link in seenArticles) {
+                                    onMarkAsRead(article.link)
+                                }
                             }
                         }
                     }
