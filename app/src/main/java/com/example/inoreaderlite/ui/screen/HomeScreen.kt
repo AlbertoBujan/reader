@@ -483,11 +483,22 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                     LazyColumn(modifier = Modifier.height(300.dp)) {
                         items(feeds) { feed ->
                             ListItem(
-                                headlineContent = { Text(feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                leadingContent = {
+                                    if (feed.iconUrl != null) {
+                                        AsyncImage(
+                                            model = feed.iconUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp).clip(CircleShape)
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.RssFeed, null)
+                                    }
+                                },
+                                headlineContent = { Text(feed.siteName ?: feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 supportingContent = { Text(feed.url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 trailingContent = {
                                     IconButton(onClick = { 
-                                        viewModel.addSource(feed.url, feed.title)
+                                        viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
                                         onDismiss()
                                     }) {
                                         Icon(Icons.Default.Add, contentDescription = "Add")
@@ -828,7 +839,11 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
             horizontalArrangement = Arrangement.Center
         ) {
             if (source.iconUrl != null) {
-                AsyncImage(model = source.iconUrl, contentDescription = null, modifier = Modifier.size(24.dp))
+                AsyncImage(
+                    model = source.iconUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp).clip(CircleShape)
+                )
             } else {
                 Icon(Icons.Filled.RssFeed, null, modifier = Modifier.size(20.dp))
             }

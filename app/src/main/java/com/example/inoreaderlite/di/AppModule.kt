@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.inoreaderlite.data.local.AppDatabase
 import com.example.inoreaderlite.data.local.dao.FeedDao
+import com.example.inoreaderlite.data.remote.ClearbitService
 import com.example.inoreaderlite.data.remote.FeedService
 import com.example.inoreaderlite.data.remote.RssParser
 import com.example.inoreaderlite.data.repository.FeedRepositoryImpl
@@ -15,6 +16,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.security.cert.X509Certificate
 import javax.inject.Singleton
 import javax.net.ssl.SSLContext
@@ -47,7 +49,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFeedService(): FeedService {
+    fun provideUnsafeOkHttpClient(): OkHttpClient {
         val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
             override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
@@ -57,16 +59,31 @@ object AppModule {
         val sslContext = SSLContext.getInstance("SSL")
         sslContext.init(null, trustAllCerts, java.security.SecureRandom())
 
-        val client = OkHttpClient.Builder()
+        return OkHttpClient.Builder()
             .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
             .hostnameVerifier { _, _ -> true }
             .build()
+    }
 
+    @Provides
+    @Singleton
+    fun provideFeedService(client: OkHttpClient): FeedService {
         return Retrofit.Builder()
             .baseUrl("https://localhost/") // Dummy Base URL as we use dynamic @Url
             .client(client)
             .build()
             .create(FeedService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideClearbitService(client: OkHttpClient): ClearbitService {
+        return Retrofit.Builder()
+            .baseUrl("https://autocomplete.clearbit.com/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ClearbitService::class.java)
     }
 
     @Provides

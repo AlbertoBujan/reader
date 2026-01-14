@@ -1,5 +1,6 @@
 package com.example.inoreaderlite.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inoreaderlite.data.local.PreferencesManager
@@ -7,6 +8,7 @@ import com.example.inoreaderlite.data.local.dao.FeedDao
 import com.example.inoreaderlite.data.local.entity.ArticleEntity
 import com.example.inoreaderlite.data.local.entity.FolderEntity
 import com.example.inoreaderlite.data.local.entity.SourceEntity
+import com.example.inoreaderlite.data.remote.ClearbitService
 import com.example.inoreaderlite.domain.usecase.AddSourceUseCase
 import com.example.inoreaderlite.domain.usecase.GetAllSourcesUseCase
 import com.example.inoreaderlite.domain.usecase.GetArticlesUseCase
@@ -44,7 +46,9 @@ sealed interface FeedUiState {
 
 data class DiscoveredFeed(
     val title: String,
-    val url: String
+    val url: String,
+    val iconUrl: String? = null,
+    val siteName: String? = null
 )
 
 @HiltViewModel
@@ -55,6 +59,7 @@ class MainViewModel @Inject constructor(
     private val markArticleReadUseCase: MarkArticleReadUseCase,
     private val feedDao: FeedDao,
     private val preferencesManager: PreferencesManager,
+    private val clearbitService: ClearbitService,
     getAllSourcesUseCase: GetAllSourcesUseCase
 ) : ViewModel() {
 
@@ -169,10 +174,10 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun addSource(url: String, title: String?) {
+    fun addSource(url: String, title: String?, iconUrl: String? = null) {
         viewModelScope.launch {
             try {
-                addSourceUseCase(url, title)
+                addSourceUseCase(url, title, iconUrl)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -271,82 +276,113 @@ class MainViewModel @Inject constructor(
                     val results = mutableListOf<DiscoveredFeed>()
                     val cleanQuery = query.trim().lowercase()
                     
-                    // Lista de URLs a probar
-                    val urlsToTry = mutableListOf<String>()
-                    if (cleanQuery.startsWith("http")) {
-                        urlsToTry.add(cleanQuery)
-                    } else {
-                        urlsToTry.add("https://$cleanQuery")
-                        urlsToTry.add("https://www.$cleanQuery")
-                        urlsToTry.add("http://$cleanQuery")
+                    val domainsToTry = mutableListOf<String>()
+                    var clearbitName: String? = null
+                    var queryIconUrl: String? = null
+
+                    // 1. Usar Clearbit para obtener el dominio si no parece una URL directa
+                    if (!cleanQuery.contains(".") || !cleanQuery.startsWith("http")) {
+                        try {
+                            Log.d("FeedSearch", "Querying Clearbit for: $cleanQuery")
+                            val suggestions = clearbitService.suggestCompanies(cleanQuery)
+                            Log.d("FeedSearch", "Clearbit returned ${suggestions.size} suggestions")
+                            suggestions.forEach { suggestion ->
+                                domainsToTry.add(suggestion.domain)
+                                if (clearbitName == null) clearbitName = suggestion.name
+                                if (queryIconUrl == null) queryIconUrl = suggestion.logo
+                            }
+                        } catch (e: Exception) {
+                            Log.e("FeedSearch", "Clearbit error: ${e.message}")
+                        }
+                    }
+                    
+                    // Siempre añadir el query original por si acaso
+                    if (!domainsToTry.contains(cleanQuery)) {
+                        domainsToTry.add(0, cleanQuery)
                     }
 
-                    for (baseUrl in urlsToTry) {
-                        try {
-                            val doc = Jsoup.connect(baseUrl)
-                                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                                .timeout(8000)
-                                .sslSocketFactory(createTrustAllSslSocketFactory())
-                                .followRedirects(true)
-                                .get()
+                    for (domain in domainsToTry) {
+                        val urlsToTry = mutableListOf<String>()
+                        if (domain.startsWith("http")) {
+                            urlsToTry.add(domain)
+                        } else {
+                            urlsToTry.add("https://$domain")
+                            urlsToTry.add("https://www.$domain")
+                            urlsToTry.add("http://$domain")
+                        }
 
-                            // 1. Buscar en etiquetas <link> del head
-                            doc.select("link[type*=rss], link[type*=atom], link[type*=xml][rel=alternate]").forEach { element ->
-                                val href = element.attr("abs:href")
-                                val title = element.attr("title").ifBlank { doc.title() }
-                                if (href.isNotBlank()) {
-                                    results.add(DiscoveredFeed(title, href))
-                                }
-                            }
+                        for (baseUrl in urlsToTry) {
+                            try {
+                                Log.d("FeedSearch", "Trying base URL: $baseUrl")
+                                val doc = Jsoup.connect(baseUrl)
+                                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                                    .timeout(8000)
+                                    .sslSocketFactory(createTrustAllSslSocketFactory())
+                                    .followRedirects(true)
+                                    .get()
 
-                            // 2. Si no hay nada, buscar en enlaces <a> con texto sospechoso
-                            if (results.isEmpty()) {
-                                doc.select("a[href*=rss], a[href*=feed]").forEach { element ->
+                                // Buscar en etiquetas <link> del head
+                                doc.select("link[type*=rss], link[type*=atom], link[type*=xml][rel=alternate]").forEach { element ->
                                     val href = element.attr("abs:href")
-                                    if (href.contains(".xml") || href.contains("rss") || href.contains("feed")) {
-                                        results.add(DiscoveredFeed(element.text().ifBlank { "Feed: ${doc.title()}" }, href))
+                                    val title = element.attr("title").ifBlank { doc.title() }
+                                    if (href.isNotBlank()) {
+                                        results.add(DiscoveredFeed(title, href, queryIconUrl, clearbitName))
                                     }
                                 }
+
+                                // Si no hay nada, buscar en enlaces <a> con texto sospechoso
+                                if (results.isEmpty()) {
+                                    doc.select("a[href*=rss], a[href*=feed]").forEach { element ->
+                                        val href = element.attr("abs:href")
+                                        if (href.contains(".xml") || href.contains("rss") || href.contains("feed")) {
+                                            results.add(DiscoveredFeed(element.text().ifBlank { "Feed: ${doc.title()}" }, href, queryIconUrl, clearbitName))
+                                        }
+                                    }
+                                }
+                                
+                                if (results.isNotEmpty()) break
+                                
+                            } catch (e: Exception) {
+                                Log.d("FeedSearch", "Failed base URL $baseUrl: ${e.message}")
+                            }
+                        }
+
+                        // Fallback: Probar rutas directas comunes
+                        if (results.isEmpty()) {
+                            val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml")
+                            val host = if (domain.startsWith("http")) {
+                                try { URL(domain).host } catch (e: Exception) { domain }
+                            } else {
+                                domain
                             }
                             
-                            // Si encontramos algo en esta URL, paramos de probar otras bases
-                            if (results.isNotEmpty()) break
-                            
-                        } catch (e: Exception) {
-                            // Silently fail during auto-discovery to clean up logs
-                        }
-                    }
-
-                    // 3. Fallback: Probar rutas directas comunes si seguimos sin nada
-                    if (results.isEmpty()) {
-                        val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml")
-                        val domain = if (cleanQuery.startsWith("http")) {
-                            try { URL(cleanQuery).host } catch (e: Exception) { cleanQuery }
-                        } else {
-                            cleanQuery
+                            for (path in commonPaths) {
+                                val testUrl = "https://$host$path"
+                                try {
+                                    Log.d("FeedSearch", "Trying common path: $testUrl")
+                                    val response = Jsoup.connect(testUrl)
+                                        .userAgent("Mozilla/5.0")
+                                        .timeout(3000)
+                                        .sslSocketFactory(createTrustAllSslSocketFactory())
+                                        .ignoreContentType(true)
+                                        .execute()
+                                    if (response.contentType()?.contains("xml") == true) {
+                                        results.add(DiscoveredFeed("Direct Feed: $path", testUrl, queryIconUrl, clearbitName))
+                                    }
+                                } catch (e: Exception) { }
+                            }
                         }
                         
-                        for (path in commonPaths) {
-                            val testUrl = "https://$domain$path"
-                            try {
-                                val response = Jsoup.connect(testUrl)
-                                    .userAgent("Mozilla/5.0")
-                                    .timeout(3000)
-                                    .sslSocketFactory(createTrustAllSslSocketFactory())
-                                    .ignoreContentType(true)
-                                    .execute()
-                                if (response.contentType()?.contains("xml") == true) {
-                                    results.add(DiscoveredFeed("Direct Feed: $path", testUrl))
-                                }
-                            } catch (e: Exception) { /* ignore */ }
-                        }
+                        // Si ya encontramos feeds para un dominio de Clearbit, paramos de probar los demás dominios
+                        if (results.isNotEmpty()) break
                     }
 
                     results.distinctBy { it.url }
                 }
+                Log.d("FeedSearch", "Final discovery count: ${discovered.size}")
                 _discoveredFeeds.value = discovered
             } catch (e: Exception) {
-                // Silently ignore top level search errors
+                Log.e("FeedSearch", "SearchFeeds top level error: ${e.message}")
             } finally {
                 _isSearching.value = false
             }

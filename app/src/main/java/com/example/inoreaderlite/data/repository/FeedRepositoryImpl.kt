@@ -20,14 +20,14 @@ class FeedRepositoryImpl(
 
     override fun getAllSources() = feedDao.getAllSources()
 
-    override suspend fun addSource(url: String, title: String?) {
+    override suspend fun addSource(url: String, title: String?, iconUrl: String?) {
         try {
             val response = feedService.fetchFeed(url)
             val articles = rssParser.parse(response.byteStream(), url)
             
             val sourceTitle = if (!title.isNullOrBlank()) title else "Feed from $url" 
             
-            val source = SourceEntity(url = url, title = sourceTitle, iconUrl = null)
+            val source = SourceEntity(url = url, title = sourceTitle, iconUrl = iconUrl)
             feedDao.insertSource(source)
             feedDao.insertArticles(articles)
         } catch (e: Exception) {
