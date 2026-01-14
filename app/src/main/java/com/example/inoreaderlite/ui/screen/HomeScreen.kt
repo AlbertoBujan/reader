@@ -1036,7 +1036,7 @@ fun ArticleList(
         
         if (articles.isNotEmpty() && !isReadLaterView) {
             item {
-                MarkAllAsReadButton(modifier = Modifier.fillParentMaxHeight(), onMarkAllAsRead = onMarkAllAsRead)
+                MarkAllAsReadButton(modifier = Modifier.height(LocalConfiguration.current.screenHeightDp.dp), onMarkAllAsRead = onMarkAllAsRead)
             }
         }
     }
