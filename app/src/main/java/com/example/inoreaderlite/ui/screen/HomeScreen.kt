@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -60,6 +61,7 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -72,6 +74,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -81,12 +84,15 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -103,6 +109,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -116,8 +123,8 @@ fun HomeScreen(
     val folders by viewModel.folders.collectAsState()
     val selectedSource by viewModel.selectedSource.collectAsState()
     val markAsReadOnScroll by viewModel.markAsReadOnScroll.collectAsState()
-    val isDarkMode by viewModel.isDarkMode.collectAsState()
     val unreadCounts by viewModel.unreadCounts.collectAsState()
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
@@ -207,10 +214,10 @@ fun HomeScreen(
                                         viewModel.selectSource(url)
                                         scope.launch { drawerState.close() }
                                     },
-                                    onDeleteSource = { viewModel.deleteSource(it) },
-                                    onRenameSource = { renamingSource = it },
-                                    onRenameFolder = { renamingFolder = it },
-                                    onDeleteFolder = { viewModel.deleteFolder(it) },
+                                    onDeleteSource = { url -> viewModel.deleteSource(url) },
+                                    onRenameSource = { source -> renamingSource = source },
+                                    onRenameFolder = { name -> renamingFolder = name },
+                                    onDeleteFolder = { name -> viewModel.deleteFolder(name) },
                                     onDrop = { sourceUrl ->
                                         viewModel.moveSourceToFolder(sourceUrl, folder.name)
                                     }
@@ -227,16 +234,18 @@ fun HomeScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     orphanSources.forEach { source ->
-                                        SwipeableSourceItem(
-                                            source = source,
-                                            isSelected = selectedSource == source.url,
-                                            onClick = {
-                                                viewModel.selectSource(source.url)
-                                                scope.launch { drawerState.close() }
-                                            },
-                                            onDelete = { viewModel.deleteSource(it) },
-                                            onRename = { renamingSource = it }
-                                        )
+                                        key(source.url) {
+                                            SwipeableSourceItem(
+                                                source = source,
+                                                isSelected = selectedSource == source.url,
+                                                onClick = {
+                                                    viewModel.selectSource(source.url)
+                                                    scope.launch { drawerState.close() }
+                                                },
+                                                onDelete = { viewModel.deleteSource(source.url) },
+                                                onRename = { renamingSource = source }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -457,9 +466,82 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("Close") }
+            Button(onClick = { onDismiss() }) { Text("Close") }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeActionBackground(dismissState: SwipeToDismissBoxState, shape: Shape) {
+    val direction = dismissState.dismissDirection ?: return
+    val isMoving = dismissState.currentValue != dismissState.targetValue || dismissState.progress != 0f
+
+    if (!isMoving) return
+
+    val isDelete = direction == SwipeToDismissBoxValue.EndToStart
+    val color = if (isDelete) Color(0xFFE53935) else Color(0xFF1E88E5)
+    val alignment = if (isDelete) Alignment.CenterEnd else Alignment.CenterStart
+    val icon = if (isDelete) Icons.Default.Delete else Icons.Default.Edit
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(color)
+            .padding(horizontal = 24.dp),
+        contentAlignment = alignment
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeableItem(
+    onDelete: () -> Unit,
+    onEdit: () -> Unit,
+    modifier: Modifier = Modifier,
+    shape: Shape = RectangleShape,
+    content: @Composable () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            when (it) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDelete()
+                    true
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onEdit()
+                    false
+                }
+                else -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        backgroundContent = { SwipeActionBackground(dismissState, shape) }
+    ) {
+        // We use a Surface here to ensure the item is opaque and covers the swipe background
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceContainerLow
+        ) {
+            content()
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -478,7 +560,6 @@ fun FolderItem(
     onDrop: (String) -> Unit
 ) {
     var isOver by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
     val isFolderSelected = selectedSource == "folder:$folderName"
     val isAnySourceSelected = remember(sources, selectedSource) { sources.any { it.url == selectedSource } }
     var isExpanded by remember { mutableStateOf(isFolderSelected || isAnySourceSelected) }
@@ -517,18 +598,20 @@ fun FolderItem(
             )
             .padding(vertical = 4.dp)
     ) {
-        Box {
+        SwipeableItem(
+            onDelete = { onDeleteFolder(folderName) },
+            onEdit = { onRenameFolder(folderName) },
+            modifier = Modifier.padding(horizontal = 12.dp),
+            shape = CircleShape
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = { 
-                            isExpanded = !isExpanded
-                            onFolderClick(folderName) 
-                        },
-                        onLongClick = { showMenu = true }
-                    )
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .clickable { 
+                        isExpanded = !isExpanded
+                        onFolderClick(folderName) 
+                    }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -559,111 +642,45 @@ fun FolderItem(
                     )
                 }
             }
-            
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Rename Folder") },
-                    leadingIcon = { Icon(Icons.Default.Edit, null) },
-                    onClick = {
-                        showMenu = false
-                        onRenameFolder(folderName)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Delete Folder & Feeds") },
-                    leadingIcon = { Icon(Icons.Default.Delete, null) },
-                    onClick = {
-                        showMenu = false
-                        onDeleteFolder(folderName)
-                    }
-                )
-            }
         }
         
         if (isExpanded) {
             sources.forEach { source ->
-                SwipeableSourceItem(
-                    source = source,
-                    isSelected = selectedSource == source.url,
-                    onClick = onSourceClick,
-                    onDelete = onDeleteSource,
-                    onRename = onRenameSource
-                )
+                key(source.url) {
+                    SwipeableSourceItem(
+                        source = source,
+                        isSelected = selectedSource == source.url,
+                        onClick = onSourceClick,
+                        onDelete = { onDeleteSource(source.url) },
+                        onRename = { onRenameSource(source) }
+                    )
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeableSourceItem(
     source: SourceEntity,
     isSelected: Boolean,
     onClick: (String) -> Unit,
-    onDelete: (String) -> Unit,
-    onRename: (SourceEntity) -> Unit
+    onDelete: () -> Unit,
+    onRename: () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            when (it) {
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete(source.url)
-                    true
-                }
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onRename(source)
-                    false // Snap back
-                }
-                else -> false
-            }
-        }
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = true,
-        enableDismissFromEndToStart = true,
-        backgroundContent = {
-            val direction = dismissState.dismissDirection
-            when (direction) {
-                SwipeToDismissBoxValue.EndToStart -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(NavigationDrawerItemDefaults.ItemPadding)
-                            .background(Color.Red, CircleShape)
-                            .padding(horizontal = 20.dp),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
-                    }
-                }
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(NavigationDrawerItemDefaults.ItemPadding)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
-                            .padding(horizontal = 20.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = "Rename", tint = Color.White)
-                    }
-                }
-                else -> {}
-            }
-        }
+    SwipeableItem(
+        onDelete = onDelete,
+        onEdit = onRename,
+        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+        shape = CircleShape
     ) {
-        SourceDrawerItem(source, isSelected, onClick)
+        SourceDrawerItemContent(source, isSelected, onClick)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SourceDrawerItem(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
+fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -674,7 +691,6 @@ fun SourceDrawerItem(source: SourceEntity, isSelected: Boolean, onClick: (String
         contentColor = contentColor,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(NavigationDrawerItemDefaults.ItemPadding)
             .dragAndDropSource {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
