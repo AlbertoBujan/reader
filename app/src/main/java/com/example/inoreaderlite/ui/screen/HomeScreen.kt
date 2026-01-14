@@ -711,8 +711,11 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
             }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
             if (source.iconUrl != null) {
                 AsyncImage(model = source.iconUrl, contentDescription = null, modifier = Modifier.size(24.dp))
@@ -724,8 +727,7 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
                 text = source.title,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
