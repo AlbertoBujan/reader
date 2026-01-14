@@ -102,6 +102,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -520,8 +521,10 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                                 headlineContent = { Text(feed.siteName ?: feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 supportingContent = { Text(feed.url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 trailingContent = {
+                                    val context = LocalContext.current
                                     IconButton(onClick = { 
                                         viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
+                                        Toast.makeText(context, "Feed added", Toast.LENGTH_SHORT).show()
                                         onDismiss()
                                     }) {
                                         Icon(Icons.Default.Add, contentDescription = "Add")
@@ -1036,7 +1039,7 @@ fun ArticleList(
         
         if (articles.isNotEmpty() && !isReadLaterView) {
             item {
-                MarkAllAsReadButton(onMarkAllAsRead)
+                MarkAllAsReadButton(modifier = Modifier.fillParentMaxHeight(), onMarkAllAsRead = onMarkAllAsRead)
             }
         }
     }
@@ -1115,28 +1118,18 @@ fun SwipeableArticleItem(
 }
 
 @Composable
-fun MarkAllAsReadButton(onMarkAllAsRead: () -> Unit) {
+fun MarkAllAsReadButton(modifier: Modifier = Modifier, onMarkAllAsRead: () -> Unit) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 32.dp),
         contentAlignment = Alignment.Center
     ) {
-        Button(
-            onClick = onMarkAllAsRead,
-            shape = RoundedCornerShape(12.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Mark everything as read")
-            }
-        }
+        Text(
+            text = "No more articles",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
