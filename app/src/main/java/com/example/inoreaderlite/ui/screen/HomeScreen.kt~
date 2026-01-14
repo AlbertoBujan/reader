@@ -134,6 +134,7 @@ fun HomeScreen(
     }
     
     // Si el drawer está cerrado, el botón atrás abrirá el drawer la primera vez
+    // (A menos que ya estemos en una sub-pantalla, pero aquí HomeScreen es la raíz)
     if (drawerState.isClosed) {
         BackHandler(enabled = true) {
             scope.launch { drawerState.open() }
