@@ -2,6 +2,7 @@ package com.example.inoreaderlite.ui.screen
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -371,6 +373,15 @@ fun HomeScreen(
                                 viewModel.toggleSaveArticle(link, isSaved)
                                 val message = if (isSaved) "Removed from Read Later" else "Added to Read Later"
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            },
+                            onShare = { article ->
+                                val sendIntent: Intent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, "${article.title}\n\n${article.link}")
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, null)
+                                context.startActivity(shareIntent)
                             },
                             onArticleClick = { link, isRead ->
                                 if (!isRead) viewModel.markAsRead(link)
@@ -883,6 +894,7 @@ fun ArticleList(
     onMarkAsRead: (String) -> Unit,
     onMarkAllAsRead: () -> Unit,
     onToggleSave: (String, Boolean) -> Unit,
+    onShare: (ArticleEntity) -> Unit,
     onArticleClick: (String, Boolean) -> Unit,
     isReadLaterView: Boolean = false
 ) {
@@ -919,6 +931,7 @@ fun ArticleList(
             SwipeableArticleItem(
                 article = article,
                 onToggleSave = { onToggleSave(article.link, article.isSaved) },
+                onShare = { onShare(article) },
                 onArticleClick = onArticleClick,
                 isReadLaterView = isReadLaterView
             )
@@ -937,16 +950,22 @@ fun ArticleList(
 fun SwipeableArticleItem(
     article: ArticleEntity,
     onToggleSave: () -> Unit,
+    onShare: () -> Unit,
     onArticleClick: (String, Boolean) -> Unit,
     isReadLaterView: Boolean
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.StartToEnd || it == SwipeToDismissBoxValue.EndToStart) {
-                onToggleSave()
-                false // No queremos que desaparezca el item de la lista, solo togglear el estado
-            } else {
-                false
+            when (it) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    if (isReadLaterView) onToggleSave() else onShare()
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    if (isReadLaterView) onShare() else onToggleSave()
+                    false
+                }
+                else -> false
             }
         }
     )
@@ -956,9 +975,20 @@ fun SwipeableArticleItem(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
         backgroundContent = {
             val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
-            val color = if (isReadLaterView) Color(0xFFE53935) else Color(0xFFFFD600) // Rojo para borrar, Amarillo para guardar
+            
+            val isSharing = (direction == SwipeToDismissBoxValue.StartToEnd && !isReadLaterView) || 
+                            (direction == SwipeToDismissBoxValue.EndToStart && isReadLaterView)
+            
+            val color = when {
+                isSharing -> Color(0xFF4CAF50) // Verde para compartir
+                isReadLaterView -> Color(0xFFE53935) // Rojo para borrar en Read Later
+                else -> Color(0xFFFFD600) // Amarillo para guardar
+            }
+            
             val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+            
             val icon = when {
+                isSharing -> Icons.Default.Share
                 isReadLaterView -> Icons.Default.BookmarkRemove
                 article.isSaved -> Icons.Default.Bookmark
                 else -> Icons.Default.BookmarkBorder
@@ -974,7 +1004,7 @@ fun SwipeableArticleItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isReadLaterView) Color.White else Color.Black,
+                    tint = if (isSharing || isReadLaterView) Color.White else Color.Black,
                     modifier = Modifier.size(24.dp)
                 )
             }
