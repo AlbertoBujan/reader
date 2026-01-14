@@ -189,9 +189,6 @@ fun HomeScreen(
                                 IconButton(onClick = { showFolderDialog = true }) {
                                     Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
                                 }
-                                IconButton(onClick = { showSearchDialog = true }) {
-                                    Icon(Icons.Default.Search, contentDescription = "Search Feeds")
-                                }
                             }
                         }
                         
@@ -301,7 +298,7 @@ fun HomeScreen(
                         }
                     }
                     FloatingActionButton(
-                        onClick = { showAddDialog = true },
+                        onClick = { showSearchDialog = true },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp)

@@ -98,6 +98,7 @@ class MainViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     init {
+        sync()
         // Carga inicial de artículos para ocultar
         updateHiddenArticles()
     }
