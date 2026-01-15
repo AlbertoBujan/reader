@@ -31,3 +31,8 @@ Thumbs.db
 # Logs y archivos temporales
 *.log
 *.hprof
+
+# Release artifacts
+output-metadata.json
+*.dm
+app/release/baselineProfiles/
