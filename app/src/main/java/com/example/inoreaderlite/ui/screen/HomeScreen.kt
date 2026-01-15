@@ -157,9 +157,8 @@ fun HomeScreen(
     val context = LocalContext.current
 
     // Sincronización automática al iniciar
-    LaunchedEffect(Unit) {
-        viewModel.sync()
-    }
+    // Sincronización automática se ha movido al ViewModel init
+
 
     // Manejo del botón atrás de Android
     BackHandler(enabled = drawerState.isOpen) {

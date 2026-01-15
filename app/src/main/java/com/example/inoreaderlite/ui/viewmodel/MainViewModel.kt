@@ -102,6 +102,8 @@ class MainViewModel @Inject constructor(
     init {
         // Carga inicial de artículos para ocultar
         updateHiddenArticles()
+        // Sync inicial una sola vez
+        sync()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
