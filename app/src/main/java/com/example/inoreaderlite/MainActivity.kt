@@ -10,6 +10,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -80,7 +83,13 @@ fun InoreaderLiteMain(viewModel: MainViewModel) {
     val navController = rememberNavController()
     
     NavHost(navController = navController, startDestination = "home") {
-        composable("home") {
+        composable(
+            route = "home",
+            enterTransition = { slideInHorizontally(tween(300)) { -it } },
+            exitTransition = { slideOutHorizontally(tween(300)) { -it } },
+            popEnterTransition = { slideInHorizontally(tween(200)) { -it } },
+            popExitTransition = { slideOutHorizontally(tween(300)) { it } }
+        ) {
             HomeScreen(
                 viewModel = viewModel,
                 onArticleClick = { link, _ ->
@@ -92,7 +101,11 @@ fun InoreaderLiteMain(viewModel: MainViewModel) {
         
         composable(
             route = "reader/{url}",
-            arguments = listOf(navArgument("url") { type = NavType.StringType })
+            arguments = listOf(navArgument("url") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(tween(300)) { it } },
+            exitTransition = { slideOutHorizontally(tween(300)) { it } },
+            popEnterTransition = { slideInHorizontally(tween(300)) { it } },
+            popExitTransition = { slideOutHorizontally(tween(200)) { it } }
         ) { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
             ArticleReaderScreen(
