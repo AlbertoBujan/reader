@@ -1,0 +1,14 @@
+package com.example.riffle.domain.repository
+
+import com.example.riffle.data.local.entity.ArticleEntity
+import com.example.riffle.data.local.entity.SourceEntity
+import kotlinx.coroutines.flow.Flow
+
+interface FeedRepository {
+    fun getAllArticles(): Flow<List<ArticleEntity>>
+    fun getArticlesBySource(sourceUrl: String): Flow<List<ArticleEntity>>
+    fun getAllSources(): Flow<List<SourceEntity>>
+    suspend fun addSource(url: String, title: String?, iconUrl: String? = null)
+    suspend fun syncFeeds()
+    suspend fun markAsRead(link: String)
+}

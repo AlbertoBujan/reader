@@ -7,15 +7,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.inoreaderlite"
+    namespace = "com.example.riffle"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.inoreaderlite"
+        applicationId = "com.example.riffle"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0.5"
+        versionName = "1.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
