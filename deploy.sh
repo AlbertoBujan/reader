@@ -1,36 +1,25 @@
 #!/bin/bash
 
-# 1. Extraer la versión automáticamente de app/build.gradle.kts
-# Buscamos la línea de versionName y extraemos el texto entre comillas
+# 1. Incrementar versionCode automáticamente en el build.gradle.kts
+# Busca la línea 'versionCode = X' y le suma 1
+sed -i 's/versionCode = \([0-9]*\)/echo "versionCode = $((\1 + 1))"/e' app/build.gradle.kts
+
+# 2. Extraer la versión (versionName) de la línea 18
 VERSION_RAW=$(grep "versionName =" app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
-
-# Verificar si se encontró la versión
-if [ -z "$VERSION_RAW" ]; then
-  echo "❌ Error: No se pudo encontrar 'versionName' en app/build.gradle.kts"
-  exit 1
-fi
-
-# Añadimos la 'v' para el Tag (ej: v1.15.0)
 VERSION="v$VERSION_RAW"
 
-echo "🔎 Versión detectada en el código: $VERSION"
-echo "🚀 Iniciando despliegue automático..."
+echo "✅ versionCode incrementado automáticamente."
+echo "🔎 Versión detectada: $VERSION"
 
-# 2. Guardar y subir código a main
+# 3. Git push y Lanzamiento de Tag
 git add .
 git commit -m "Release $VERSION"
 git push origin main
 
-# 3. Limpiar tags antiguos (por si estás re-subiendo la misma versión)
-echo "🧹 Limpiando tags previos para $VERSION..."
+# Limpieza y subida de Tag
 git tag -d $VERSION 2>/dev/null
 git push --delete origin $VERSION 2>/dev/null
-
-# 4. Crear y subir el nuevo tag
-echo "🏷️ Creando tag $VERSION..."
 git tag $VERSION
 git push origin $VERSION
 
-echo "✅ ¡Misión cumplida! El robot de GitHub Actions está fabricando la $VERSION."
-
-# Launch: ./deploy.sh
+echo "🚀 ¡Todo en marcha! Revisa la pestaña Actions en GitHub."

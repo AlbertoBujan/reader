@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
                                 TextButton(
                                     onClick = { 
                                         // Usamos la URL directa genérica
-                                        downloadAndInstall("https://github.com/AlbertoBujan/reader/releases/latest/download/app-release.apk")
+                                        downloadAndInstall("https://github.com/AlbertoBujan/reader/releases/latest/download/Riffle.apk")
                                         updateInfo.value = null 
                                     }
                                 ) {

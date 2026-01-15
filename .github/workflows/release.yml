@@ -3,12 +3,12 @@ name: Android Build & Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*' # Se activa con tags tipo v1.16.0
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Permisos necesarios para crear la release
+    # Permisos para que el robot pueda subir archivos a la sección de Releases
     permissions:
       contents: write
       
@@ -43,10 +43,15 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
+      # --- PASO CLAVE: Renombrar el archivo firmado a un nombre fijo ---
+      - name: Renombrar APK para la Release
+        run: mv ${{ steps.sign_app.outputs.signedReleaseFile }} app/build/outputs/apk/release/Riffle.apk
+
       - name: Crear Release en GitHub
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.sign_app.outputs.signedReleaseFile }}
+          # Subimos el archivo con el nombre nuevo y limpio
+          files: app/build/outputs/apk/release/Riffle.apk
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           draft: false
