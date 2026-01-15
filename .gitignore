@@ -22,7 +22,8 @@ captures/
 *.iml
 *.iws
 *.ipr
-.shelf/
+.sh
+deploy.shelf/
 
 # Archivos del Sistema Operativo
 *.DS_Store
