@@ -25,8 +25,13 @@ jobs:
       - name: Compilar APK de Release
         run: ./gradlew assembleRelease
 
+      # --- NUEVO PASO: Instalamos la versión exacta que busca la acción de firmado ---
+      - name: Instalar Android Build Tools 29.0.3
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "build-tools;29.0.3"
+
       - name: Firmar el APK
-        uses: r0adkll/sign-android-release@v1.5.6
+        uses: r0adkll/sign-android-release@v1 # Volvemos a la v1 estable
         id: sign_app
         with:
           releaseDirectory: app/build/outputs/apk/release
@@ -34,13 +39,14 @@ jobs:
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-          buildToolsVersion: "34.0.0"
+          # Eliminamos buildToolsVersion para usar la que acabamos de instalar por defecto
 
       - name: Crear Release en GitHub
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ steps.sign_app.outputs.signedReleaseFile }}
           name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: false
         env:
