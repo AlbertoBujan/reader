@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    InoreaderLiteMain(viewModel)
+                    RiffleApp(viewModel)
                 }
             }
         }
@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun InoreaderLiteMain(viewModel: MainViewModel) {
+fun RiffleApp(viewModel: MainViewModel) {
     val navController = rememberNavController()
     
     NavHost(navController = navController, startDestination = "home") {

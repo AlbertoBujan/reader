@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "InoreaderLite"
+rootProject.name = "Riffle"
 include(":app")
