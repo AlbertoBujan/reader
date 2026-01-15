@@ -409,6 +409,9 @@ fun HomeScreen(
                                 onMarkAsRead = { viewModel.markAsRead(it) },
                                 onToggleSave = { link, isSaved -> 
                                     viewModel.toggleSaveArticle(link, isSaved)
+                                    if (selectedSource == "saved" && isSaved) {
+                                        viewModel.markAsRead(link)
+                                    }
                                     val message = if (isSaved) "Removed from Read Later" else "Added to Read Later"
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                 },
@@ -982,13 +985,17 @@ fun ArticleList(
     if (markAsReadOnScroll) {
         var lastProcessedIndex by remember { mutableStateOf(listState.firstVisibleItemIndex) }
 
+        LaunchedEffect(articles) {
+            lastProcessedIndex = listState.firstVisibleItemIndex
+        }
+
         LaunchedEffect(listState, isRefreshing) {
             if (isRefreshing) return@LaunchedEffect
             
             snapshotFlow { listState.firstVisibleItemIndex }
                 .distinctUntilChanged()
                 .collect { currentFirstIndex ->
-                    if (currentFirstIndex > lastProcessedIndex) {
+                    if (listState.isScrollInProgress && currentFirstIndex > lastProcessedIndex) {
                         for (i in lastProcessedIndex until currentFirstIndex) {
                             if (i < currentArticles.size) {
                                 val article = currentArticles[i]
