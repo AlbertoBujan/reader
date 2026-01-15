@@ -982,7 +982,7 @@ fun ArticleList(
 
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     
-    if (markAsReadOnScroll) {
+    if (markAsReadOnScroll && !isReadLaterView) {
         var lastProcessedIndex by remember { mutableStateOf(listState.firstVisibleItemIndex) }
 
         LaunchedEffect(articles) {
