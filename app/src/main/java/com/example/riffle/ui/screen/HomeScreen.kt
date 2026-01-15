@@ -401,7 +401,7 @@ fun HomeScreen(
                             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "©Riffle ${com.example.riffle.BuildConfig.VERSION_NAME}",
+                                text = "© Riffle ${com.example.riffle.BuildConfig.VERSION_NAME}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
