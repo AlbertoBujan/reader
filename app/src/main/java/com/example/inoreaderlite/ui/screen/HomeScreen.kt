@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -86,7 +87,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -102,21 +102,15 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.inoreaderlite.data.local.entity.ArticleEntity
@@ -125,6 +119,7 @@ import com.example.inoreaderlite.ui.viewmodel.DiscoveredFeed
 import com.example.inoreaderlite.ui.viewmodel.FeedUiState
 import com.example.inoreaderlite.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -156,8 +151,23 @@ fun HomeScreen(
     var renamingFolder by remember { mutableStateOf<String?>(null) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    // Sincronización automática al iniciar
+    LaunchedEffect(Unit) {
+        viewModel.sync()
+    }
+
+    // Scroll al principio cuando termina una carga
+    var wasRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(isRefreshing) {
+        if (wasRefreshing && !isRefreshing) {
+            listState.animateScrollToItem(0)
+        }
+        wasRefreshing = isRefreshing
+    }
 
     // Manejo del botón atrás de Android
     BackHandler(enabled = drawerState.isOpen) {
@@ -184,15 +194,19 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            @Suppress("DEPRECATION")
                             Text(text = "Subscriptions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Row {
                                 IconButton(onClick = { showFolderDialog = true }) {
                                     Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
                                 }
+                                IconButton(onClick = { showSearchDialog = true }) {
+                                    Icon(Icons.Default.Search, contentDescription = "Search Feeds")
+                                }
                             }
                         }
                         
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(modifier = Modifier.weight(1f)) {
                             item(key = "all_feeds") {
                                 val totalUnread = unreadCounts.values.sum()
                                 NavigationDrawerItem(
@@ -202,6 +216,7 @@ fun HomeScreen(
                                             Text("All Feeds")
                                             if (totalUnread > 0) {
                                                 Spacer(Modifier.width(8.dp))
+                                                @Suppress("DEPRECATION")
                                                 Text(
                                                     text = totalUnread.toString(),
                                                     style = MaterialTheme.typography.labelSmall,
@@ -224,9 +239,11 @@ fun HomeScreen(
                                     icon = { Icon(Icons.Default.Bookmark, null) },
                                     label = { 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            @Suppress("DEPRECATION")
                                             Text("Read Later")
                                             if (savedCount > 0) {
                                                 Spacer(Modifier.width(8.dp))
+                                                @Suppress("DEPRECATION")
                                                 Text(
                                                     text = savedCount.toString(),
                                                     style = MaterialTheme.typography.labelSmall,
@@ -273,6 +290,7 @@ fun HomeScreen(
                             item(key = "uncategorized_header") {
                                 val orphanSources = sources.filter { it.folderName == null }
                                 if (orphanSources.isNotEmpty()) {
+                                    @Suppress("DEPRECATION")
                                     Text(
                                         text = "Uncategorized",
                                         style = MaterialTheme.typography.labelMedium,
@@ -296,22 +314,27 @@ fun HomeScreen(
                                 }
                             }
                         }
+                        
+                        HorizontalDivider()
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Settings, null) },
+                            label = { Text("Settings") },
+                            selected = false,
+                            onClick = { 
+                                showSettingsDialog = true
+                                scope.launch { drawerState.close() }
+                            },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                        Spacer(Modifier.height(12.dp))
                     }
                     FloatingActionButton(
-                        onClick = { showSearchDialog = true },
+                        onClick = { showAddDialog = true },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Add Source")
-                    }
-                    IconButton(
-                        onClick = { showSettingsDialog = true },
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(16.dp)
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
             }
@@ -354,6 +377,13 @@ fun HomeScreen(
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
+                    },
+                    actions = {
+                        if (selectedSource != "saved") {
+                            IconButton(onClick = { viewModel.markAllAsRead() }) {
+                                Icon(Icons.Default.DoneAll, contentDescription = "Mark all as read")
+                            }
+                        }
                     }
                 )
             }
@@ -376,9 +406,10 @@ fun HomeScreen(
                     is FeedUiState.Success -> {
                         ArticleList(
                             articles = state.articles, 
+                            listState = listState,
                             markAsReadOnScroll = markAsReadOnScroll,
+                            isRefreshing = isRefreshing,
                             onMarkAsRead = { viewModel.markAsRead(it) },
-                            onMarkAllAsRead = { viewModel.markAllAsRead() },
                             onToggleSave = { link, isSaved -> 
                                 viewModel.toggleSaveArticle(link, isSaved)
                                 val message = if (isSaved) "Removed from Read Later" else "Added to Read Later"
@@ -397,11 +428,13 @@ fun HomeScreen(
                                 if (!isRead) viewModel.markAsRead(link)
                                 onArticleClick(link, isRead)
                             },
-                            isReadLaterView = selectedSource == "saved"
+                            isReadLaterView = selectedSource == "saved",
+                            onLoadMore = { viewModel.loadMore() }
                         )
                     }
                     is FeedUiState.Error -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            @Suppress("DEPRECATION")
                             Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -485,7 +518,7 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                     TextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text("Search websites...") },
+                        label = { Text("URL or Domain (e.g. xataka.com)") },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
@@ -518,10 +551,8 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                                 headlineContent = { Text(feed.siteName ?: feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 supportingContent = { Text(feed.url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 trailingContent = {
-                                    val context = LocalContext.current
                                     IconButton(onClick = { 
                                         viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
-                                        Toast.makeText(context, "Feed added", Toast.LENGTH_SHORT).show()
                                         onDismiss()
                                     }) {
                                         Icon(Icons.Default.Add, contentDescription = "Add")
@@ -587,6 +618,7 @@ fun SettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text("Settings") },
         text = {
+            @Suppress("DEPRECATION")
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -594,6 +626,7 @@ fun SettingsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Dark Mode")
+                    @Suppress("DEPRECATION")
                     Switch(
                         checked = isDarkMode,
                         onCheckedChange = onToggleDarkMode
@@ -606,6 +639,7 @@ fun SettingsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Mark as read on scroll")
+                    @Suppress("DEPRECATION")
                     Switch(
                         checked = markAsReadOnScroll,
                         onCheckedChange = onToggleMarkAsReadOnScroll
@@ -621,16 +655,25 @@ fun SettingsDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwipeActionBackground(dismissState: SwipeToDismissBoxState, shape: Shape) {
+fun SwipeActionBackground(dismissState: SwipeToDismissBoxState, shape: Shape, isReadLaterView: Boolean, isSaved: Boolean) {
     val direction = dismissState.dismissDirection ?: return
     val isMoving = dismissState.currentValue != dismissState.targetValue || dismissState.progress != 0f
 
     if (!isMoving) return
 
-    val isDelete = direction == SwipeToDismissBoxValue.EndToStart
-    val color = if (isDelete) Color(0xFFE53935) else Color(0xFF1E88E5)
-    val alignment = if (isDelete) Alignment.CenterEnd else Alignment.CenterStart
-    val icon = if (isDelete) Icons.Default.Delete else Icons.Default.Edit
+    val isShare = direction == SwipeToDismissBoxValue.StartToEnd
+    val color = when {
+        isShare -> Color(0xFF4CAF50)
+        isReadLaterView -> Color(0xFFE53935)
+        else -> Color(0xFFFFD600)
+    }
+    val alignment = if (isShare) Alignment.CenterStart else Alignment.CenterEnd
+    val icon = when {
+        isShare -> Icons.Default.Share
+        isReadLaterView -> Icons.Default.BookmarkRemove
+        isSaved -> Icons.Default.Bookmark
+        else -> Icons.Default.BookmarkBorder
+    }
 
     Box(
         modifier = Modifier
@@ -643,7 +686,7 @@ fun SwipeActionBackground(dismissState: SwipeToDismissBoxState, shape: Shape) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.White,
+            tint = if (isShare || isReadLaterView) Color.White else Color.Black,
             modifier = Modifier.size(24.dp)
         )
     }
@@ -679,7 +722,23 @@ fun SwipeableItem(
         modifier = modifier,
         enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true,
-        backgroundContent = { SwipeActionBackground(dismissState, shape) }
+        backgroundContent = { 
+            val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
+            val color = if (direction == SwipeToDismissBoxValue.EndToStart) Color(0xFFE53935) else Color(0xFF1E88E5)
+            val alignment = if (direction == SwipeToDismissBoxValue.EndToStart) Alignment.CenterEnd else Alignment.CenterStart
+            val icon = if (direction == SwipeToDismissBoxValue.EndToStart) Icons.Default.Delete else Icons.Default.Edit
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .background(color)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = alignment
+            ) {
+                Icon(icon, null, tint = Color.White)
+            }
+        }
     ) {
         // We use a Surface here to ensure the item is opaque and covers the swipe background
         Surface(
@@ -783,6 +842,7 @@ fun FolderItem(
                     modifier = Modifier.weight(1f)
                 )
                 if (folderUnreadCount > 0) {
+                    @Suppress("DEPRECATION")
                     Text(
                         text = folderUnreadCount.toString(),
                         style = MaterialTheme.typography.labelSmall,
@@ -829,39 +889,8 @@ fun SwipeableSourceItem(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
-    var isDragging by remember { mutableStateOf(false) }
-    val backgroundColor = when {
-        isDragging -> MaterialTheme.colorScheme.primaryContainer // Highlight for dragging
-        isSelected -> MaterialTheme.colorScheme.secondaryContainer
-        else -> Color.Transparent
-    }
-    val contentColor = if (isSelected || isDragging) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    val haptic = LocalHapticFeedback.current
-    
-    // Preparation for custom drag shadow drawing
-    val density = LocalDensity.current
-    val textPaint = remember(contentColor, density) {
-        android.graphics.Paint().apply {
-            color = contentColor.toArgb()
-            textSize = with(density) { 14.sp.toPx() } // Approximate labelLarge size
-            isAntiAlias = true
-            textAlign = android.graphics.Paint.Align.CENTER
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        }
-    }
-    
-    // Shadow color should match the "Dragging" highlight color
-    val shadowContainerColor = MaterialTheme.colorScheme.primaryContainer
-
-    // Target to detect when drag ends to reset state (since source gesture gets cancelled)
-    val dndCallback = remember {
-        object : DragAndDropTarget {
-            override fun onDrop(event: DragAndDropEvent): Boolean = false
-            override fun onEnded(event: DragAndDropEvent) {
-                isDragging = false
-            }
-        }
-    }
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
         onClick = { onClick(source.url) },
@@ -870,34 +899,9 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
         contentColor = contentColor,
         modifier = Modifier
             .fillMaxWidth()
-            .dragAndDropTarget(
-                shouldStartDragAndDrop = { true },
-                target = dndCallback
-            )
-            .dragAndDropSource(
-                drawDragDecoration = {
-                    // Draw the specialized highlight shadow
-                    
-                    // 1. Draw Background Pill
-                    drawRoundRect(
-                        color = shadowContainerColor,
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
-                        size = size
-                    )
-                    
-                    // 2. Draw Text (Centered)
-                    drawContext.canvas.nativeCanvas.drawText(
-                        source.title,
-                        size.width / 2,
-                        (size.height / 2) - ((textPaint.descent() + textPaint.ascent()) / 2),
-                        textPaint
-                    )
-                }
-            ) {
+            .dragAndDropSource {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
-                        isDragging = true
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         startTransfer(
                             DragAndDropTransferData(
                                 clipData = ClipData.newPlainText("sourceUrl", source.url)
@@ -905,8 +909,8 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
                         )
                     },
                     onDrag = { _, _ -> },
-                    onDragEnd = { isDragging = false },
-                    onDragCancel = { isDragging = false }
+                    onDragEnd = { },
+                    onDragCancel = { }
                 )
             }
     ) {
@@ -958,64 +962,52 @@ fun AddFolderDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
 @Composable
 fun ArticleList(
     articles: List<ArticleEntity>, 
+    listState: LazyListState,
     markAsReadOnScroll: Boolean,
+    isRefreshing: Boolean,
     onMarkAsRead: (String) -> Unit,
-    onMarkAllAsRead: () -> Unit,
     onToggleSave: (String, Boolean) -> Unit,
     onShare: (ArticleEntity) -> Unit,
     onArticleClick: (String, Boolean) -> Unit,
-    isReadLaterView: Boolean = false
+    isReadLaterView: Boolean = false,
+    onLoadMore: () -> Unit = {}
 ) {
-    val listState = rememberLazyListState()
-
     val currentArticles by rememberUpdatedState(articles)
-    
-    // Logic to scroll to top when new articles arrive (newer than what we've seen)
-    var lastMaxPubDate by remember { mutableLongStateOf(0L) }
-    
-    LaunchedEffect(articles) {
-        val maxPubDate = articles.maxOfOrNull { it.pubDate } ?: 0L
-        if (lastMaxPubDate > 0 && maxPubDate > lastMaxPubDate) {
-            listState.animateScrollToItem(0)
-        }
-        lastMaxPubDate = maxPubDate
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .distinctUntilChanged()
+            .collect { lastIndex ->
+                if (lastIndex != null && lastIndex >= currentArticles.size - 5) {
+                    onLoadMore()
+                }
+            }
     }
 
     if (markAsReadOnScroll) {
-        // Track articles that have actually been visible on screen
-        val seenArticles = remember { mutableSetOf<String>() }
+        var lastProcessedIndex by remember { mutableStateOf(listState.firstVisibleItemIndex) }
 
-        LaunchedEffect(listState, currentArticles) {
-            snapshotFlow { 
-                // Optimize: Map to indices to avoid triggering on every pixel scroll (offset changes)
-                val visibleIndices = listState.layoutInfo.visibleItemsInfo.map { it.index }
-                Triple(
-                    listState.firstVisibleItemIndex,
-                    visibleIndices,
-                    listState.isScrollInProgress
-                )
+        LaunchedEffect(isRefreshing) {
+            if (!isRefreshing) {
+                lastProcessedIndex = listState.firstVisibleItemIndex
             }
-                .distinctUntilChanged() 
-                .collect { (firstIndex, visibleIndices, isScrolling) ->
-                    // 1. Add currently visible items to seen set
-                    visibleIndices.forEach { index ->
-                        if (index in currentArticles.indices) {
-                            seenArticles.add(currentArticles[index].link)
-                        }
-                    }
+        }
 
-                    // 2. Mark items above as read ONLY if they have been seen and we are scrolling
-                    if (firstIndex > 0 && isScrolling) {
-                        for (i in 0 until firstIndex) {
+        LaunchedEffect(listState) {
+            snapshotFlow { listState.firstVisibleItemIndex }
+                .distinctUntilChanged()
+                .collect { firstIndex ->
+                    if (firstIndex > lastProcessedIndex && !isRefreshing) {
+                        for (i in lastProcessedIndex until firstIndex) {
                             if (i < currentArticles.size) {
                                 val article = currentArticles[i]
-                                // Critical fix: Only mark as read if we have established that the user SAW this article
-                                if (!article.isRead && article.link in seenArticles) {
+                                if (!article.isRead) {
                                     onMarkAsRead(article.link)
                                 }
                             }
                         }
                     }
+                    lastProcessedIndex = firstIndex
                 }
         }
     }
@@ -1036,9 +1028,25 @@ fun ArticleList(
             )
         }
         
-        if (articles.isNotEmpty() && !isReadLaterView) {
+        if (articles.isNotEmpty()) {
             item {
-                MarkAllAsReadButton(modifier = Modifier.height(LocalConfiguration.current.screenHeightDp.dp), onMarkAllAsRead = onMarkAllAsRead)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 32.dp, bottom = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    @Suppress("DEPRECATION")
+                    Text(
+                        text = "You've reached the end ✨",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            item {
+                Spacer(modifier = Modifier.height(400.dp))
             }
         }
     }
@@ -1073,43 +1081,12 @@ fun SwipeableArticleItem(
         state = dismissState,
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
         backgroundContent = {
-            val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
-            
-            // Standardized actions:
-            // StartToEnd (Right) -> Share
-            // EndToStart (Left) -> Toggle Save (Delete in Read Later)
-            
-            val isSharing = direction == SwipeToDismissBoxValue.StartToEnd
-            
-            val color = when {
-                isSharing -> Color(0xFF4CAF50) // Share (Green)
-                isReadLaterView -> Color(0xFFE53935) // Delete from Read Later (Red)
-                else -> Color(0xFFFFD600) // Save to Read Later (Yellow)
-            }
-            
-            val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
-            
-            val icon = when {
-                isSharing -> Icons.Default.Share
-                isReadLaterView -> Icons.Default.BookmarkRemove
-                article.isSaved -> Icons.Default.Bookmark
-                else -> Icons.Default.BookmarkBorder
-            }
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(color)
-                    .padding(horizontal = 24.dp),
-                contentAlignment = alignment
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (isSharing || isReadLaterView) Color.White else Color.Black,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            SwipeActionBackground(
+                dismissState = dismissState, 
+                shape = RoundedCornerShape(12.dp),
+                isReadLaterView = isReadLaterView,
+                isSaved = article.isSaved
+            )
         }
     ) {
         ArticleItem(article, onArticleClick)
@@ -1117,34 +1094,7 @@ fun SwipeableArticleItem(
 }
 
 @Composable
-fun MarkAllAsReadButton(modifier: Modifier = Modifier, onMarkAllAsRead: () -> Unit) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "No more articles",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-// Optimization: Reuse formatter. Note: SimpleDateFormat is not thread-safe, but strictly used on Main thread for UI is usually fine.
-// For absolute safety, we'd use ThreadLocal or just create it once per ViewModel/Screen.
-// Here we use a remember inside the composable, effectively reusing a cached instance if we wanted, 
-// but actually, just remembering the String result is enough to avoid re-formatting.
-// To avoid creating SDF every time, we can place it in a companion object or top level.
-private val DateFormatter = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
-
-@Composable
 fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
-    val formattedDate = remember(article.pubDate) {
-        DateFormatter.format(Date(article.pubDate))
-    }
-
     Card(
         onClick = { onClick(article.link, article.isRead) },
         shape = RoundedCornerShape(12.dp),
@@ -1167,6 +1117,7 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
             
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    @Suppress("DEPRECATION")
                     Text(
                         text = article.title,
                         style = MaterialTheme.typography.titleMedium,
@@ -1185,8 +1136,9 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                @Suppress("DEPRECATION")
                 Text(
-                    text = "$formattedDate • ${article.sourceUrl}",
+                    text = "${formatDate(article.pubDate)} • ${article.sourceUrl}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -1231,4 +1183,7 @@ fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String, String?) -> Unit) {
     )
 }
 
-
+private fun formatDate(timestamp: Long): String {
+    val sdf = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
+    return sdf.format(Date(timestamp))
+}

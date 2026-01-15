@@ -81,6 +81,8 @@ class MainViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    private val _articleLimit = MutableStateFlow(20)
+    
     // Enlaces de artículos que deben estar ocultos (ya estaban leídos en la última recarga)
     private val _hiddenArticleLinks = MutableStateFlow<Set<String>>(emptySet())
 
@@ -98,16 +100,15 @@ class MainViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     init {
-        sync()
         // Carga inicial de artículos para ocultar
         updateHiddenArticles()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks) { selector, hiddenLinks ->
-        selector to hiddenLinks
+    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks, _articleLimit) { selector, hiddenLinks, limit ->
+        Triple(selector, hiddenLinks, limit)
     }
-    .flatMapLatest { (selector, hiddenLinks) ->
+    .flatMapLatest { (selector, hiddenLinks, limit) ->
         val articlesFlow = when {
             selector == "saved" -> feedDao.getSavedArticles()
             selector == null -> getArticlesUseCase()
@@ -118,13 +119,12 @@ class MainViewModel @Inject constructor(
             else -> getArticlesUseCase(selector)
         }
         articlesFlow.map<List<ArticleEntity>, FeedUiState> { articles ->
-            // Filtramos solo los que estaban leídos al momento de la última recarga/navegación
-            // EXCEPTO si estamos en la vista de "saved", donde mostramos todo independientemente de si es leído
-            if (selector == "saved") {
-                FeedUiState.Success(articles)
+            val filtered = if (selector == "saved") {
+                articles
             } else {
-                FeedUiState.Success(articles.filter { it.link !in hiddenLinks })
+                articles.filter { it.link !in hiddenLinks }
             }
+            FeedUiState.Success(filtered.take(limit))
         }
     }
     .catch { emit(FeedUiState.Error(it.message ?: "Unknown error")) }
@@ -146,17 +146,24 @@ class MainViewModel @Inject constructor(
     }
 
     fun selectSource(url: String?) {
+        _articleLimit.value = 20
         updateHiddenArticles()
         _selectedSource.value = url
     }
 
     fun selectSaved() {
+        _articleLimit.value = 20
         _selectedSource.value = "saved"
     }
 
     fun selectFolder(name: String) {
+        _articleLimit.value = 20
         updateHiddenArticles()
         _selectedSource.value = "folder:$name"
+    }
+
+    fun loadMore() {
+        _articleLimit.value += 20
     }
 
     fun toggleMarkAsReadOnScroll(enabled: Boolean) {
@@ -229,7 +236,6 @@ class MainViewModel @Inject constructor(
             _isRefreshing.value = true
             try {
                 syncFeedsUseCase()
-                // Al terminar la sincronización, actualizamos qué artículos ocultar
                 updateHiddenArticles()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -249,7 +255,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val selector = _selectedSource.value
             when {
-                selector == "saved" -> return@launch // No marcamos todo como leído en saved (opcional)
+                selector == "saved" -> return@launch 
                 selector == null -> feedDao.markAllArticlesAsRead()
                 selector.startsWith("folder:") -> {
                     val folderName = selector.removePrefix("folder:")
@@ -281,12 +287,9 @@ class MainViewModel @Inject constructor(
                     var clearbitName: String? = null
                     var queryIconUrl: String? = null
 
-                    // 1. Usar Clearbit para obtener el dominio si no parece una URL directa
                     if (!cleanQuery.contains(".") || !cleanQuery.startsWith("http")) {
                         try {
-                            Log.d("FeedSearch", "Querying Clearbit for: $cleanQuery")
                             val suggestions = clearbitService.suggestCompanies(cleanQuery)
-                            Log.d("FeedSearch", "Clearbit returned ${suggestions.size} suggestions")
                             suggestions.forEach { suggestion ->
                                 domainsToTry.add(suggestion.domain)
                                 if (clearbitName == null) clearbitName = suggestion.name
@@ -297,9 +300,12 @@ class MainViewModel @Inject constructor(
                         }
                     }
                     
-                    // Siempre añadir el query original por si acaso
                     if (!domainsToTry.contains(cleanQuery)) {
                         domainsToTry.add(0, cleanQuery)
+                        if (!cleanQuery.contains(".")) {
+                            domainsToTry.add(cleanQuery + ".es")
+                            domainsToTry.add(cleanQuery + ".com")
+                        }
                     }
 
                     for (domain in domainsToTry) {
@@ -314,15 +320,13 @@ class MainViewModel @Inject constructor(
 
                         for (baseUrl in urlsToTry) {
                             try {
-                                Log.d("FeedSearch", "Trying base URL: $baseUrl")
                                 val doc = Jsoup.connect(baseUrl)
-                                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                                    .timeout(8000)
+                                    .userAgent("Mozilla/5.0")
+                                    .timeout(5000)
                                     .sslSocketFactory(createTrustAllSslSocketFactory())
                                     .followRedirects(true)
                                     .get()
 
-                                // Buscar en etiquetas <link> del head
                                 doc.select("link[type*=rss], link[type*=atom], link[type*=xml][rel=alternate]").forEach { element ->
                                     val href = element.attr("abs:href")
                                     val title = element.attr("title").ifBlank { doc.title() }
@@ -331,7 +335,6 @@ class MainViewModel @Inject constructor(
                                     }
                                 }
 
-                                // Si no hay nada, buscar en enlaces <a> con texto sospechoso
                                 if (results.isEmpty()) {
                                     doc.select("a[href*=rss], a[href*=feed]").forEach { element ->
                                         val href = element.attr("abs:href")
@@ -343,54 +346,39 @@ class MainViewModel @Inject constructor(
                                 
                                 if (results.isNotEmpty()) break
                                 
-                            } catch (e: Exception) {
-                                Log.d("FeedSearch", "Failed base URL $baseUrl: ${e.message}")
-                            }
+                            } catch (e: Exception) { }
                         }
 
-                        // Fallback: Probar rutas directas comunes
                         if (results.isEmpty()) {
-                            val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml", "/atom.xml", "/feed.xml")
-                            var host = if (domain.startsWith("http")) {
+                            val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml")
+                            val host = if (domain.startsWith("http")) {
                                 try { URL(domain).host } catch (e: Exception) { domain }
-                            } else {
-                                domain
-                            }
-                            // Normalize host
-                            host = host.removePrefix("www.")
+                            } else { domain }
                             
-                            val hostsToTry = listOf(host, "www.$host")
-                            
-                            for (h in hostsToTry) {
-                                for (path in commonPaths) {
-                                    val testUrl = "https://$h$path"
-                                    try {
-                                        Log.d("FeedSearch", "Trying common path: $testUrl")
-                                        val response = Jsoup.connect(testUrl)
-                                            .userAgent("Mozilla/5.0")
-                                            .timeout(3000)
-                                            .sslSocketFactory(createTrustAllSslSocketFactory())
-                                            .ignoreContentType(true)
-                                            .execute()
-                                        if (response.contentType()?.contains("xml") == true) {
-                                            results.add(DiscoveredFeed("Direct Feed: $path", testUrl, queryIconUrl, clearbitName))
-                                        }
-                                    } catch (e: Exception) { }
-                                }
-                                if (results.isNotEmpty()) break
+                            for (path in commonPaths) {
+                                val testUrl = "https://$host$path"
+                                try {
+                                    val response = Jsoup.connect(testUrl)
+                                        .userAgent("Mozilla/5.0")
+                                        .timeout(3000)
+                                        .sslSocketFactory(createTrustAllSslSocketFactory())
+                                        .ignoreContentType(true)
+                                        .execute()
+                                    if (response.contentType()?.contains("xml") == true) {
+                                        results.add(DiscoveredFeed("Feed: $path", testUrl, queryIconUrl, clearbitName))
+                                    }
+                                } catch (e: Exception) { }
                             }
                         }
                         
-                        // Si ya encontramos feeds para un dominio de Clearbit, paramos de probar los demás dominios
                         if (results.isNotEmpty()) break
                     }
 
                     results.distinctBy { it.url }
                 }
-                Log.d("FeedSearch", "Final discovery count: ${discovered.size}")
                 _discoveredFeeds.value = discovered
             } catch (e: Exception) {
-                Log.e("FeedSearch", "SearchFeeds top level error: ${e.message}")
+                Log.e("FeedSearch", "SearchFeeds error: ${e.message}")
             } finally {
                 _isSearching.value = false
             }
