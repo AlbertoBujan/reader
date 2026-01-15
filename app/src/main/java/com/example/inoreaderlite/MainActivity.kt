@@ -30,6 +30,12 @@ import com.example.inoreaderlite.ui.screen.HomeScreen
 import com.example.inoreaderlite.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.URLEncoder
+import android.app.DownloadManager
+import android.content.*
+import android.net.Uri
+import android.os.Environment
+import androidx.core.content.FileProvider
+import java.io.File
 
 import java.nio.charset.StandardCharsets
 import com.github.javiersantos.appupdater.AppUpdater
@@ -50,6 +56,11 @@ class MainActivity : AppCompatActivity() {
             .setDisplay(Display.DIALOG)
             .setButtonUpdate("Actualizar ahora")
             .setButtonDismiss("Luego")
+            .setButtonUpdateClickListener { dialog, update ->
+                // Usamos la URL directa genérica a la última release (asumiendo que el nombre es app-release.apk)
+                // Si tienes otro nombre de APK, cámbialo aquí.
+                downloadAndInstall("https://github.com/AlbertoBujan/reader/releases/latest/download/app-release.apk")
+            }
             //.setButtonDoNotShowAgain(null) // Omitido si causa problemas de tipo, el comportamiento por defecto suele ser visible.
         
         appUpdater.start()
@@ -90,6 +101,51 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private val lightScrim = android.graphics.Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
         private val darkScrim = android.graphics.Color.argb(0x80, 0x1b, 0x1b, 0x1b)
+    }
+
+    private fun downloadAndInstall(url: String) {
+        // 1. Configurar dónde se guardará el APK
+        val file = File(externalCacheDir, "update.apk")
+        if (file.exists()) file.delete() // Borrar si había uno previo
+
+        // 2. Usar el DownloadManager de Android
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setTitle("Actualizando Riffle")
+            .setDescription("Descargando nueva versión...")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+            .setDestinationUri(Uri.fromFile(file))
+
+        val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val downloadId = manager.enqueue(request)
+
+        // 3. Escuchar cuando termine la descarga
+        val onComplete = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val installIntent = Intent(Intent.ACTION_VIEW)
+                val apkUri = FileProvider.getUriForFile(
+                    context, 
+                    "${packageName}.fileprovider", 
+                    file
+                )
+                
+                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive")
+                installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                
+                try {
+                    startActivity(installIntent)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                unregisterReceiver(this)
+            }
+        }
+        // Register receiver without separate flags for now as it captures system broadcast
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        }
     }
 }
 
