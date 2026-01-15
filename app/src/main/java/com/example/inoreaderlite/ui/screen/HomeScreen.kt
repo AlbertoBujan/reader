@@ -126,7 +126,90 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntSize
 import kotlin.math.absoluteValue
+
+fun Modifier.shimmerEffect(): Modifier = composed {
+    var size by remember { mutableStateOf(IntSize.Zero) }
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val startOffsetX by transition.animateFloat(
+        initialValue = -2 * size.width.toFloat(),
+        targetValue = 2 * size.width.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000)
+        ),
+        label = "shimmer_offset"
+    )
+
+    background(
+        brush = Brush.linearGradient(
+            colors = listOf(
+                Color(0xFFB8B5B5),
+                Color(0xFF8F8B8B),
+                Color(0xFFB8B5B5),
+            ),
+            start = Offset(startOffsetX, 0f),
+            end = Offset(startOffsetX + size.width.toFloat(), size.height.toFloat())
+        )
+    )
+    .onGloballyPositioned {
+        size = it.size
+    }
+}
+
+@Composable
+fun SkeletonArticleItem() {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmerEffect()
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerEffect()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(20.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerEffect()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.4f)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerEffect()
+                )
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -383,9 +466,13 @@ fun HomeScreen(
             ) {
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
-                        if (!isRefreshing) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(6) {
+                                SkeletonArticleItem()
                             }
                         }
                     }
