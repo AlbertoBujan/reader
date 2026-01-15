@@ -385,16 +385,25 @@ fun HomeScreen(
                         }
                         
                         HorizontalDivider()
-                        NavigationDrawerItem(
-                            icon = { Icon(Icons.Default.Settings, null) },
-                            label = { Text("Settings") },
-                            selected = false,
-                            onClick = { 
-                                showSettingsDialog = true
-                                scope.launch { drawerState.close() }
-                            },
-                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(NavigationDrawerItemDefaults.ItemPadding)
+                                .clickable {
+                                    showSettingsDialog = true
+                                    scope.launch { drawerState.close() }
+                                }
+                                .padding(vertical = 12.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "©BoaXente Riffle ${com.example.inoreaderlite.BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Spacer(Modifier.height(12.dp))
                     }
                     FloatingActionButton(

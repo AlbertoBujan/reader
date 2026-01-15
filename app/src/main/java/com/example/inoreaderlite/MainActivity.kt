@@ -38,9 +38,17 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 import java.nio.charset.StandardCharsets
-import com.github.javiersantos.appupdater.AppUpdater
+import com.github.javiersantos.appupdater.AppUpdaterUtils
+import com.github.javiersantos.appupdater.enums.AppUpdaterError
 import com.github.javiersantos.appupdater.enums.Display
 import com.github.javiersantos.appupdater.enums.UpdateFrom
+import com.github.javiersantos.appupdater.objects.Update
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -49,21 +57,26 @@ class MainActivity : AppCompatActivity() {
         
         enableEdgeToEdge()
 
-        // Configuración de la actualización automática
-        val appUpdater = AppUpdater(this)
+        // State for update dialog
+        val updateInfo = mutableStateOf<Update?>(null)
+
+        // Check for updates manually
+        val appUpdaterUtils = AppUpdaterUtils(this)
             .setUpdateFrom(UpdateFrom.GITHUB)
             .setGitHubUserAndRepo("AlbertoBujan", "reader")
-            .setDisplay(Display.DIALOG)
-            .setButtonUpdate("Actualizar ahora")
-            .setButtonDismiss("Luego")
-            .setButtonUpdateClickListener { dialog, update ->
-                // Usamos la URL directa genérica a la última release (asumiendo que el nombre es app-release.apk)
-                // Si tienes otro nombre de APK, cámbialo aquí.
-                downloadAndInstall("https://github.com/AlbertoBujan/reader/releases/latest/download/app-release.apk")
-            }
-            //.setButtonDoNotShowAgain(null) // Omitido si causa problemas de tipo, el comportamiento por defecto suele ser visible.
+            .withListener(object : com.github.javiersantos.appupdater.AppUpdaterUtils.UpdateListener {
+                override fun onSuccess(update: Update?, isUpdateAvailable: Boolean?) {
+                    if (isUpdateAvailable == true) {
+                        updateInfo.value = update
+                    }
+                }
+
+                override fun onFailed(error: AppUpdaterError?) {
+                    // Handle error if needed
+                }
+            })
         
-        appUpdater.start()
+        appUpdaterUtils.start()
         
         setContent {
             val viewModel: MainViewModel = hiltViewModel()
@@ -93,6 +106,33 @@ class MainActivity : AppCompatActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     RiffleApp(viewModel)
+                    
+                    // Show custom update dialog
+                    updateInfo.value?.let { update ->
+                        AlertDialog(
+                            onDismissRequest = { updateInfo.value = null },
+                            title = { Text("New update available!") },
+                            text = { 
+                                Text("Update ${update.latestVersion} is available to download. By downloading the latest update you will get the latest features, improvements and bug fixes for Riffle.") 
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = { 
+                                        // Usamos la URL directa genérica
+                                        downloadAndInstall("https://github.com/AlbertoBujan/reader/releases/latest/download/app-release.apk")
+                                        updateInfo.value = null 
+                                    }
+                                ) {
+                                    Text("UPDATE NOW")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { updateInfo.value = null }) {
+                                    Text("LATER")
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
