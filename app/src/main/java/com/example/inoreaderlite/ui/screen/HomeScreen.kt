@@ -106,6 +106,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -160,15 +161,6 @@ fun HomeScreen(
         viewModel.sync()
     }
 
-    // Scroll al principio cuando termina una carga
-    var wasRefreshing by remember { mutableStateOf(false) }
-    LaunchedEffect(isRefreshing) {
-        if (wasRefreshing && !isRefreshing) {
-            listState.animateScrollToItem(0)
-        }
-        wasRefreshing = isRefreshing
-    }
-
     // Manejo del botón atrás de Android
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
@@ -194,7 +186,6 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            @Suppress("DEPRECATION")
                             Text(text = "Subscriptions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Row {
                                 IconButton(onClick = { showFolderDialog = true }) {
@@ -216,7 +207,6 @@ fun HomeScreen(
                                             Text("All Feeds")
                                             if (totalUnread > 0) {
                                                 Spacer(Modifier.width(8.dp))
-                                                @Suppress("DEPRECATION")
                                                 Text(
                                                     text = totalUnread.toString(),
                                                     style = MaterialTheme.typography.labelSmall,
@@ -239,11 +229,9 @@ fun HomeScreen(
                                     icon = { Icon(Icons.Default.Bookmark, null) },
                                     label = { 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            @Suppress("DEPRECATION")
                                             Text("Read Later")
                                             if (savedCount > 0) {
                                                 Spacer(Modifier.width(8.dp))
-                                                @Suppress("DEPRECATION")
                                                 Text(
                                                     text = savedCount.toString(),
                                                     style = MaterialTheme.typography.labelSmall,
@@ -290,7 +278,6 @@ fun HomeScreen(
                             item(key = "uncategorized_header") {
                                 val orphanSources = sources.filter { it.folderName == null }
                                 if (orphanSources.isNotEmpty()) {
-                                    @Suppress("DEPRECATION")
                                     Text(
                                         text = "Uncategorized",
                                         style = MaterialTheme.typography.labelMedium,
@@ -404,37 +391,47 @@ fun HomeScreen(
                         }
                     }
                     is FeedUiState.Success -> {
-                        ArticleList(
-                            articles = state.articles, 
-                            listState = listState,
-                            markAsReadOnScroll = markAsReadOnScroll,
-                            isRefreshing = isRefreshing,
-                            onMarkAsRead = { viewModel.markAsRead(it) },
-                            onToggleSave = { link, isSaved -> 
-                                viewModel.toggleSaveArticle(link, isSaved)
-                                val message = if (isSaved) "Removed from Read Later" else "Added to Read Later"
-                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                            },
-                            onShare = { article ->
-                                val sendIntent: Intent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, "${article.title}\n\n${article.link}")
-                                    type = "text/plain"
-                                }
-                                val shareIntent = Intent.createChooser(sendIntent, null)
-                                context.startActivity(shareIntent)
-                            },
-                            onArticleClick = { link, isRead ->
-                                if (!isRead) viewModel.markAsRead(link)
-                                onArticleClick(link, isRead)
-                            },
-                            isReadLaterView = selectedSource == "saved",
-                            onLoadMore = { viewModel.loadMore() }
-                        )
+                        // Scroll automático al inicio tras carga
+                        var wasRefreshing by remember { mutableStateOf(false) }
+                        LaunchedEffect(isRefreshing) {
+                            if (wasRefreshing && !isRefreshing && state.articles.isNotEmpty()) {
+                                listState.animateScrollToItem(0)
+                            }
+                            wasRefreshing = isRefreshing
+                        }
+
+                        key(selectedSource) {
+                            ArticleList(
+                                articles = state.articles, 
+                                listState = listState,
+                                markAsReadOnScroll = markAsReadOnScroll,
+                                isRefreshing = isRefreshing,
+                                onMarkAsRead = { viewModel.markAsRead(it) },
+                                onToggleSave = { link, isSaved -> 
+                                    viewModel.toggleSaveArticle(link, isSaved)
+                                    val message = if (isSaved) "Removed from Read Later" else "Added to Read Later"
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                },
+                                onShare = { article ->
+                                    val sendIntent: Intent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(Intent.EXTRA_TEXT, "${article.title}\n\n${article.link}")
+                                        type = "text/plain"
+                                    }
+                                    val shareIntent = Intent.createChooser(sendIntent, null)
+                                    context.startActivity(shareIntent)
+                                },
+                                onArticleClick = { link, isRead ->
+                                    if (!isRead) viewModel.markAsRead(link)
+                                    onArticleClick(link, isRead)
+                                },
+                                isReadLaterView = selectedSource == "saved",
+                                onLoadMore = { viewModel.loadMore() }
+                            )
+                        }
                     }
                     is FeedUiState.Error -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            @Suppress("DEPRECATION")
                             Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -618,7 +615,6 @@ fun SettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text("Settings") },
         text = {
-            @Suppress("DEPRECATION")
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -626,7 +622,6 @@ fun SettingsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Dark Mode")
-                    @Suppress("DEPRECATION")
                     Switch(
                         checked = isDarkMode,
                         onCheckedChange = onToggleDarkMode
@@ -639,7 +634,6 @@ fun SettingsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Mark as read on scroll")
-                    @Suppress("DEPRECATION")
                     Switch(
                         checked = markAsReadOnScroll,
                         onCheckedChange = onToggleMarkAsReadOnScroll
@@ -842,7 +836,6 @@ fun FolderItem(
                     modifier = Modifier.weight(1f)
                 )
                 if (folderUnreadCount > 0) {
-                    @Suppress("DEPRECATION")
                     Text(
                         text = folderUnreadCount.toString(),
                         style = MaterialTheme.typography.labelSmall,
@@ -984,30 +977,26 @@ fun ArticleList(
             }
     }
 
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    
     if (markAsReadOnScroll) {
         var lastProcessedIndex by remember { mutableStateOf(listState.firstVisibleItemIndex) }
 
-        LaunchedEffect(isRefreshing) {
-            if (!isRefreshing) {
-                lastProcessedIndex = listState.firstVisibleItemIndex
-            }
-        }
-
-        LaunchedEffect(listState) {
+        LaunchedEffect(listState, isRefreshing) {
+            if (isRefreshing) return@LaunchedEffect
+            
             snapshotFlow { listState.firstVisibleItemIndex }
                 .distinctUntilChanged()
-                .collect { firstIndex ->
-                    if (firstIndex > lastProcessedIndex && !isRefreshing) {
-                        for (i in lastProcessedIndex until firstIndex) {
+                .collect { currentFirstIndex ->
+                    if (currentFirstIndex > lastProcessedIndex) {
+                        for (i in lastProcessedIndex until currentFirstIndex) {
                             if (i < currentArticles.size) {
                                 val article = currentArticles[i]
-                                if (!article.isRead) {
-                                    onMarkAsRead(article.link)
-                                }
+                                if (!article.isRead) onMarkAsRead(article.link)
                             }
                         }
                     }
-                    lastProcessedIndex = firstIndex
+                    lastProcessedIndex = currentFirstIndex
                 }
         }
     }
@@ -1036,7 +1025,6 @@ fun ArticleList(
                         .padding(top = 32.dp, bottom = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    @Suppress("DEPRECATION")
                     Text(
                         text = "You've reached the end ✨",
                         style = MaterialTheme.typography.bodyMedium,
@@ -1046,7 +1034,7 @@ fun ArticleList(
                 }
             }
             item {
-                Spacer(modifier = Modifier.height(400.dp))
+                Spacer(modifier = Modifier.height(screenHeight - 60.dp))
             }
         }
     }
@@ -1117,7 +1105,6 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
             
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    @Suppress("DEPRECATION")
                     Text(
                         text = article.title,
                         style = MaterialTheme.typography.titleMedium,
@@ -1136,7 +1123,6 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                @Suppress("DEPRECATION")
                 Text(
                     text = "${formatDate(article.pubDate)} • ${article.sourceUrl}",
                     style = MaterialTheme.typography.bodySmall
