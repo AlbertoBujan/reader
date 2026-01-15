@@ -3,11 +3,15 @@ name: Android Build & Release
 on:
   push:
     tags:
-      - 'v*' # Se activará cada vez que subas un tag como v1.0.1, v1.2, etc.
+      - 'v*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Permisos necesarios para crear la release
+    permissions:
+      contents: write
+      
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -25,13 +29,12 @@ jobs:
       - name: Compilar APK de Release
         run: ./gradlew assembleRelease
 
-      # --- NUEVO PASO: Instalamos la versión exacta que busca la acción de firmado ---
       - name: Instalar Android Build Tools 29.0.3
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "build-tools;29.0.3"
 
       - name: Firmar el APK
-        uses: r0adkll/sign-android-release@v1 # Volvemos a la v1 estable
+        uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
           releaseDirectory: app/build/outputs/apk/release
@@ -39,7 +42,6 @@ jobs:
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-          # Eliminamos buildToolsVersion para usar la que acabamos de instalar por defecto
 
       - name: Crear Release en GitHub
         uses: softprops/action-gh-release@v1
