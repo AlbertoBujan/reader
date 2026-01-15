@@ -992,7 +992,15 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
         contentColor = contentColor,
         modifier = Modifier
             .fillMaxWidth()
-            .dragAndDropSource {
+            .dragAndDropSource(
+                drawDragDecoration = {
+                    drawRoundRect(
+                         color = Color(0xFFAAAAAA).copy(alpha = 0.5f),
+                         size = size,
+                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2)
+                    )
+                }
+            ) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
                         startTransfer(
