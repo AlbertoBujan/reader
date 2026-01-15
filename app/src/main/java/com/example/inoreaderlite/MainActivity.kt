@@ -1,7 +1,7 @@
 package com.example.inoreaderlite
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -30,14 +30,29 @@ import com.example.inoreaderlite.ui.screen.HomeScreen
 import com.example.inoreaderlite.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.URLEncoder
+
 import java.nio.charset.StandardCharsets
+import com.github.javiersantos.appupdater.AppUpdater
+import com.github.javiersantos.appupdater.enums.Display
+import com.github.javiersantos.appupdater.enums.UpdateFrom
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         enableEdgeToEdge()
+
+        // Configuración de la actualización automática
+        val appUpdater = AppUpdater(this)
+            .setUpdateFrom(UpdateFrom.GITHUB)
+            .setGitHubUserAndRepo("AlbertoBujan", "reader")
+            .setDisplay(Display.DIALOG)
+            .setButtonUpdate("Actualizar ahora")
+            .setButtonDismiss("Luego")
+            //.setButtonDoNotShowAgain(null) // Omitido si causa problemas de tipo, el comportamiento por defecto suele ser visible.
+        
+        appUpdater.start()
         
         setContent {
             val viewModel: MainViewModel = hiltViewModel()

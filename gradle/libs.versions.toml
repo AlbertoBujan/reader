@@ -15,8 +15,10 @@ coil = "2.6.0"
 hilt = "2.51.1"
 ksp = "2.0.0-1.0.21"
 hiltNavigationCompose = "1.2.0"
+appUpdater = "2.7"
 
 [libraries]
+appUpdater = { module = "com.github.javiersantos:AppUpdater", version.ref = "appUpdater" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -41,6 +43,7 @@ androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navig
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version = "1.6.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
