@@ -239,9 +239,11 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Sincronización automática al iniciar
-    // Sincronización automática se ha movido al ViewModel init
-
+    LaunchedEffect(Unit) {
+        viewModel.messageEvent.collect { message: String ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Manejo del botón atrás de Android
     BackHandler(enabled = drawerState.isOpen) {

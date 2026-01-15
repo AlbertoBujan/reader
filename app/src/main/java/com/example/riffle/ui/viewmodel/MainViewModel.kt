@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -65,6 +66,9 @@ class MainViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _messageEvent = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+    val messageEvent = _messageEvent.asSharedFlow()
 
     private val _selectedSource = MutableStateFlow<String?>(null)
     val selectedSource: StateFlow<String?> = _selectedSource.asStateFlow()
@@ -188,8 +192,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 addSourceUseCase(url, title, iconUrl)
+                _messageEvent.emit("Feed added successfully")
             } catch (e: Exception) {
                 e.printStackTrace()
+                _messageEvent.emit("Error adding feed: ${e.message}")
             }
         }
     }
