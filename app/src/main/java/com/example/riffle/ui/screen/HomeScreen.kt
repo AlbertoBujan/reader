@@ -950,6 +950,10 @@ fun FolderItem(
                         isExpanded = !isExpanded
                         onFolderClick(folderName) 
                     }
+                    .background(
+                        if (isOver) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) 
+                        else Color.Transparent
+                    )
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -960,12 +964,7 @@ fun FolderItem(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(4.dp))
-                Icon(
-                    Icons.Filled.Folder, 
-                    contentDescription = null, 
-                    tint = if (isOver || isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.width(12.dp))
+
                 Text(
                     text = folderName, 
                     style = MaterialTheme.typography.titleSmall,
