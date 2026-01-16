@@ -1,3 +1,12 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -21,6 +30,10 @@ versionCode = 4
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // ESTO LEE TU CLAVE Y LA METE EN LA APP
+        val key = localProperties.getProperty("GEMINI_API_KEY") ?: ""
+        buildConfigField("String", "GEMINI_API_KEY", "\"$key\"")
     }
 
     buildTypes {
@@ -98,4 +111,7 @@ dependencies {
     // App Updater
     implementation(libs.appUpdater)
     implementation(libs.androidx.appcompat)
+
+    // El SDK de Google AI
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }

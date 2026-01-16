@@ -38,6 +38,8 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
+import com.google.ai.client.generativeai.GenerativeModel
+import com.example.riffle.BuildConfig
 
 sealed interface FeedUiState {
     data object Loading : FeedUiState
@@ -84,6 +86,51 @@ class MainViewModel @Inject constructor(
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    // --- ZONA IA: Variables para el resumen ---
+    private val _summaryState = MutableStateFlow<String?>(null)
+    val summaryState: StateFlow<String?> = _summaryState.asStateFlow()
+
+    private val _isSummarizing = MutableStateFlow(false)
+    val isSummarizing: StateFlow<Boolean> = _isSummarizing.asStateFlow()
+
+    // Inicializamos el modelo de Gemini (versión Flash para que sea rápido)
+    private val generativeModel = GenerativeModel(
+        modelName = "gemini-2.5-flash",
+        apiKey = BuildConfig.GEMINI_API_KEY
+    )
+
+    // Función que llama a la IA
+    fun summarizeArticle(title: String, content: String) {
+        viewModelScope.launch {
+            _isSummarizing.value = true
+            _summaryState.value = null // Limpiamos resumen anterior
+            try {
+                // Limpiamos un poco el texto por si viene con mucha basura HTML
+                val cleanContent = Jsoup.parse(content).text().take(10000) // Límite de seguridad
+                
+                val prompt = """
+                    Actúa como un asistente experto en noticias.
+                    Resume el siguiente artículo en 3 puntos clave (bullet points) usando un tono informativo y directo.
+                    Título: $title
+                    Contenido: $cleanContent
+                """.trimIndent()
+
+                val response = generativeModel.generateContent(prompt)
+                _summaryState.value = response.text
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _summaryState.value = "Error al conectar con la IA: \"${e.localizedMessage}\""
+            } finally {
+                _isSummarizing.value = false
+            }
+        }
+    }
+
+    // Para borrar el resumen cuando sales del artículo
+    fun clearSummary() {
+        _summaryState.value = null
+    }
 
     private val _articleLimit = MutableStateFlow(20)
     

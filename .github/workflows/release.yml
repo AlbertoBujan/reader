@@ -26,6 +26,11 @@ jobs:
       - name: Hacer el APK ejecutable
         run: chmod +x gradlew
 
+      # --- NUEVO PASO: Inyectar la API Key en el servidor ---
+      # Esto crea el archivo secreto al vuelo usando el Secret de GitHub
+      - name: Crear local.properties con API Key
+        run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > local.properties
+
       - name: Compilar APK de Release
         run: ./gradlew assembleRelease
 
