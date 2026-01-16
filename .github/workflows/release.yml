@@ -26,11 +26,8 @@ jobs:
       - name: Hacer el APK ejecutable
         run: chmod +x gradlew
 
-      # --- NUEVO PASO: Inyectar la API Key en el servidor ---
-      # Esto crea el archivo secreto al vuelo usando el Secret de GitHub
-      - name: Crear local.properties con API Key
-        run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > local.properties
-
+      # Quitamos el paso de crear local.properties. 
+      # La app compilará igual gracias al fallback (?: "") que pusimos en Gradle.
       - name: Compilar APK de Release
         run: ./gradlew assembleRelease
 
@@ -48,14 +45,13 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      # --- PASO CLAVE: Renombrar el archivo firmado a un nombre fijo ---
+      # MANTENEMOS ESTO: Es vital para que el auto-update encuentre el archivo
       - name: Renombrar APK para la Release
         run: mv ${{ steps.sign_app.outputs.signedReleaseFile }} app/build/outputs/apk/release/Riffle.apk
 
       - name: Crear Release en GitHub
         uses: softprops/action-gh-release@v1
         with:
-          # Subimos el archivo con el nombre nuevo y limpio
           files: app/build/outputs/apk/release/Riffle.apk
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}

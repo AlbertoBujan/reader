@@ -26,4 +26,12 @@ class PreferencesManager @Inject constructor(@ApplicationContext context: Contex
     fun setMarkAsReadOnScroll(enabled: Boolean) {
         sharedPreferences.edit().putBoolean("mark_on_scroll", enabled).apply()
     }
+
+    fun getGeminiApiKey(): String {
+        return sharedPreferences.getString("gemini_api_key", "") ?: ""
+    }
+
+    fun setGeminiApiKey(key: String) {
+        sharedPreferences.edit().putString("gemini_api_key", key).apply()
+    }
 }

@@ -225,7 +225,9 @@ fun HomeScreen(
     val markAsReadOnScroll by viewModel.markAsReadOnScroll.collectAsState()
     val unreadCounts by viewModel.unreadCounts.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
+
     val savedCount by viewModel.savedCount.collectAsState()
+    val geminiApiKey by viewModel.geminiApiKey.collectAsState()
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
@@ -571,7 +573,9 @@ fun HomeScreen(
                     markAsReadOnScroll = markAsReadOnScroll,
                     onToggleMarkAsReadOnScroll = { viewModel.toggleMarkAsReadOnScroll(it) },
                     isDarkMode = isDarkMode,
-                    onToggleDarkMode = { viewModel.toggleDarkMode(it) }
+                    onToggleDarkMode = { viewModel.toggleDarkMode(it) },
+                    geminiApiKey = geminiApiKey,
+                    onApiKeyChange = { viewModel.updateGeminiApiKey(it) }
                 )
             }
 
@@ -708,8 +712,11 @@ fun SettingsDialog(
     onDismiss: () -> Unit,
     markAsReadOnScroll: Boolean,
     onToggleMarkAsReadOnScroll: (Boolean) -> Unit,
+
     isDarkMode: Boolean,
-    onToggleDarkMode: (Boolean) -> Unit
+    onToggleDarkMode: (Boolean) -> Unit,
+    geminiApiKey: String,
+    onApiKeyChange: (String) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -737,8 +744,23 @@ fun SettingsDialog(
                     Switch(
                         checked = markAsReadOnScroll,
                         onCheckedChange = onToggleMarkAsReadOnScroll
+
                     )
                 }
+                
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("Gemini API Key", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = geminiApiKey,
+                    onValueChange = onApiKeyChange,
+                    label = { Text("Paste your API Key here") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall
+                )
             }
         },
         confirmButton = {

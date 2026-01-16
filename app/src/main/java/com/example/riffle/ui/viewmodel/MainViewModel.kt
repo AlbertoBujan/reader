@@ -94,18 +94,32 @@ class MainViewModel @Inject constructor(
     private val _isSummarizing = MutableStateFlow(false)
     val isSummarizing: StateFlow<Boolean> = _isSummarizing.asStateFlow()
 
-    // Inicializamos el modelo de Gemini (versión Flash para que sea rápido)
-    private val generativeModel = GenerativeModel(
-        modelName = "gemini-2.5-flash",
-        apiKey = BuildConfig.GEMINI_API_KEY
-    )
+    private val _geminiApiKey = MutableStateFlow(preferencesManager.getGeminiApiKey())
+    val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
+
+    fun updateGeminiApiKey(key: String) {
+        _geminiApiKey.value = key
+        preferencesManager.setGeminiApiKey(key)
+    }
 
     // Función que llama a la IA
     fun summarizeArticle(title: String, content: String) {
+        val currentKey = _geminiApiKey.value
+        if (currentKey.isBlank()) {
+            _summaryState.value = "⚠️ Por favor, configura tu API Key de Gemini en Ajustes primero."
+            return
+        }
+
         viewModelScope.launch {
             _isSummarizing.value = true
             _summaryState.value = null // Limpiamos resumen anterior
             try {
+                // Inicializamos el modelo dinámicamente con la clave del usuario
+                val generativeModel = GenerativeModel(
+                    modelName = "gemini-2.5-flash",
+                    apiKey = currentKey
+                )
+
                 // Limpiamos un poco el texto por si viene con mucha basura HTML
                 val cleanContent = Jsoup.parse(content).text().take(10000) // Límite de seguridad
                 
