@@ -501,7 +501,7 @@ fun HomeScreen(
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
                         LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
@@ -1260,7 +1260,7 @@ fun ArticleList(
 
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxSize()
     ) {
