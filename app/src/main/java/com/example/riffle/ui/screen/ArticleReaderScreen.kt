@@ -66,6 +66,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.riffle.ui.viewmodel.MainViewModel
+import com.example.riffle.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,7 +95,7 @@ fun ArticleReaderScreen(
                 title = { Text("Article") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.article_back))
                     }
                 },
                 actions = {
@@ -101,7 +103,7 @@ fun ArticleReaderScreen(
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         context.startActivity(intent)
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Open in Browser")
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.article_open_browser))
                     }
                 }
             )
@@ -109,6 +111,7 @@ fun ArticleReaderScreen(
         // 3. EL BOTÓN MÁGICO DE LA IA
         floatingActionButton = {
             if (article != null) { // Solo mostramos botón si hay artículo
+                val noContentString = stringResource(R.string.article_no_content)
                 FloatingActionButton(
                     onClick = {
                         // Si ya hay resumen, lo borramos (toggle), si no, lo pedimos
@@ -118,7 +121,7 @@ fun ArticleReaderScreen(
                             // Enviamos título y contenido (o descripción si contenido es nulo)
                             viewModel.summarizeArticle(
                                 title = article!!.title,
-                                content = article!!.description ?: "Sin contenido"
+                                content = article!!.description ?: noContentString
                             )
                         }
                     },
@@ -133,7 +136,7 @@ fun ArticleReaderScreen(
                         // Cambia el icono si ya hay resumen o no
                         Icon(
                             imageVector = if (summary != null) Icons.Default.Close else Icons.Default.AutoAwesome,
-                            contentDescription = "IA Resumen"
+                            contentDescription = stringResource(R.string.ai_summary_button_desc)
                         )
                     }
                 }
@@ -164,7 +167,7 @@ fun ArticleReaderScreen(
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Resumen Inteligente",
+                                    text = stringResource(R.string.ai_summary_title),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -227,7 +230,7 @@ fun ArticleReaderScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Loading article content...")
+                Text(stringResource(R.string.article_loading))
             }
         }
     }

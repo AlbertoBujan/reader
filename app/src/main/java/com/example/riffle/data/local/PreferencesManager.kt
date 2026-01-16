@@ -34,4 +34,12 @@ class PreferencesManager @Inject constructor(@ApplicationContext context: Contex
     fun setGeminiApiKey(key: String) {
         sharedPreferences.edit().putString("gemini_api_key", key).apply()
     }
+
+    fun getLanguage(): String {
+        return sharedPreferences.getString("language", "system") ?: "system"
+    }
+
+    fun setLanguage(language: String) {
+        sharedPreferences.edit().putString("language", language).apply()
+    }
 }

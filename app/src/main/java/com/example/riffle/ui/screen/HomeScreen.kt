@@ -143,6 +143,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.res.stringResource
+import androidx.core.os.LocaleListCompat
+import androidx.appcompat.app.AppCompatDelegate
+import com.example.riffle.R
 import kotlin.math.absoluteValue
 
 fun Modifier.shimmerEffect(): Modifier = composed {
@@ -238,6 +242,7 @@ fun HomeScreen(
     val markAsReadOnScroll by viewModel.markAsReadOnScroll.collectAsState()
     val unreadCounts by viewModel.unreadCounts.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
+    val language by viewModel.language.collectAsState()
 
     val savedCount by viewModel.savedCount.collectAsState()
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
@@ -285,13 +290,13 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "Subscriptions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(text = stringResource(R.string.nav_subscriptions), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Row {
                                 IconButton(onClick = { showFolderDialog = true }) {
-                                    Icon(Icons.Filled.CreateNewFolder, contentDescription = "New Folder")
+                                    Icon(Icons.Filled.CreateNewFolder, contentDescription = stringResource(R.string.nav_new_folder))
                                 }
                                 IconButton(onClick = { showSearchDialog = true }) {
-                                    Icon(Icons.Default.Search, contentDescription = "Search Feeds")
+                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search_feeds))
                                 }
                             }
                         }
@@ -303,7 +308,7 @@ fun HomeScreen(
                                     icon = { Icon(Icons.Filled.RssFeed, null) },
                                     label = { 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("All Feeds")
+                                            Text(stringResource(R.string.nav_all_feeds))
                                             if (totalUnread > 0) {
                                                 Spacer(Modifier.width(8.dp))
                                                 Text(
@@ -328,7 +333,7 @@ fun HomeScreen(
                                     icon = { Icon(Icons.Default.Bookmark, null) },
                                     label = { 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("Read Later")
+                                            Text(stringResource(R.string.nav_read_later))
                                             if (savedCount > 0) {
                                                 Spacer(Modifier.width(8.dp))
                                                 Text(
@@ -378,7 +383,7 @@ fun HomeScreen(
                                 val orphanSources = sources.filter { it.folderName == null }
                                 if (orphanSources.isNotEmpty()) {
                                     Text(
-                                        text = "Uncategorized",
+                                        text = stringResource(R.string.nav_uncategorized),
                                         style = MaterialTheme.typography.labelMedium,
                                         modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 8.dp),
                                         color = MaterialTheme.colorScheme.primary
@@ -413,10 +418,10 @@ fun HomeScreen(
                                 .padding(vertical = 12.dp, horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "© Riffle ${com.example.riffle.BuildConfig.VERSION_NAME}",
+                                text = stringResource(R.string.app_name) + " ${com.example.riffle.BuildConfig.VERSION_NAME}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -429,7 +434,7 @@ fun HomeScreen(
                             .align(Alignment.BottomEnd)
                             .padding(16.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Source")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
                     }
                 }
             }
@@ -443,10 +448,10 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 when {
-                                    selectedSource == "saved" -> "Read Later"
-                                    selectedSource == null -> "Riffle"
-                                    selectedSource!!.startsWith("folder:") -> "Folder: ${selectedSource!!.removePrefix("folder:")}"
-                                    else -> sources.find { it.url == selectedSource }?.title ?: "Filtered Feed"
+                                    selectedSource == "saved" -> stringResource(R.string.nav_read_later)
+                                    selectedSource == null -> stringResource(R.string.app_name)
+                                    selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
+                                    else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
                                 }
                             )
                             val currentUnread = when {
@@ -470,13 +475,13 @@ fun HomeScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
                         }
                     },
                     actions = {
                         if (selectedSource != "saved") {
                             IconButton(onClick = { viewModel.markAllAsRead() }) {
-                                Icon(Icons.Default.DoneAll, contentDescription = "Mark all as read")
+                                Icon(Icons.Default.DoneAll, contentDescription = stringResource(R.string.mark_all_read))
                             }
                         }
                     }
@@ -525,7 +530,7 @@ fun HomeScreen(
                                     if (selectedSource == "saved" && isSaved) {
                                         viewModel.markAsRead(link)
                                     }
-                                    val message = if (isSaved) "Removed from Read Later" else "Added to Read Later"
+                                    val message = if (isSaved) context.getString(R.string.msg_removed_read_later) else context.getString(R.string.msg_added_read_later)
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                 },
                                 onShare = { article ->
@@ -589,7 +594,13 @@ fun HomeScreen(
                     isDarkMode = isDarkMode,
                     onToggleDarkMode = { viewModel.toggleDarkMode(it) },
                     geminiApiKey = geminiApiKey,
-                    onApiKeyChange = { viewModel.updateGeminiApiKey(it) }
+                    onApiKeyChange = { viewModel.updateGeminiApiKey(it) },
+                    language = language,
+                    onLanguageChange = { code ->
+                        viewModel.setLanguage(code)
+                        val localeList = if (code == "system") LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(code)
+                        AppCompatDelegate.setApplicationLocales(localeList)
+                    }
                 )
             }
 
@@ -626,19 +637,19 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Search Feeds") },
+        title = { Text(stringResource(R.string.dialog_search_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text("URL or Domain (e.g. xataka.com)") },
+                        label = { Text(stringResource(R.string.dialog_search_label)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
                     IconButton(onClick = { viewModel.searchFeeds(query) }, enabled = query.isNotBlank() && !isSearching) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search_feeds))
                     }
                 }
                 
@@ -677,7 +688,7 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                                         viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
                                         onDismiss()
                                     }) {
-                                        Icon(Icons.Default.Add, contentDescription = "Add")
+                                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
                                     }
                                 }
                             )
@@ -687,7 +698,7 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("Close") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
         }
     )
 }
@@ -697,15 +708,15 @@ fun RenameSourceDialog(initialTitle: String, onDismiss: () -> Unit, onConfirm: (
     var text by remember { mutableStateOf(initialTitle) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename Feed") },
+        title = { Text(stringResource(R.string.dialog_rename_source_title)) },
         text = {
-            TextField(value = text, onValueChange = { text = it }, label = { Text("Feed Title") }, singleLine = true)
+            TextField(value = text, onValueChange = { text = it }, label = { Text(stringResource(R.string.dialog_rename_source_label)) }, singleLine = true)
         },
         confirmButton = {
-            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text("Rename") }
+            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text(stringResource(R.string.dialog_rename)) }
         },
         dismissButton = {
-            Button(onClick = onDismiss) { Text("Cancel") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
         }
     )
 }
@@ -715,15 +726,15 @@ fun RenameFolderDialog(initialName: String, onDismiss: () -> Unit, onConfirm: (S
     var text by remember { mutableStateOf(initialName) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename Folder") },
+        title = { Text(stringResource(R.string.dialog_rename_folder_title)) },
         text = {
-            TextField(value = text, onValueChange = { text = it }, label = { Text("Folder Name") }, singleLine = true)
+            TextField(value = text, onValueChange = { text = it }, label = { Text(stringResource(R.string.dialog_rename_folder_label)) }, singleLine = true)
         },
         confirmButton = {
-            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text("Rename") }
+            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text(stringResource(R.string.dialog_rename)) }
         },
         dismissButton = {
-            Button(onClick = onDismiss) { Text("Cancel") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
         }
     )
 }
@@ -737,11 +748,15 @@ fun SettingsDialog(
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit,
     geminiApiKey: String,
-    onApiKeyChange: (String) -> Unit
+    onApiKeyChange: (String) -> Unit,
+    language: String,
+    onLanguageChange: (String) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Settings") },
+        title = { Text(stringResource(R.string.settings_title)) },
         text = {
             Column {
                 Row(
@@ -749,7 +764,7 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Dark Mode")
+                    Text(stringResource(R.string.settings_dark_mode))
                     Switch(
                         checked = isDarkMode,
                         onCheckedChange = onToggleDarkMode
@@ -761,23 +776,56 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Mark as read on scroll")
+                    Text(stringResource(R.string.settings_mark_read_scroll))
                     Switch(
                         checked = markAsReadOnScroll,
                         onCheckedChange = onToggleMarkAsReadOnScroll
 
                     )
                 }
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.settings_language))
+                    Box {
+                         Text(
+                             text = when(language) {
+                                 "en" -> stringResource(R.string.settings_language_en)
+                                 "es" -> stringResource(R.string.settings_language_es)
+                                 else -> stringResource(R.string.settings_language_system)
+                             },
+                             color = MaterialTheme.colorScheme.primary,
+                             modifier = Modifier.clickable { expanded = true }.padding(8.dp)
+                         )
+                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                             DropdownMenuItem(
+                                 text = { Text(stringResource(R.string.settings_language_system)) },
+                                 onClick = { onLanguageChange("system"); expanded = false }
+                             )
+                             DropdownMenuItem(
+                                 text = { Text(stringResource(R.string.settings_language_en)) },
+                                 onClick = { onLanguageChange("en"); expanded = false }
+                             )
+                             DropdownMenuItem(
+                                 text = { Text(stringResource(R.string.settings_language_es)) },
+                                 onClick = { onLanguageChange("es"); expanded = false }
+                             )
+                         }
+                    }
+                }
                 
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text("Gemini API Key", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_gemini_key), style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = geminiApiKey,
                     onValueChange = onApiKeyChange,
-                    label = { Text("Paste your API Key here") },
+                    label = { Text(stringResource(R.string.settings_gemini_key_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.bodySmall
@@ -785,7 +833,7 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onDismiss() }) { Text("Close") }
+            Button(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_close)) }
         }
     )
 }
@@ -1097,15 +1145,15 @@ fun AddFolderDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Folder") },
+        title = { Text(stringResource(R.string.dialog_add_folder_title)) },
         text = {
-            TextField(value = text, onValueChange = { text = it }, label = { Text("Folder Name") }, singleLine = true)
+            TextField(value = text, onValueChange = { text = it }, label = { Text(stringResource(R.string.dialog_add_folder_label)) }, singleLine = true)
         },
         confirmButton = {
-            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text("Create") }
+            Button(onClick = { if(text.isNotBlank()) onConfirm(text) }) { Text(stringResource(R.string.dialog_create)) }
         },
         dismissButton = {
-            Button(onClick = onDismiss) { Text("Cancel") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
         }
     )
 }
@@ -1191,7 +1239,7 @@ fun ArticleList(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "You've reached the end ✨",
+                        text = stringResource(R.string.list_end_message),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -1272,7 +1320,7 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                     if (article.isSaved) {
                         Icon(
                             Icons.Default.Bookmark, 
-                            contentDescription = "Saved",
+                            contentDescription = stringResource(R.string.action_saved),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp).padding(start = 4.dp)
                         )
@@ -1294,32 +1342,32 @@ fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String, String?) -> Unit) {
     var title by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add RSS Feed") },
+        title = { Text(stringResource(R.string.dialog_add_feed_title)) },
         text = {
             Column {
                 TextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title (Optional)") },
+                    label = { Text(stringResource(R.string.dialog_feed_title_optional)) },
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL") },
+                    label = { Text(stringResource(R.string.dialog_feed_url)) },
                     singleLine = true
                 )
             }
         },
         confirmButton = {
             Button(onClick = { if (url.isNotBlank()) onAdd(url, if(title.isBlank()) null else title) }) {
-                Text("Add")
+                Text(stringResource(R.string.dialog_add))
             }
         },
         dismissButton = {
             Button(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.dialog_cancel))
             }
         }
     )

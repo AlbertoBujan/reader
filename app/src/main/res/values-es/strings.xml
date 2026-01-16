@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Riffle</string>
+
+    <!-- Navigation / Drawer -->
+    <string name="nav_subscriptions">Suscripciones</string>
+    <string name="nav_new_folder">Nueva Carpeta</string>
+    <string name="nav_search_feeds">Buscar Feeds</string>
+    <string name="nav_all_feeds">Todos los Feeds</string>
+    <string name="nav_read_later">Leer más tarde</string>
+    <string name="nav_uncategorized">Sin categoría</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="nav_menu">Menú</string>
+    
+    <!-- Feed / Articles -->
+    <string name="feed_filtered">Feed Filtrado</string>
+    <string name="folder_prefix">Carpeta: %1$s</string>
+    <string name="mark_all_read">Marcar todo como leído</string>
+    <string name="article_loading">Cargando contenido...</string>
+    <string name="article_no_content">Sin contenido</string>
+    <string name="article_open_browser">Abrir en Navegador</string>
+    <string name="article_back">Atrás</string>
+    
+    <!-- AI Summary -->
+    <string name="ai_summary_title">Resumen Inteligente</string>
+    <string name="ai_summary_button_desc">Resumen IA</string>
+    <string name="ai_error_api_key">⚠️ Por favor, configura tu API Key de Gemini en Ajustes primero.</string>
+    <string name="ai_error_connection">Error al conectar con la IA: "%1$s"</string>
+    
+    <!-- Dialogs -->
+    <string name="dialog_add_folder_title">Nueva Carpeta</string>
+    <string name="dialog_add_folder_label">Nombre de la Carpeta</string>
+    <string name="dialog_confirm">Confirmar</string>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="dialog_rename">Renombrar</string>
+    <string name="dialog_close">Cerrar</string>
+    <string name="dialog_add">Añadir</string>
+    
+    <string name="dialog_rename_source_title">Renombrar Feed</string>
+    <string name="dialog_rename_source_label">Título del Feed</string>
+    
+    <string name="dialog_rename_folder_title">Renombrar Carpeta</string>
+    <string name="dialog_rename_folder_label">Nombre de la Carpeta</string>
+    
+    <string name="dialog_search_title">Buscar Feeds</string>
+    <string name="dialog_search_label">URL o Dominio (ej. xataka.com)</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_dark_mode">Modo Oscuro</string>
+    <string name="settings_mark_read_scroll">Marcar como leído al hacer scroll</string>
+    <string name="settings_gemini_key">API Key de Gemini</string>
+    <string name="settings_gemini_key_hint">Pega tu API Key aquí</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_system">Por defecto del sistema</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_es">Español</string>
+
+    <!-- Toasts / Messages -->
+    <string name="msg_removed_read_later">Eliminado de Leer más tarde</string>
+    <string name="msg_added_read_later">Añadido a Leer más tarde</string>
+    <string name="msg_feed_added">Feed añadido correctamente</string>
+    <string name="msg_feed_error">Error al añadir feed: %1$s</string>
+    <string name="msg_unknown_error">Error desconocido</string>
+    <string name="list_end_message">Has llegado al final ✨</string>
+    <string name="action_saved">Guardado</string>
+    <string name="dialog_add_feed_title">Añadir RSS Feed</string>
+    <string name="dialog_feed_title_optional">Título (Opcional)</string>
+    <string name="dialog_feed_url">URL</string>
+    <string name="dialog_create">Crear</string>
+
+</resources>

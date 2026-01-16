@@ -63,7 +63,8 @@ class MainViewModel @Inject constructor(
     private val feedDao: FeedDao,
     private val preferencesManager: PreferencesManager,
     private val clearbitService: ClearbitService,
-    getAllSourcesUseCase: GetAllSourcesUseCase
+    getAllSourcesUseCase: GetAllSourcesUseCase,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -102,11 +103,19 @@ class MainViewModel @Inject constructor(
         preferencesManager.setGeminiApiKey(key)
     }
 
+    private val _language = MutableStateFlow(preferencesManager.getLanguage())
+    val language: StateFlow<String> = _language.asStateFlow()
+
+    fun setLanguage(code: String) {
+        _language.value = code
+        preferencesManager.setLanguage(code)
+    }
+
     // Función que llama a la IA
     fun summarizeArticle(title: String, content: String) {
         val currentKey = _geminiApiKey.value
         if (currentKey.isBlank()) {
-            _summaryState.value = "⚠️ Please configure your Gemini API Key in Settings first."
+            _summaryState.value = context.getString(com.example.riffle.R.string.ai_error_api_key)
             return
         }
 
@@ -123,18 +132,30 @@ class MainViewModel @Inject constructor(
                 // Limpiamos un poco el texto por si viene con mucha basura HTML
                 val cleanContent = Jsoup.parse(content).text().take(10000) // Límite de seguridad
                 
-                val prompt = """
+                val currentLanguage = _language.value
+                val isEnglish = currentLanguage == "en" || (currentLanguage == "system" && java.util.Locale.getDefault().language == "en")
+
+                val prompt = if (isEnglish) {
+                    """
+                    Act as an expert news assistant.
+                    Summarize the following article in 3 key bullet points using an informative and direct tone.
+                    Title: $title
+                    Content: $cleanContent
+                    """.trimIndent()
+                } else {
+                    """
                     Actúa como un asistente experto en noticias.
                     Resume el siguiente artículo en 3 puntos clave (bullet points) usando un tono informativo y directo.
                     Título: $title
                     Contenido: $cleanContent
-                """.trimIndent()
+                    """.trimIndent()
+                }
 
                 val response = generativeModel.generateContent(prompt)
                 _summaryState.value = response.text
             } catch (e: Exception) {
                 e.printStackTrace()
-                _summaryState.value = "Error al conectar con la IA: \"${e.localizedMessage}\""
+                _summaryState.value = context.getString(com.example.riffle.R.string.ai_error_connection, e.localizedMessage)
             } finally {
                 _isSummarizing.value = false
             }
@@ -194,7 +215,7 @@ class MainViewModel @Inject constructor(
             FeedUiState.Success(filtered.take(limit))
         }
     }
-    .catch { emit(FeedUiState.Error(it.message ?: "Unknown error")) }
+    .catch { emit(FeedUiState.Error(it.message ?: context.getString(com.example.riffle.R.string.msg_unknown_error))) }
     .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -253,10 +274,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 addSourceUseCase(url, title, iconUrl)
-                _messageEvent.emit("Feed added successfully")
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_feed_added))
             } catch (e: Exception) {
                 e.printStackTrace()
-                _messageEvent.emit("Error adding feed: ${e.message}")
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_feed_error, e.message))
             }
         }
     }
