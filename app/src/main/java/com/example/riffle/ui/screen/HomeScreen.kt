@@ -106,8 +106,10 @@ import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -507,7 +509,8 @@ fun HomeScreen(
 
                         key(selectedSource) {
                             ArticleList(
-                                articles = state.articles, 
+                                articles = state.articles,
+                                sources = sources,
                                 listState = listState,
                                 markAsReadOnScroll = markAsReadOnScroll,
                                 isRefreshing = isRefreshing,
@@ -1019,6 +1022,7 @@ fun SwipeableSourceItem(
 fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val haptic = LocalHapticFeedback.current
 
     Surface(
         onClick = { onClick(source.url) },
@@ -1038,6 +1042,7 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
             ) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         startTransfer(
                             DragAndDropTransferData(
                                 clipData = ClipData.newPlainText("sourceUrl", source.url)
@@ -1055,7 +1060,7 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Start
         ) {
             if (source.iconUrl != null) {
                 AsyncImage(
@@ -1097,7 +1102,8 @@ fun AddFolderDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
 
 @Composable
 fun ArticleList(
-    articles: List<ArticleEntity>, 
+    articles: List<ArticleEntity>,
+    sources: List<SourceEntity>,
     listState: LazyListState,
     markAsReadOnScroll: Boolean,
     isRefreshing: Boolean,
@@ -1155,8 +1161,10 @@ fun ArticleList(
         modifier = Modifier.fillMaxSize()
     ) {
         items(articles, key = { it.link }) { article ->
+            val sourceName = sources.find { it.url == article.sourceUrl }?.title
             SwipeableArticleItem(
                 article = article,
+                sourceName = sourceName,
                 onToggleSave = { onToggleSave(article.link, article.isSaved) },
                 onShare = { onShare(article) },
                 onArticleClick = onArticleClick,
@@ -1191,6 +1199,7 @@ fun ArticleList(
 @Composable
 fun SwipeableArticleItem(
     article: ArticleEntity,
+    sourceName: String?,
     onToggleSave: () -> Unit,
     onShare: () -> Unit,
     onArticleClick: (String, Boolean) -> Unit,
@@ -1224,12 +1233,12 @@ fun SwipeableArticleItem(
             )
         }
     ) {
-        ArticleItem(article, onArticleClick)
+        ArticleItem(article, sourceName, onArticleClick)
     }
 }
 
 @Composable
-fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
+fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, Boolean) -> Unit) {
     Card(
         onClick = { onClick(article.link, article.isRead) },
         shape = RoundedCornerShape(12.dp),
@@ -1240,16 +1249,6 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
                 .padding(16.dp)
                 .alpha(if (article.isRead) 0.5f else 1f)
         ) {
-            if (article.imageUrl != null) {
-                AsyncImage(
-                    model = article.imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-            }
-            
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -1271,7 +1270,7 @@ fun ArticleItem(article: ArticleEntity, onClick: (String, Boolean) -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${formatDate(article.pubDate)} • ${article.sourceUrl}",
+                    text = "${formatDate(article.pubDate)} • ${sourceName ?: article.sourceUrl}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
