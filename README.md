@@ -50,14 +50,7 @@
     ```
 2.  **Open in Android Studio**:
     Open the project folder in Android Studio (Ladybug or newer recommended).
-3.  **Setup API Keys**:
-    *   Riffle uses Google Gemini for summaries. You need an API key.
-    *   Add your key to `local.properties`:
-        ```properties
-        GEMINI_API_KEY=your_api_key_here
-        ```
-    *   *(Optional)* You can also configure the API key directly in the app settings.
-4.  **Build and Run**:
+3.  **Build and Run**:
     Run the app on an emulator or physical device.
 
 ## 🤝 Contributing
