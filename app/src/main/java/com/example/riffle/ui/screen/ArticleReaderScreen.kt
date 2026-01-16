@@ -7,6 +7,7 @@ import android.content.Intent
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -152,14 +153,14 @@ fun ArticleReaderScreen(
                     .padding(16.dp)
             ) {
                 // 4. LA TARJETA DEL RESUMEN (APARECE ARRIBA)
-                // 4. LA TARJETA DEL RESUMEN (APARECE ARRIBA)
                 AnimatedVisibility(visible = summary != null || isSummarizing) {
+                    val isDark = isSystemInDarkTheme()
                     Card(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(bottom = 16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            containerColor = if (isDark) Color(0xFF424242) else MaterialTheme.colorScheme.secondaryContainer
                         )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {

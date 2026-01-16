@@ -8,8 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.Surface
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -28,6 +27,7 @@ import androidx.navigation.navArgument
 import com.example.riffle.ui.screen.ArticleReaderScreen
 import com.example.riffle.ui.screen.HomeScreen
 import com.example.riffle.ui.viewmodel.MainViewModel
+import com.example.riffle.ui.theme.RiffleTheme
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.URLEncoder
 import android.app.DownloadManager
@@ -82,11 +82,6 @@ class MainActivity : AppCompatActivity() {
             val viewModel: MainViewModel = hiltViewModel()
             val isDarkMode by viewModel.isDarkMode.collectAsState()
             
-            val colorScheme = when {
-                isDarkMode -> darkColorScheme()
-                else -> lightColorScheme()
-            }
-
             LaunchedEffect(isDarkMode) {
                 enableEdgeToEdge(
                     statusBarStyle = SystemBarStyle.auto(
@@ -100,7 +95,7 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            MaterialTheme(colorScheme = colorScheme) {
+            RiffleTheme(darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
