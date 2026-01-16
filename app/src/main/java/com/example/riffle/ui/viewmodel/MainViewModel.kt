@@ -106,7 +106,7 @@ class MainViewModel @Inject constructor(
     fun summarizeArticle(title: String, content: String) {
         val currentKey = _geminiApiKey.value
         if (currentKey.isBlank()) {
-            _summaryState.value = "⚠️ Por favor, configura tu API Key de Gemini en Ajustes primero."
+            _summaryState.value = "⚠️ Please configure your Gemini API Key in Settings first."
             return
         }
 
