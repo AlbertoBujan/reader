@@ -906,20 +906,67 @@ fun SwipeActionBackground(dismissState: SwipeToDismissBoxState, shape: Shape, is
         else -> Icons.Default.BookmarkBorder
     }
 
+    // Haptic Feedback Logic
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(dismissState.targetValue) {
+        if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) {
+             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+
+    // Shine Effect Logic
+    val isThresholdReached = dismissState.targetValue != SwipeToDismissBoxValue.Settled
+    val shineAlpha = if (isThresholdReached) 0.3f else 0f
+    
+    val transition = rememberInfiniteTransition(label = "shine")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = androidx.compose.animation.core.LinearEasing),
+        ),
+        label = "shine_translation"
+    )
+
+    val shineBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0f),
+            Color.White.copy(alpha = 0.5f),
+            Color.White.copy(alpha = 0f)
+        ),
+        start = Offset(translateAnim, translateAnim),
+        end = Offset(translateAnim + 100f, translateAnim + 100f)
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(shape)
             .background(color)
-            .padding(horizontal = 24.dp),
-        contentAlignment = alignment
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isShare || isReadLaterView) Color.White else Color.Black,
-            modifier = Modifier.size(24.dp)
-        )
+        // Shine Overlay
+        if (isThresholdReached) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(shineBrush)
+            )
+        }
+        
+        // Icon
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            contentAlignment = alignment
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isShare || isReadLaterView) Color.White else Color.Black,
+                modifier = Modifier.size(24.dp)
+            )
+        }
     }
 }
 
@@ -959,15 +1006,46 @@ fun SwipeableItem(
             val alignment = if (direction == SwipeToDismissBoxValue.EndToStart) Alignment.CenterEnd else Alignment.CenterStart
             val icon = if (direction == SwipeToDismissBoxValue.EndToStart) Icons.Default.Delete else Icons.Default.Edit
 
+            // Haptic Feedback
+            val haptic = LocalHapticFeedback.current
+            LaunchedEffect(dismissState.targetValue) {
+                if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            }
+            
+            // Shine Effect (Simplified copy for non-article items)
+            val isThresholdReached = dismissState.targetValue != SwipeToDismissBoxValue.Settled
+            val transition = rememberInfiniteTransition(label = "shine_simple")
+            val translateAnim by transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1000f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1000, easing = androidx.compose.animation.core.LinearEasing),
+                ),
+                label = "shine_translation_simple"
+            )
+            val shineBrush = Brush.linearGradient(
+                colors = listOf(Color.White.copy(alpha = 0f), Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0f)),
+                start = Offset(translateAnim, translateAnim),
+                end = Offset(translateAnim + 100f, translateAnim + 100f)
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(shape)
                     .background(color)
-                    .padding(horizontal = 24.dp),
-                contentAlignment = alignment
             ) {
-                Icon(icon, null, tint = Color.White)
+                 if (isThresholdReached) {
+                    Box(modifier = Modifier.fillMaxSize().background(shineBrush))
+                }
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                    contentAlignment = alignment
+                ) {
+                    Icon(icon, null, tint = Color.White)
+                }
             }
         }
     ) {
