@@ -26,18 +26,17 @@ jobs:
       - name: Hacer el APK ejecutable
         run: chmod +x gradlew
 
-      # La app compilará usando la clave vacía gracias al fallback en Gradle
+      # Quitamos el paso de crear local.properties. 
+      # La app compilará igual gracias al fallback (?: "") que pusimos en Gradle.
       - name: Compilar APK de Release
         run: ./gradlew assembleRelease
 
-      # ACTUALIZADO: Usamos una versión más moderna de las herramientas (34.0.0)
-      - name: Instalar Android Build Tools 34.0.0
+      - name: Instalar Android Build Tools 29.0.3
         run: |
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "build-tools;34.0.0"
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "build-tools;29.0.3"
 
-      # CORREGIDO: Usamos 'ilharp' en lugar de 'r0adkll' para evitar el warning de 'set-output'
       - name: Firmar el APK
-        uses: ilharp/sign-android-release@v1
+        uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
           releaseDirectory: app/build/outputs/apk/release
@@ -46,6 +45,7 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
+      # MANTENEMOS ESTO: Es vital para que el auto-update encuentre el archivo
       - name: Renombrar APK para la Release
         run: mv ${{ steps.sign_app.outputs.signedReleaseFile }} app/build/outputs/apk/release/Riffle.apk
 
