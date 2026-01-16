@@ -111,6 +111,9 @@ class MainViewModel @Inject constructor(
         preferencesManager.setLanguage(code)
     }
 
+    private val _modelStatuses = MutableStateFlow<Map<String, String>>(emptyMap())
+    val modelStatuses: StateFlow<Map<String, String>> = _modelStatuses.asStateFlow()
+
     // Función que llama a la IA
     fun summarizeArticle(title: String, content: String) {
         val currentKey = _geminiApiKey.value
@@ -122,43 +125,84 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _isSummarizing.value = true
             _summaryState.value = null // Limpiamos resumen anterior
-            try {
-                // Inicializamos el modelo dinámicamente con la clave del usuario
-                val generativeModel = GenerativeModel(
-                    modelName = "gemini-2.5-flash",
-                    apiKey = currentKey
-                )
 
-                // Limpiamos un poco el texto por si viene con mucha basura HTML
-                val cleanContent = Jsoup.parse(content).text().take(10000) // Límite de seguridad
-                
-                val currentLanguage = _language.value
-                val isEnglish = currentLanguage == "en" || (currentLanguage == "system" && java.util.Locale.getDefault().language == "en")
-
-                val prompt = if (isEnglish) {
-                    """
-                    Act as an expert news assistant.
-                    Summarize the following article in 3 key bullet points using an informative and direct tone.
-                    Title: $title
-                    Content: $cleanContent
-                    """.trimIndent()
-                } else {
-                    """
-                    Actúa como un asistente experto en noticias.
-                    Resume el siguiente artículo en 3 puntos clave (bullet points) usando un tono informativo y directo.
-                    Título: $title
-                    Contenido: $cleanContent
-                    """.trimIndent()
-                }
-
-                val response = generativeModel.generateContent(prompt)
-                _summaryState.value = response.text
+            // Preparar prompt una única vez
+            val cleanContent = try {
+                Jsoup.parse(content).text().take(10000)
             } catch (e: Exception) {
-                e.printStackTrace()
-                _summaryState.value = context.getString(com.example.riffle.R.string.ai_error_connection, e.localizedMessage)
-            } finally {
-                _isSummarizing.value = false
+                content.take(10000)
             }
+            
+            val currentLanguage = _language.value
+            val isEnglish = currentLanguage == "en" || (currentLanguage == "system" && java.util.Locale.getDefault().language == "en")
+
+            val prompt = if (isEnglish) {
+                """
+                Act as an expert news assistant.
+                Summarize the following article in 3 key bullet points using an informative and direct tone.
+                Title: $title
+                Content: $cleanContent
+                """.trimIndent()
+            } else {
+                """
+                Actúa como un asistente experto en noticias.
+                Resume el siguiente artículo en 3 puntos clave (bullet points) usando un tono informativo y directo.
+                Título: $title
+                Contenido: $cleanContent
+                """.trimIndent()
+            }
+
+            // Lógica de reintento con fallback de modelos
+            val fallbackModels = listOf("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash")
+            var success = false
+            var lastException: Exception? = null
+
+            val currentStatuses = _modelStatuses.value.toMutableMap()
+
+            for (modelName in fallbackModels) {
+                try {
+                    val generativeModel = GenerativeModel(
+                        modelName = modelName,
+                        apiKey = currentKey
+                    )
+
+                    val response = generativeModel.generateContent(prompt)
+                    _summaryState.value = response.text
+                    success = true
+                    
+                    // Si ha funcionado, marcamos como disponible
+                    currentStatuses[modelName] = "available"
+                    _modelStatuses.value = currentStatuses
+                    
+                    break // Éxito, salimos del bucle
+                } catch (e: Exception) {
+                    lastException = e
+                    val msg = e.message?.lowercase() ?: ""
+                    // Detectar error de cuota (429, exhausted, quota)
+                    val isQuotaError = msg.contains("429") || msg.contains("quota") || msg.contains("exhausted")
+                    
+                    if (isQuotaError) {
+                        Log.w("MainViewModel", "Model $modelName quota exceeded. Switching to next model...")
+                        currentStatuses[modelName] = "exhausted"
+                        _modelStatuses.value = currentStatuses
+                        continue // Intentar siguiente modelo
+                    } else {
+                        e.printStackTrace()
+                        // Para otros errores no sabemos si está agotado o no, pero podemos marcarlo unknown o dejarlo como estaba
+                        // De momento solo marcamos exhausted si es cuota.
+                        break // Error no relacionado con cuota (red, api key inválida, etc), abortamos
+                    }
+                }
+            }
+
+            if (!success) {
+                _summaryState.value = context.getString(
+                    com.example.riffle.R.string.ai_error_connection, 
+                    lastException?.localizedMessage ?: "Unknown error"
+                )
+            }
+
+            _isSummarizing.value = false
         }
     }
 

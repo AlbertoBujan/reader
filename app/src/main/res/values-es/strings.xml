@@ -68,5 +68,10 @@
     <string name="dialog_feed_title_optional">Título (Opcional)</string>
     <string name="dialog_feed_url">URL</string>
     <string name="dialog_create">Crear</string>
+    
+    <string name="ai_stats_title">Estado de Modelos IA</string>
+    <string name="status_available">Disponible</string>
+    <string name="status_exhausted">Límite alcanzado</string>
+    <string name="status_unknown">Desconocido</string>
 
 </resources>

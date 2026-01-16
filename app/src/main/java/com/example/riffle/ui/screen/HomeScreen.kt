@@ -10,6 +10,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
@@ -246,6 +248,7 @@ fun HomeScreen(
 
     val savedCount by viewModel.savedCount.collectAsState()
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
+    val modelStatuses by viewModel.modelStatuses.collectAsState()
     
     var showAddDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
@@ -600,7 +603,8 @@ fun HomeScreen(
                         viewModel.setLanguage(code)
                         val localeList = if (code == "system") LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(code)
                         AppCompatDelegate.setApplicationLocales(localeList)
-                    }
+                    },
+                    modelStatuses = modelStatuses
                 )
             }
 
@@ -750,9 +754,18 @@ fun SettingsDialog(
     geminiApiKey: String,
     onApiKeyChange: (String) -> Unit,
     language: String,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    modelStatuses: Map<String, String>
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showStatsDialog by remember { mutableStateOf(false) }
+
+    if (showStatsDialog) {
+        ModelStatsDialog(
+            modelStatuses = modelStatuses,
+            onDismiss = { showStatsDialog = false }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -820,7 +833,16 @@ fun SettingsDialog(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text(stringResource(R.string.settings_gemini_key), style = MaterialTheme.typography.titleSmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.settings_gemini_key), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { showStatsDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info, // Fallback icon, acts as stats/info
+                            contentDescription = stringResource(R.string.ai_stats_title),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = geminiApiKey,
@@ -828,7 +850,9 @@ fun SettingsDialog(
                     label = { Text(stringResource(R.string.settings_gemini_key_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodySmall
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password)
                 )
             }
         },
@@ -1376,4 +1400,57 @@ fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String, String?) -> Unit) {
 private fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+
+@Composable
+fun ModelStatsDialog(
+    modelStatuses: Map<String, String>,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.ai_stats_title)) },
+        text = {
+            Column {
+                val models = listOf("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash")
+                models.forEach { model ->
+                    val status = modelStatuses[model]
+                    val isExhausted = status == "exhausted"
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(model, style = MaterialTheme.typography.bodyMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isExhausted) {
+                                Text(
+                                    text = stringResource(R.string.status_exhausted),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            
+                            Canvas(modifier = Modifier.size(8.dp)) {
+                                drawCircle(
+                                    color = if (isExhausted) Color.Red else Color(0xFF4CAF50) // Green for available too
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_close))
+            }
+        }
+    )
 }
