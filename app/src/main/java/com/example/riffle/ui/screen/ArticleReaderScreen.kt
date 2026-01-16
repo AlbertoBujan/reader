@@ -78,8 +78,9 @@ fun ArticleReaderScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    // Fetch article directly from DB instead of UI state (which filters unread)
-    val article by viewModel.getArticle(url).collectAsState(initial = null)
+    // Fetch article with source title directly from DB
+    val articleWithSource by viewModel.getArticleWithSource(url).collectAsState(initial = null)
+    val article = articleWithSource?.article
 
     // 2. OBTENEMOS LOS ESTADOS DE LA IA (LO NUEVO)
     val summary by viewModel.summaryState.collectAsState()
@@ -203,7 +204,7 @@ fun ArticleReaderScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = article!!.sourceUrl,
+                    text = articleWithSource?.sourceTitle ?: article!!.sourceUrl,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )

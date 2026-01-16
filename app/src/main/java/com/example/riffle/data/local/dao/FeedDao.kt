@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.example.riffle.data.local.entity.ArticleEntity
+import com.example.riffle.data.local.entity.ArticleWithSource
 import com.example.riffle.data.local.entity.FolderEntity
 import com.example.riffle.data.local.entity.SourceEntity
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,14 @@ interface FeedDao {
 
     @Query("SELECT * FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC")
     fun getSavedArticles(): Flow<List<ArticleEntity>>
+
+    @Query("""
+        SELECT articles.*, sources.title as sourceTitle 
+        FROM articles 
+        LEFT JOIN sources ON articles.sourceUrl = sources.url 
+        WHERE articles.link = :link LIMIT 1
+    """)
+    fun getArticleWithSource(link: String): Flow<ArticleWithSource?>
 
     @Query("SELECT * FROM articles WHERE link = :link LIMIT 1")
     fun getArticleByLink(link: String): Flow<ArticleEntity?>

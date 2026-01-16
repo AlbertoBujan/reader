@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.riffle.data.local.PreferencesManager
 import com.example.riffle.data.local.dao.FeedDao
 import com.example.riffle.data.local.entity.ArticleEntity
+import com.example.riffle.data.local.entity.ArticleWithSource
 import com.example.riffle.data.local.entity.FolderEntity
 import com.example.riffle.data.local.entity.SourceEntity
 import com.example.riffle.data.remote.ClearbitService
@@ -275,6 +276,10 @@ class MainViewModel @Inject constructor(
 
     fun getArticle(url: String): Flow<ArticleEntity?> {
         return feedDao.getArticleByLink(url)
+    }
+
+    fun getArticleWithSource(url: String): Flow<ArticleWithSource?> {
+        return feedDao.getArticleWithSource(url)
     }
 
     fun selectSource(url: String?) {
