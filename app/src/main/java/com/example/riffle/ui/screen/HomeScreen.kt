@@ -62,6 +62,10 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -250,9 +254,8 @@ fun HomeScreen(
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
     val modelStatuses by viewModel.modelStatuses.collectAsState()
     
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showUnifiedDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
-    var showSearchDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var renamingSource by remember { mutableStateOf<SourceEntity?>(null) }
     var renamingFolder by remember { mutableStateOf<String?>(null) }
@@ -297,9 +300,6 @@ fun HomeScreen(
                             Row {
                                 IconButton(onClick = { showFolderDialog = true }) {
                                     Icon(Icons.Filled.CreateNewFolder, contentDescription = stringResource(R.string.nav_new_folder))
-                                }
-                                IconButton(onClick = { showSearchDialog = true }) {
-                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search_feeds))
                                 }
                             }
                         }
@@ -432,7 +432,7 @@ fun HomeScreen(
                         Spacer(Modifier.height(12.dp))
                     }
                     FloatingActionButton(
-                        onClick = { showAddDialog = true },
+                        onClick = { showUnifiedDialog = true },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp)
@@ -562,13 +562,10 @@ fun HomeScreen(
                 }
             }
 
-            if (showAddDialog) {
-                AddSourceDialog(
-                    onDismiss = { showAddDialog = false },
-                    onAdd = { url, title ->
-                        viewModel.addSource(url, title)
-                        showAddDialog = false
-                    }
+            if (showUnifiedDialog) {
+                UnifiedAddFeedDialog(
+                    onDismiss = { showUnifiedDialog = false },
+                    viewModel = viewModel
                 )
             }
             
@@ -582,12 +579,7 @@ fun HomeScreen(
                 )
             }
 
-            if (showSearchDialog) {
-                SearchFeedDialog(
-                    onDismiss = { showSearchDialog = false },
-                    viewModel = viewModel
-                )
-            }
+
 
             if (showSettingsDialog) {
                 SettingsDialog(
@@ -634,23 +626,25 @@ fun HomeScreen(
 }
 
 @Composable
-fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
+fun UnifiedAddFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
     var query by remember { mutableStateOf("") }
     val feeds by viewModel.discoveredFeeds.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dialog_search_title)) },
+        title = { Text(stringResource(R.string.dialog_add_feed_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text(stringResource(R.string.dialog_search_label)) },
+                        label = { Text("Search or URL") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardActions = KeyboardActions(onDone = { viewModel.searchFeeds(query) }),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
                     )
                     IconButton(onClick = { viewModel.searchFeeds(query) }, enabled = query.isNotBlank() && !isSearching) {
                         Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search_feeds))
@@ -665,6 +659,21 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                     }
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        if (query.isNotBlank() && !isSearching && feeds.isEmpty()) {
+                             item {
+                                 TextButton(
+                                     onClick = {
+                                         viewModel.addSource(query, null)
+                                         onDismiss()
+                                     },
+                                     modifier = Modifier.fillMaxWidth()
+                                 ) {
+                                     Icon(Icons.Default.Add, null)
+                                     Spacer(Modifier.width(8.dp))
+                                     Text("Add \"$query\" directly")
+                                 }
+                             }
+                        }
                         items(feeds) { feed ->
                             ListItem(
                                 leadingContent = {
@@ -702,7 +711,20 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
+             TextButton(
+                 onClick = {
+                     if (query.isNotBlank()) {
+                         viewModel.addSource(query, null)
+                         onDismiss()
+                     }
+                 },
+                 enabled = query.isNotBlank()
+             ) {
+                 Text(stringResource(R.string.dialog_add))
+             }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
         }
     )
 }
@@ -1360,42 +1382,7 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
     }
 }
 
-@Composable
-fun AddSourceDialog(onDismiss: () -> Unit, onAdd: (String, String?) -> Unit) {
-    var url by remember { mutableStateOf("") }
-    var title by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dialog_add_feed_title)) },
-        text = {
-            Column {
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.dialog_feed_title_optional)) },
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text(stringResource(R.string.dialog_feed_url)) },
-                    singleLine = true
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = { if (url.isNotBlank()) onAdd(url, if(title.isBlank()) null else title) }) {
-                Text(stringResource(R.string.dialog_add))
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_cancel))
-            }
-        }
-    )
-}
+
 
 private fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
