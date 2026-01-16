@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -640,7 +641,7 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                         CircularProgressIndicator()
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.height(300.dp)) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         items(feeds) { feed ->
                             ListItem(
                                 leadingContent = {
@@ -655,7 +656,14 @@ fun SearchFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
                                     }
                                 },
                                 headlineContent = { Text(feed.siteName ?: feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                supportingContent = { Text(feed.url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                supportingContent = { 
+                                    Text(
+                                        text = feed.url, 
+                                        maxLines = 3, 
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodySmall
+                                    ) 
+                                },
                                 trailingContent = {
                                     IconButton(onClick = { 
                                         viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
