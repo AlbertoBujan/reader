@@ -149,12 +149,17 @@ fun Modifier.shimmerEffect(): Modifier = composed {
         label = "shimmer_offset"
     )
 
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    // Aún más oscuros y con menos contraste para que no sea "shiny" agresivo
+    val baseColor = if (isDark) Color(0xFF1A1B1E) else Color(0xFFB8B5B5) 
+    val highlightColor = if (isDark) Color(0xFF2E3035) else Color(0xFF8F8B8B)
+
     background(
         brush = Brush.linearGradient(
             colors = listOf(
-                Color(0xFFB8B5B5),
-                Color(0xFF8F8B8B),
-                Color(0xFFB8B5B5),
+                baseColor,
+                highlightColor,
+                baseColor,
             ),
             start = Offset(startOffsetX, 0f),
             end = Offset(startOffsetX + size.width.toFloat(), size.height.toFloat())
