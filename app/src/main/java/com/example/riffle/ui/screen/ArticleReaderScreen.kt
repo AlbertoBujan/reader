@@ -94,7 +94,7 @@ fun ArticleReaderScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Article") },
+                title = { Text(stringResource(R.string.article_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.article_back))

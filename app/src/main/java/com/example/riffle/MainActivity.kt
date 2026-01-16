@@ -6,6 +6,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Surface
@@ -18,6 +20,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,6 +36,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.net.URLEncoder
 import android.app.DownloadManager
 import android.content.*
+import android.database.Cursor
 import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
@@ -44,11 +49,17 @@ import com.github.javiersantos.appupdater.enums.Display
 import com.github.javiersantos.appupdater.enums.UpdateFrom
 import com.github.javiersantos.appupdater.objects.Update
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -59,6 +70,9 @@ class MainActivity : AppCompatActivity() {
 
         // State for update dialog
         val updateInfo = mutableStateOf<Update?>(null)
+        val isDownloading = mutableStateOf(false)
+        val downloadProgress = mutableFloatStateOf(-1f)
+        val currentDownloadId = mutableLongStateOf(-1L)
 
         // Check for updates manually
         val appUpdaterUtils = AppUpdaterUtils(this)
@@ -95,6 +109,40 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
+            LaunchedEffect(isDownloading.value, currentDownloadId.longValue) {
+                if (isDownloading.value && currentDownloadId.longValue != -1L) {
+                    val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                    while (isActive && isDownloading.value) {
+                        val query = DownloadManager.Query().setFilterById(currentDownloadId.longValue)
+                        val cursor: Cursor = manager.query(query)
+                        if (cursor.moveToFirst()) {
+                            val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                            val status = if (statusIndex != -1) cursor.getInt(statusIndex) else -1
+                            
+                            val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                            val totalBytesIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                            
+                            if (bytesDownloadedIndex != -1 && totalBytesIndex != -1) {
+                                val bytesDownloaded = cursor.getLong(bytesDownloadedIndex)
+                                val totalBytes = cursor.getLong(totalBytesIndex)
+                                if (totalBytes > 0) {
+                                    downloadProgress.floatValue = bytesDownloaded.toFloat() / totalBytes.toFloat()
+                                } else {
+                                    downloadProgress.floatValue = -1f
+                                }
+                            }
+
+                            if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
+                                isDownloading.value = false
+                                updateInfo.value = null // Close dialog
+                            }
+                        }
+                        cursor.close()
+                        delay(100) // Poll every 100ms
+                    }
+                }
+            }
+
             RiffleTheme(darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -104,29 +152,62 @@ class MainActivity : AppCompatActivity() {
                     
                     // Show custom update dialog
                     updateInfo.value?.let { update ->
-                        AlertDialog(
-                            onDismissRequest = { updateInfo.value = null },
-                            title = { Text("New update available!") },
-                            text = { 
-                                Text("Update ${update.latestVersion} is available to download. By downloading the latest update you will get the latest features, improvements and bug fixes for Riffle.") 
-                            },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = { 
-                                        // Usamos la URL directa genérica
-                                        downloadAndInstall("https://github.com/AlbertoBujan/reader/releases/latest/download/Riffle.apk")
-                                        updateInfo.value = null 
+                            AlertDialog(
+                                onDismissRequest = { 
+                                    if (!isDownloading.value) updateInfo.value = null 
+                                },
+                                title = { 
+                                    Text(text = if (isDownloading.value) stringResource(R.string.update_download_title) else stringResource(R.string.update_dialog_title)) 
+                                },
+                                text = { 
+                                    if (isDownloading.value) {
+                                        androidx.compose.foundation.layout.Column {
+                                            Text(text = stringResource(R.string.update_download_desc))
+                                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+                                            
+                                            if (downloadProgress.floatValue >= 0f) {
+                                                LinearProgressIndicator(
+                                                    progress = { downloadProgress.floatValue },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                )
+                                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "${(downloadProgress.floatValue * 100).toInt()}%",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.align(androidx.compose.ui.Alignment.End)
+                                                )
+                                            } else {
+                                                LinearProgressIndicator(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Text(text = stringResource(R.string.update_dialog_message, update.latestVersion)) 
                                     }
-                                ) {
-                                    Text("UPDATE NOW")
+                                },
+                                confirmButton = {
+                                    if (!isDownloading.value) {
+                                        TextButton(
+                                            onClick = { 
+                                                // Usamos la URL directa genérica
+                                                val id = downloadAndInstall("https://github.com/AlbertoBujan/reader/releases/latest/download/Riffle.apk")
+                                                currentDownloadId.longValue = id
+                                                isDownloading.value = true
+                                            }
+                                        ) {
+                                            Text(stringResource(R.string.update_button_now))
+                                        }
+                                    }
+                                },
+                                dismissButton = {
+                                    if (!isDownloading.value) {
+                                        TextButton(onClick = { updateInfo.value = null }) {
+                                            Text(stringResource(R.string.update_button_later))
+                                        }
+                                    }
                                 }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { updateInfo.value = null }) {
-                                    Text("LATER")
-                                }
-                            }
-                        )
+                            )
                     }
                 }
             }
@@ -138,15 +219,15 @@ class MainActivity : AppCompatActivity() {
         private val darkScrim = android.graphics.Color.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 
-    private fun downloadAndInstall(url: String) {
+    private fun downloadAndInstall(url: String): Long {
         // 1. Configurar dónde se guardará el APK
         val file = File(externalCacheDir, "update.apk")
         if (file.exists()) file.delete() // Borrar si había uno previo
 
         // 2. Usar el DownloadManager de Android
         val request = DownloadManager.Request(Uri.parse(url))
-            .setTitle("Actualizando Riffle")
-            .setDescription("Descargando nueva versión...")
+            .setTitle(getString(R.string.update_download_title))
+            .setDescription(getString(R.string.update_download_desc))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
             .setDestinationUri(Uri.fromFile(file))
 
@@ -181,6 +262,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
         }
+        
+        return downloadId
     }
 }
 

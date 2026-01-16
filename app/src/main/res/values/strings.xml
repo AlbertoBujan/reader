@@ -74,4 +74,14 @@
     <string name="status_exhausted">Limit Reached</string>
     <string name="status_unknown">Unknown</string>
 
+    <string name="article_screen_title">Article</string>
+    
+    <!-- Updates -->
+    <string name="update_dialog_title">New update available!</string>
+    <string name="update_dialog_message">Update %1$s is available to download. By downloading the latest update you will get the latest features, improvements and bug fixes for Riffle.</string>
+    <string name="update_button_now">UPDATE NOW</string>
+    <string name="update_button_later">LATER</string>
+    <string name="update_download_title">Updating Riffle</string>
+    <string name="update_download_desc">Downloading new version...</string>
+
 </resources>

@@ -74,4 +74,14 @@
     <string name="status_exhausted">Límite alcanzado</string>
     <string name="status_unknown">Desconocido</string>
 
+    <string name="article_screen_title">Artículo</string>
+    
+    <!-- Updates -->
+    <string name="update_dialog_title">¡Nueva actualización disponible!</string>
+    <string name="update_dialog_message">La versión %1$s está disponible para descargar. Descarga la última actualización para disfrutar de las mejores y correcciones.</string>
+    <string name="update_button_now">ACTUALIZAR</string>
+    <string name="update_button_later">LUEGO</string>
+    <string name="update_download_title">Actualizando Riffle</string>
+    <string name="update_download_desc">Descargando nueva versión...</string>
+
 </resources>
