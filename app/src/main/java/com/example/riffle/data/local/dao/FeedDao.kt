@@ -79,7 +79,7 @@ interface FeedDao {
     @Query("DELETE FROM articles WHERE pubDate < :threshold AND isSaved = 0")
     suspend fun deleteOldArticles(threshold: Long)
 
-    @Query("DELETE FROM articles WHERE isRead = 1 AND isSaved = 0")
+    @Query("UPDATE articles SET description = NULL, imageUrl = NULL WHERE isRead = 1 AND isSaved = 0")
     suspend fun deleteReadArticles()
 
     @Query("SELECT link, title, NULL as description, pubDate, sourceUrl, imageUrl, isRead, isSaved FROM articles WHERE title LIKE '%' || :query || '%' ORDER BY pubDate DESC")

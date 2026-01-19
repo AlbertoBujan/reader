@@ -73,6 +73,9 @@ class MainViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _isInitialSync = MutableStateFlow(true)
+
+
     private val _messageEvent = kotlinx.coroutines.flow.MutableSharedFlow<String>()
     val messageEvent = _messageEvent.asSharedFlow()
 
@@ -246,10 +249,16 @@ class MainViewModel @Inject constructor(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks, _articleLimit, _isArticleSearching, _articleSearchQuery) { selector, hiddenLinks, limit, isSearching, query ->
-        CombinedState(selector, hiddenLinks, limit, isSearching, query)
+    val uiState: StateFlow<FeedUiState> = combine(
+        combine(_selectedSource, _hiddenArticleLinks, _articleLimit) { selector, hiddenLinks, limit -> Triple(selector, hiddenLinks, limit) },
+        combine(_isArticleSearching, _articleSearchQuery, _isInitialSync) { isSearching, query, isInitialSync -> Triple(isSearching, query, isInitialSync) }
+    ) { (selector, hiddenLinks, limit), (isSearching, query, isInitialSync) ->
+        CombinedState(selector, hiddenLinks, limit, isSearching, query, isInitialSync)
     }
     .flatMapLatest { state ->
+        if (state.isInitialSync) {
+            return@flatMapLatest flowOf(FeedUiState.Loading)
+        }
         val articlesFlow = when {
             state.isArticleSearching && state.searchQuery.isBlank() -> flowOf(emptyList())
             state.isArticleSearching && state.searchQuery.isNotBlank() -> feedDao.searchArticles(state.searchQuery)
@@ -393,6 +402,7 @@ class MainViewModel @Inject constructor(
                 e.printStackTrace()
             } finally {
                 _isRefreshing.value = false
+                _isInitialSync.value = false
             }
         }
     }
@@ -400,6 +410,7 @@ class MainViewModel @Inject constructor(
     fun markAsRead(link: String) {
         viewModelScope.launch {
             markArticleReadUseCase(link)
+            _hiddenArticleLinks.value += link
         }
     }
 
@@ -579,5 +590,6 @@ data class CombinedState(
     val hiddenLinks: Set<String>,
     val limit: Int,
     val isArticleSearching: Boolean,
-    val searchQuery: String
+    val searchQuery: String,
+    val isInitialSync: Boolean
 )

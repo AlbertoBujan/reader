@@ -584,7 +584,7 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(6) {
+                            items(10) {
                                 SkeletonArticleItem()
                             }
                         }
