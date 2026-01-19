@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.Crossfade
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.Canvas
@@ -43,6 +44,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.BookmarkRemove
@@ -105,6 +107,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -507,19 +510,29 @@ fun HomeScreen(
                                         else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
                                     }
                                 )
+                                val totalUnread = unreadCounts.values.sum()
                                 val currentUnread = when {
                                     selectedSource == "saved" -> 0
-                                    selectedSource == null -> unreadCounts.values.sum()
+                                    selectedSource == null -> totalUnread
                                     selectedSource!!.startsWith("folder:") -> {
                                         val folderName = selectedSource!!.removePrefix("folder:")
                                         sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
                                     }
                                     else -> unreadCounts[selectedSource] ?: 0
                                 }
-                                if (currentUnread > 0) {
+
+                                // Delay update until refresh is done
+                                var displayedUnread by remember { mutableIntStateOf(currentUnread) }
+                                LaunchedEffect(isRefreshing, currentUnread) {
+                                    if (!isRefreshing) {
+                                        displayedUnread = currentUnread
+                                    }
+                                }
+
+                                if (displayedUnread > 0) {
                                     Spacer(Modifier.width(8.dp))
                                     Text(
-                                        text = "($currentUnread)",
+                                        text = "($displayedUnread)",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -570,65 +583,67 @@ fun HomeScreen(
                     .padding(padding)
                     .fillMaxSize()
             ) {
-                when (val state = uiState) {
-                    is FeedUiState.Loading -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(10) {
-                                SkeletonArticleItem()
+                Crossfade(targetState = uiState, label = "content") { state ->
+                    when (state) {
+                        is FeedUiState.Loading -> {
+                            LazyColumn(
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(10) {
+                                    SkeletonArticleItem()
+                                }
                             }
                         }
-                    }
-                    is FeedUiState.Success -> {
-                        // Scroll automático al inicio tras carga
-                        var wasRefreshing by remember { mutableStateOf(false) }
-                        LaunchedEffect(isRefreshing) {
-                            if (wasRefreshing && !isRefreshing && state.articles.isNotEmpty()) {
-                                listState.animateScrollToItem(0)
+                        is FeedUiState.Success -> {
+                            // Scroll automático al inicio tras carga
+                            var wasRefreshing by remember { mutableStateOf(false) }
+                            LaunchedEffect(isRefreshing) {
+                                if (wasRefreshing && !isRefreshing && state.articles.isNotEmpty()) {
+                                    listState.animateScrollToItem(0)
+                                }
+                                wasRefreshing = isRefreshing
                             }
-                            wasRefreshing = isRefreshing
-                        }
 
-                        key(selectedSource) {
-                            ArticleList(
-                                articles = state.articles,
-                                sources = sources,
-                                listState = listState,
-                                markAsReadOnScroll = markAsReadOnScroll,
-                                isRefreshing = isRefreshing,
-                                onMarkAsRead = { viewModel.markAsRead(it) },
-                                onToggleSave = { link, isSaved -> 
-                                    viewModel.toggleSaveArticle(link, isSaved)
-                                    if (selectedSource == "saved" && isSaved) {
-                                        viewModel.markAsRead(link)
-                                    }
-                                    val message = if (isSaved) context.getString(R.string.msg_removed_read_later) else context.getString(R.string.msg_added_read_later)
-                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                },
-                                onShare = { article ->
-                                    val sendIntent: Intent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, "${article.title}\n\n${article.link}")
-                                        type = "text/plain"
-                                    }
-                                    val shareIntent = Intent.createChooser(sendIntent, null)
-                                    context.startActivity(shareIntent)
-                                },
-                                onArticleClick = { link, isRead ->
-                                    if (!isRead) viewModel.markAsRead(link)
-                                    onArticleClick(link, isRead)
-                                },
-                                isReadLaterView = selectedSource == "saved",
-                                onLoadMore = { viewModel.loadMore() }
-                            )
+                            key(selectedSource) {
+                                ArticleList(
+                                    articles = state.articles,
+                                    sources = sources,
+                                    listState = listState,
+                                    markAsReadOnScroll = markAsReadOnScroll,
+                                    isRefreshing = isRefreshing,
+                                    onMarkAsRead = { viewModel.markAsRead(it) },
+                                    onToggleSave = { link, isSaved -> 
+                                        viewModel.toggleSaveArticle(link, isSaved)
+                                        if (selectedSource == "saved" && isSaved) {
+                                            viewModel.markAsRead(link)
+                                        }
+                                        val message = if (isSaved) context.getString(R.string.msg_removed_read_later) else context.getString(R.string.msg_added_read_later)
+                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    },
+                                    onShare = { article ->
+                                        val sendIntent: Intent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, "${article.title}\n\n${article.link}")
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, null)
+                                        context.startActivity(shareIntent)
+                                    },
+                                    onArticleClick = { link, isRead ->
+                                        if (!isRead) viewModel.markAsRead(link)
+                                        onArticleClick(link, isRead)
+                                    },
+                                    isReadLaterView = selectedSource == "saved",
+                                    onLoadMore = { viewModel.loadMore() }
+                                )
+                            }
                         }
-                    }
-                    is FeedUiState.Error -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+                        is FeedUiState.Error -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }
@@ -1488,6 +1503,29 @@ fun ArticleList(
             }
             item {
                 Spacer(modifier = Modifier.height(screenHeight - 60.dp))
+            }
+        } else {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillParentMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.list_end_message),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
