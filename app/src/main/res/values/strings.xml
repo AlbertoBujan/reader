@@ -26,6 +26,7 @@
     <string name="ai_summary_button_desc">AI Summary</string>
     <string name="ai_error_api_key">⚠️ Please configure your Gemini API Key in Settings first.</string>
     <string name="ai_error_connection">Error connecting to AI: "%1$s"</string>
+    <string name="ai_error_overloaded">The AI server is overloaded right now. Please try again in a few seconds.</string>
     
     <!-- Dialogs -->
     <string name="dialog_add_folder_title">New Folder</string>

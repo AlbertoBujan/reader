@@ -147,14 +147,14 @@ class MainViewModel @Inject constructor(
             val prompt = if (isEnglish) {
                 """
                 Act as an expert news assistant.
-                Summarize the following article in 3 key bullet points using an informative and direct tone.
+                Summarize the following article using an informative and direct tone.
                 Title: $title
                 Content: $cleanContent
                 """.trimIndent()
             } else {
                 """
                 Actúa como un asistente experto en noticias.
-                Resume el siguiente artículo en 3 puntos clave (bullet points) usando un tono informativo y directo.
+                Resume el siguiente artículo usando un tono informativo y directo.
                 Título: $title
                 Contenido: $cleanContent
                 """.trimIndent()
@@ -204,10 +204,17 @@ class MainViewModel @Inject constructor(
             }
 
             if (!success) {
-                _summaryState.value = context.getString(
-                    com.example.riffle.R.string.ai_error_connection, 
-                    lastException?.localizedMessage ?: "Unknown error"
-                )
+                val errorMsg = lastException?.message?.lowercase() ?: ""
+                val isOverloaded = errorMsg.contains("503") || errorMsg.contains("overloaded") || errorMsg.contains("capacity")
+                
+                if (isOverloaded) {
+                    _summaryState.value = context.getString(com.example.riffle.R.string.ai_error_overloaded)
+                } else {
+                    _summaryState.value = context.getString(
+                        com.example.riffle.R.string.ai_error_connection, 
+                        lastException?.localizedMessage ?: "Unknown error"
+                    )
+                }
             }
 
             _isSummarizing.value = false

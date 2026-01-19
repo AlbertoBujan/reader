@@ -26,6 +26,7 @@
     <string name="ai_summary_button_desc">Resumen IA</string>
     <string name="ai_error_api_key">⚠️ Por favor, configura tu API Key de Gemini en Ajustes primero.</string>
     <string name="ai_error_connection">Error al conectar con la IA: "%1$s"</string>
+    <string name="ai_error_overloaded">El servidor de IA está saturado en este momento. Por favor, inténtalo de nuevo en unos segundos.</string>
     
     <!-- Dialogs -->
     <string name="dialog_add_folder_title">Nueva Carpeta</string>
