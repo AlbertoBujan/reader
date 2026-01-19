@@ -1357,7 +1357,8 @@ fun ArticleList(
                 onToggleSave = { onToggleSave(article.link, article.isSaved) },
                 onShare = { onShare(article) },
                 onArticleClick = onArticleClick,
-                isReadLaterView = isReadLaterView
+                isReadLaterView = isReadLaterView,
+                modifier = Modifier.animateItem()
             )
         }
         
@@ -1392,7 +1393,8 @@ fun SwipeableArticleItem(
     onToggleSave: () -> Unit,
     onShare: () -> Unit,
     onArticleClick: (String, Boolean) -> Unit,
-    isReadLaterView: Boolean
+    isReadLaterView: Boolean,
+    modifier: Modifier = Modifier
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -1412,7 +1414,7 @@ fun SwipeableArticleItem(
 
     SwipeToDismissBox(
         state = dismissState,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
         backgroundContent = {
             SwipeActionBackground(
                 dismissState = dismissState, 
