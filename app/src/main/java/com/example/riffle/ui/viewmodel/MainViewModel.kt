@@ -1,6 +1,7 @@
 package com.example.riffle.ui.viewmodel
 
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.riffle.data.local.PreferencesManager
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -71,6 +73,9 @@ class MainViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _isInitialSync = MutableStateFlow(true)
+
+
     private val _messageEvent = kotlinx.coroutines.flow.MutableSharedFlow<String>()
     val messageEvent = _messageEvent.asSharedFlow()
 
@@ -88,6 +93,12 @@ class MainViewModel @Inject constructor(
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private val _isArticleSearching = MutableStateFlow(false)
+    val isArticleSearching: StateFlow<Boolean> = _isArticleSearching.asStateFlow()
+
+    private val _articleSearchQuery = MutableStateFlow("")
+    val articleSearchQuery: StateFlow<String> = _articleSearchQuery.asStateFlow()
 
     // --- ZONA IA: Variables para el resumen ---
     private val _summaryState = MutableStateFlow<String?>(null)
@@ -238,26 +249,34 @@ class MainViewModel @Inject constructor(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks, _articleLimit) { selector, hiddenLinks, limit ->
-        Triple(selector, hiddenLinks, limit)
+    val uiState: StateFlow<FeedUiState> = combine(
+        combine(_selectedSource, _hiddenArticleLinks, _articleLimit) { selector, hiddenLinks, limit -> Triple(selector, hiddenLinks, limit) },
+        combine(_isArticleSearching, _articleSearchQuery, _isInitialSync, _isRefreshing) { isSearching, query, isInitialSync, isRefreshing -> Quadruple(isSearching, query, isInitialSync, isRefreshing) }
+    ) { (selector, hiddenLinks, limit), (isSearching, query, isInitialSync, isRefreshing) ->
+        CombinedState(selector, hiddenLinks, limit, isSearching, query, isInitialSync, isRefreshing)
     }
-    .flatMapLatest { (selector, hiddenLinks, limit) ->
+    .flatMapLatest { state ->
+        if (state.isInitialSync || state.isRefreshing) {
+            return@flatMapLatest flowOf(FeedUiState.Loading)
+        }
         val articlesFlow = when {
-            selector == "saved" -> feedDao.getSavedArticles()
-            selector == null -> getArticlesUseCase()
-            selector.startsWith("folder:") -> {
-                val folderName = selector.removePrefix("folder:")
+            state.isArticleSearching && state.searchQuery.isBlank() -> flowOf(emptyList())
+            state.isArticleSearching && state.searchQuery.isNotBlank() -> feedDao.searchArticles(state.searchQuery)
+            state.selector == "saved" -> feedDao.getSavedArticles()
+            state.selector == null -> getArticlesUseCase()
+            state.selector.startsWith("folder:") -> {
+                val folderName = state.selector.removePrefix("folder:")
                 feedDao.getArticlesByFolder(folderName)
             }
-            else -> getArticlesUseCase(selector)
+            else -> getArticlesUseCase(state.selector)
         }
         articlesFlow.map<List<ArticleEntity>, FeedUiState> { articles ->
-            val filtered = if (selector == "saved") {
+            val filtered = if (state.selector == "saved" || state.isArticleSearching) {
                 articles
             } else {
-                articles.filter { it.link !in hiddenLinks }
+                articles.filter { it.link !in state.hiddenLinks }
             }
-            FeedUiState.Success(filtered.take(limit))
+            FeedUiState.Success(filtered.take(state.limit))
         }
     }
     .catch { emit(FeedUiState.Error(it.message ?: context.getString(com.example.riffle.R.string.msg_unknown_error))) }
@@ -375,11 +394,15 @@ class MainViewModel @Inject constructor(
             _isRefreshing.value = true
             try {
                 syncFeedsUseCase()
+                // Cleanup old articles (> 30 days)
+                val threshold = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
+                feedDao.deleteOldArticles(threshold)
                 updateHiddenArticles()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
                 _isRefreshing.value = false
+                _isInitialSync.value = false
             }
         }
     }
@@ -387,6 +410,7 @@ class MainViewModel @Inject constructor(
     fun markAsRead(link: String) {
         viewModelScope.launch {
             markArticleReadUseCase(link)
+            _hiddenArticleLinks.value += link
         }
     }
 
@@ -535,4 +559,40 @@ class MainViewModel @Inject constructor(
         sslContext.init(null, trustAllCerts, java.security.SecureRandom())
         return sslContext.socketFactory
     }
+
+    fun startArticleSearch() {
+        _isArticleSearching.value = true
+    }
+
+    fun stopArticleSearch() {
+        _isArticleSearching.value = false
+        _articleSearchQuery.value = ""
+    }
+
+    fun updateArticleSearchQuery(query: String) {
+        _articleSearchQuery.value = query
+    }
+
+    fun deleteReadArticles() {
+        viewModelScope.launch(Dispatchers.IO) {
+            feedDao.deleteReadArticles()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, context.getString(com.example.riffle.R.string.msg_read_articles_deleted), Toast.LENGTH_SHORT).show()
+                // Update lists if necessary, though Flow should handle it.
+                // If we are in "Read Later" or specific folder, items might disappear.
+            }
+        }
+    }
 }
+
+data class CombinedState(
+    val selector: String?,
+    val hiddenLinks: Set<String>,
+    val limit: Int,
+    val isArticleSearching: Boolean,
+    val searchQuery: String,
+    val isInitialSync: Boolean,
+    val isRefreshing: Boolean
+)
+
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

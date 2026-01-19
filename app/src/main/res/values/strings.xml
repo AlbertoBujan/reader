@@ -11,6 +11,11 @@
     <string name="nav_uncategorized">Uncategorized</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_menu">Menu</string>
+    <string name="action_back">Back</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_search">Search</string>
+    <string name="search_articles_hint">Search articles...</string>
+
     
     <!-- Feed / Articles -->
     <string name="feed_filtered">Filtered Feed</string>
@@ -54,7 +59,13 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System Default</string>
     <string name="settings_language_en">English</string>
+
     <string name="settings_language_es">Español</string>
+    <string name="settings_delete_read">Delete Read Articles</string>
+    <string name="dialog_delete_read_title">Delete Read Articles</string>
+    <string name="dialog_delete_read_confirm">Are you sure you want to delete all read articles? Saved articles will be kept.</string>
+    <string name="msg_read_articles_deleted">Read articles deleted</string>
+
 
     <!-- Toasts / Messages -->
     <string name="msg_removed_read_later">Removed from Read Later</string>

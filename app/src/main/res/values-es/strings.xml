@@ -11,6 +11,11 @@
     <string name="nav_uncategorized">Sin categoría</string>
     <string name="nav_settings">Ajustes</string>
     <string name="nav_menu">Menú</string>
+    <string name="action_back">Atrás</string>
+    <string name="action_clear">Borrar</string>
+    <string name="action_search">Buscar</string>
+    <string name="search_articles_hint">Buscar artículos...</string>
+
     
     <!-- Feed / Articles -->
     <string name="feed_filtered">Feed Filtrado</string>
@@ -54,7 +59,13 @@
     <string name="settings_language">Idioma</string>
     <string name="settings_language_system">Por defecto del sistema</string>
     <string name="settings_language_en">English</string>
+
     <string name="settings_language_es">Español</string>
+    <string name="settings_delete_read">Eliminar Artículos Leídos</string>
+    <string name="dialog_delete_read_title">Eliminar Artículos Leídos</string>
+    <string name="dialog_delete_read_confirm">¿Estás seguro de que quieres eliminar todos los artículos leídos? Los artículos guardados se mantendrán.</string>
+    <string name="msg_read_articles_deleted">Artículos leídos eliminados</string>
+
 
     <!-- Toasts / Messages -->
     <string name="msg_removed_read_later">Eliminado de Leer más tarde</string>

@@ -11,6 +11,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.Crossfade
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -41,6 +44,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.BookmarkRemove
@@ -54,6 +58,8 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -62,6 +68,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.text.KeyboardActions
@@ -100,6 +107,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -190,46 +198,41 @@ fun Modifier.shimmerEffect(): Modifier = composed {
 }
 
 @Composable
+
 fun SkeletonArticleItem() {
     Card(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            // Title Line 1
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .fillMaxWidth(0.95f)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
                     .shimmerEffect()
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .shimmerEffect()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(20.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .shimmerEffect()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.4f)
-                        .height(14.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .shimmerEffect()
-                )
-            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // Title Line 2
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.75f)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            // Metadata Line
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.4f)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect()
+            )
         }
     }
 }
@@ -255,6 +258,9 @@ fun HomeScreen(
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
     val modelStatuses by viewModel.modelStatuses.collectAsState()
     
+    val isArticleSearching by viewModel.isArticleSearching.collectAsState()
+    val articleSearchQuery by viewModel.articleSearchQuery.collectAsState()
+    
     var showUnifiedDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -265,10 +271,30 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         viewModel.messageEvent.collect { message: String ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(articleSearchQuery) {
+        if (isArticleSearching) {
+            listState.scrollToItem(0)
+        }
+    }
+    
+    LaunchedEffect(isArticleSearching) {
+        if (isArticleSearching) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(isArticleSearching) {
+        if (!isArticleSearching) {
+            listState.scrollToItem(0)
         }
     }
 
@@ -454,44 +480,96 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                when {
-                                    selectedSource == "saved" -> stringResource(R.string.nav_read_later)
-                                    selectedSource == null -> stringResource(R.string.app_name)
-                                    selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
-                                    else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
-                                }
+                    title = {
+                        if (isArticleSearching) {
+                            TextField(
+                                value = articleSearchQuery,
+                                onValueChange = { viewModel.updateArticleSearchQuery(it) },
+                                placeholder = { Text(stringResource(R.string.search_articles_hint)) },
+                                singleLine = true,
+                                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { /* Search happens on type, or dismiss keyboard */ })
                             )
-                            val currentUnread = when {
-                                selectedSource == "saved" -> 0
-                                selectedSource == null -> unreadCounts.values.sum()
-                                selectedSource!!.startsWith("folder:") -> {
-                                    val folderName = selectedSource!!.removePrefix("folder:")
-                                    sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
-                                }
-                                else -> unreadCounts[selectedSource] ?: 0
-                            }
-                            if (currentUnread > 0) {
-                                Spacer(Modifier.width(8.dp))
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "($currentUnread)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    when {
+                                        selectedSource == "saved" -> stringResource(R.string.nav_read_later)
+                                        selectedSource == null -> stringResource(R.string.app_name)
+                                        selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
+                                        else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
+                                    }
                                 )
+                                val totalUnread = unreadCounts.values.sum()
+                                val currentUnread = when {
+                                    selectedSource == "saved" -> 0
+                                    selectedSource == null -> totalUnread
+                                    selectedSource!!.startsWith("folder:") -> {
+                                        val folderName = selectedSource!!.removePrefix("folder:")
+                                        sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
+                                    }
+                                    else -> unreadCounts[selectedSource] ?: 0
+                                }
+
+                                // Delay update until refresh is done
+                                var displayedUnread by remember { mutableIntStateOf(currentUnread) }
+                                LaunchedEffect(isRefreshing, currentUnread) {
+                                    if (!isRefreshing) {
+                                        displayedUnread = currentUnread
+                                    }
+                                }
+
+                                if (displayedUnread > 0) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "($displayedUnread)",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                        if (isArticleSearching) {
+                            IconButton(onClick = { viewModel.stopArticleSearch() }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                            }
+                        } else {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                            }
                         }
                     },
                     actions = {
-                        if (selectedSource != "saved") {
-                            IconButton(onClick = { viewModel.markAllAsRead() }) {
-                                Icon(Icons.Default.DoneAll, contentDescription = stringResource(R.string.mark_all_read))
+                        if (isArticleSearching) {
+                            if (articleSearchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.updateArticleSearchQuery("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear))
+                                }
+                            }
+                        } else {
+                            if (selectedSource != "saved") {
+                                IconButton(onClick = { viewModel.startArticleSearch() }) {
+                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
+                                }
+
+                            } else {
+                                // Search in saved logic could be added here if desired, 
+                                // currently logic supports searching in saved view too because of ViewModel impl
+                                IconButton(onClick = { viewModel.startArticleSearch() }) {
+                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
+                                }
                             }
                         }
                     }
@@ -505,65 +583,67 @@ fun HomeScreen(
                     .padding(padding)
                     .fillMaxSize()
             ) {
-                when (val state = uiState) {
-                    is FeedUiState.Loading -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(6) {
-                                SkeletonArticleItem()
+                Crossfade(targetState = uiState, label = "content") { state ->
+                    when (state) {
+                        is FeedUiState.Loading -> {
+                            LazyColumn(
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(10) {
+                                    SkeletonArticleItem()
+                                }
                             }
                         }
-                    }
-                    is FeedUiState.Success -> {
-                        // Scroll automático al inicio tras carga
-                        var wasRefreshing by remember { mutableStateOf(false) }
-                        LaunchedEffect(isRefreshing) {
-                            if (wasRefreshing && !isRefreshing && state.articles.isNotEmpty()) {
-                                listState.animateScrollToItem(0)
+                        is FeedUiState.Success -> {
+                            // Scroll automático al inicio tras carga
+                            var wasRefreshing by remember { mutableStateOf(false) }
+                            LaunchedEffect(isRefreshing) {
+                                if (wasRefreshing && !isRefreshing && state.articles.isNotEmpty()) {
+                                    listState.animateScrollToItem(0)
+                                }
+                                wasRefreshing = isRefreshing
                             }
-                            wasRefreshing = isRefreshing
-                        }
 
-                        key(selectedSource) {
-                            ArticleList(
-                                articles = state.articles,
-                                sources = sources,
-                                listState = listState,
-                                markAsReadOnScroll = markAsReadOnScroll,
-                                isRefreshing = isRefreshing,
-                                onMarkAsRead = { viewModel.markAsRead(it) },
-                                onToggleSave = { link, isSaved -> 
-                                    viewModel.toggleSaveArticle(link, isSaved)
-                                    if (selectedSource == "saved" && isSaved) {
-                                        viewModel.markAsRead(link)
-                                    }
-                                    val message = if (isSaved) context.getString(R.string.msg_removed_read_later) else context.getString(R.string.msg_added_read_later)
-                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                },
-                                onShare = { article ->
-                                    val sendIntent: Intent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, "${article.title}\n\n${article.link}")
-                                        type = "text/plain"
-                                    }
-                                    val shareIntent = Intent.createChooser(sendIntent, null)
-                                    context.startActivity(shareIntent)
-                                },
-                                onArticleClick = { link, isRead ->
-                                    if (!isRead) viewModel.markAsRead(link)
-                                    onArticleClick(link, isRead)
-                                },
-                                isReadLaterView = selectedSource == "saved",
-                                onLoadMore = { viewModel.loadMore() }
-                            )
+                            key(selectedSource) {
+                                ArticleList(
+                                    articles = state.articles,
+                                    sources = sources,
+                                    listState = listState,
+                                    markAsReadOnScroll = markAsReadOnScroll,
+                                    isRefreshing = isRefreshing,
+                                    onMarkAsRead = { viewModel.markAsRead(it) },
+                                    onToggleSave = { link, isSaved -> 
+                                        viewModel.toggleSaveArticle(link, isSaved)
+                                        if (selectedSource == "saved" && isSaved) {
+                                            viewModel.markAsRead(link)
+                                        }
+                                        val message = if (isSaved) context.getString(R.string.msg_removed_read_later) else context.getString(R.string.msg_added_read_later)
+                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    },
+                                    onShare = { article ->
+                                        val sendIntent: Intent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, "${article.title}\n\n${article.link}")
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, null)
+                                        context.startActivity(shareIntent)
+                                    },
+                                    onArticleClick = { link, isRead ->
+                                        if (!isRead) viewModel.markAsRead(link)
+                                        onArticleClick(link, isRead)
+                                    },
+                                    isReadLaterView = selectedSource == "saved",
+                                    onLoadMore = { viewModel.loadMore() }
+                                )
+                            }
                         }
-                    }
-                    is FeedUiState.Error -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+                        is FeedUiState.Error -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(text = "Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }
@@ -603,7 +683,8 @@ fun HomeScreen(
                         val localeList = if (code == "system") LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(code)
                         AppCompatDelegate.setApplicationLocales(localeList)
                     },
-                    modelStatuses = modelStatuses
+                    modelStatuses = modelStatuses,
+                    onDeleteReadArticles = { viewModel.deleteReadArticles() }
                 )
             }
 
@@ -784,15 +865,41 @@ fun SettingsDialog(
     onApiKeyChange: (String) -> Unit,
     language: String,
     onLanguageChange: (String) -> Unit,
-    modelStatuses: Map<String, String>
+    modelStatuses: Map<String, String>,
+    onDeleteReadArticles: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     if (showStatsDialog) {
         ModelStatsDialog(
             modelStatuses = modelStatuses,
             onDismiss = { showStatsDialog = false }
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text(stringResource(R.string.dialog_delete_read_title)) },
+            text = { Text(stringResource(R.string.dialog_delete_read_confirm)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteReadArticles()
+                        showDeleteConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.dialog_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            }
         )
     }
 
@@ -859,6 +966,20 @@ fun SettingsDialog(
                     }
                 }
                 
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = { showDeleteConfirmation = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_delete_read))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -1382,6 +1503,29 @@ fun ArticleList(
             }
             item {
                 Spacer(modifier = Modifier.height(screenHeight - 60.dp))
+            }
+        } else {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillParentMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.list_end_message),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
