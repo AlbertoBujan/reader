@@ -59,7 +59,13 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System Default</string>
     <string name="settings_language_en">English</string>
+
     <string name="settings_language_es">Español</string>
+    <string name="settings_delete_read">Delete Read Articles</string>
+    <string name="dialog_delete_read_title">Delete Read Articles</string>
+    <string name="dialog_delete_read_confirm">Are you sure you want to delete all read articles? Saved articles will be kept.</string>
+    <string name="msg_read_articles_deleted">Read articles deleted</string>
+
 
     <!-- Toasts / Messages -->
     <string name="msg_removed_read_later">Removed from Read Later</string>

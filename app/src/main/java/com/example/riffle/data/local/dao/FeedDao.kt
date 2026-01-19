@@ -14,21 +14,21 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FeedDao {
 
-    @Query("SELECT * FROM articles ORDER BY pubDate DESC")
+    @Query("SELECT link, title, NULL as description, pubDate, sourceUrl, imageUrl, isRead, isSaved FROM articles ORDER BY pubDate DESC")
     fun getAllArticles(): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC")
+    @Query("SELECT link, title, NULL as description, pubDate, sourceUrl, imageUrl, isRead, isSaved FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC")
     fun getArticlesBySource(sourceUrl: String): Flow<List<ArticleEntity>>
 
     @Query("""
-        SELECT articles.* FROM articles 
+        SELECT articles.link, articles.title, NULL as description, articles.pubDate, articles.sourceUrl, articles.imageUrl, articles.isRead, articles.isSaved FROM articles 
         INNER JOIN sources ON articles.sourceUrl = sources.url 
         WHERE sources.folderName = :folderName 
         ORDER BY pubDate DESC
     """)
     fun getArticlesByFolder(folderName: String): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC")
+    @Query("SELECT link, title, NULL as description, pubDate, sourceUrl, imageUrl, isRead, isSaved FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC")
     fun getSavedArticles(): Flow<List<ArticleEntity>>
 
     @Query("""
@@ -79,7 +79,10 @@ interface FeedDao {
     @Query("DELETE FROM articles WHERE pubDate < :threshold AND isSaved = 0")
     suspend fun deleteOldArticles(threshold: Long)
 
-    @Query("SELECT * FROM articles WHERE title LIKE '%' || :query || '%' ORDER BY pubDate DESC")
+    @Query("DELETE FROM articles WHERE isRead = 1 AND isSaved = 0")
+    suspend fun deleteReadArticles()
+
+    @Query("SELECT link, title, NULL as description, pubDate, sourceUrl, imageUrl, isRead, isSaved FROM articles WHERE title LIKE '%' || :query || '%' ORDER BY pubDate DESC")
     fun searchArticles(query: String): Flow<List<ArticleEntity>>
 
 

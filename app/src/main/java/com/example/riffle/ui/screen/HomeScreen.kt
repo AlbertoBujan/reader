@@ -66,6 +66,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.text.KeyboardActions
@@ -674,7 +675,8 @@ fun HomeScreen(
                         val localeList = if (code == "system") LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(code)
                         AppCompatDelegate.setApplicationLocales(localeList)
                     },
-                    modelStatuses = modelStatuses
+                    modelStatuses = modelStatuses,
+                    onDeleteReadArticles = { viewModel.deleteReadArticles() }
                 )
             }
 
@@ -855,15 +857,41 @@ fun SettingsDialog(
     onApiKeyChange: (String) -> Unit,
     language: String,
     onLanguageChange: (String) -> Unit,
-    modelStatuses: Map<String, String>
+    modelStatuses: Map<String, String>,
+    onDeleteReadArticles: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     if (showStatsDialog) {
         ModelStatsDialog(
             modelStatuses = modelStatuses,
             onDismiss = { showStatsDialog = false }
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text(stringResource(R.string.dialog_delete_read_title)) },
+            text = { Text(stringResource(R.string.dialog_delete_read_confirm)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteReadArticles()
+                        showDeleteConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.dialog_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            }
         )
     }
 
@@ -930,6 +958,20 @@ fun SettingsDialog(
                     }
                 }
                 
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = { showDeleteConfirmation = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_delete_read))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
                 

@@ -1,6 +1,7 @@
 package com.example.riffle.ui.viewmodel
 
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.riffle.data.local.PreferencesManager
@@ -559,6 +560,17 @@ class MainViewModel @Inject constructor(
 
     fun updateArticleSearchQuery(query: String) {
         _articleSearchQuery.value = query
+    }
+
+    fun deleteReadArticles() {
+        viewModelScope.launch(Dispatchers.IO) {
+            feedDao.deleteReadArticles()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, context.getString(com.example.riffle.R.string.msg_read_articles_deleted), Toast.LENGTH_SHORT).show()
+                // Update lists if necessary, though Flow should handle it.
+                // If we are in "Read Later" or specific folder, items might disappear.
+            }
+        }
     }
 }
 
