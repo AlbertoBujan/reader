@@ -4,6 +4,7 @@ package com.example.riffle.ui.screen
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -35,7 +36,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Card
@@ -51,6 +55,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -101,6 +106,31 @@ fun ArticleReaderScreen(
                     }
                 },
                 actions = {
+                    if (article != null) {
+                        IconButton(onClick = {
+                            val sendIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, "${article!!.title}\n\n${article!!.link}")
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, null)
+                            context.startActivity(shareIntent)
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+                        IconButton(onClick = {
+                            val newSavedState = !article!!.isSaved
+                            viewModel.toggleSaveArticle(article!!.link, article!!.isSaved)
+                            val message = if (newSavedState) context.getString(R.string.msg_added_read_later) else context.getString(R.string.msg_removed_read_later)
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(
+                                imageVector = if (article!!.isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = stringResource(R.string.nav_read_later),
+                                tint = if (article!!.isSaved) Color(0xFFFFD600) else LocalContentColor.current
+                            )
+                        }
+                    }
                     IconButton(onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         context.startActivity(intent)
