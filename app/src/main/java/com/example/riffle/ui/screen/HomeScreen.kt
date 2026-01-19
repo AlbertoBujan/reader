@@ -325,7 +325,11 @@ fun HomeScreen(
                                     selected = selectedSource == null,
                                     onClick = {
                                         viewModel.selectSource(null)
-                                        scope.launch { drawerState.close() }
+                                        viewModel.sync()
+                                        scope.launch { 
+                                            listState.scrollToItem(0)
+                                            drawerState.close() 
+                                        }
                                     },
                                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                                 )
@@ -350,7 +354,10 @@ fun HomeScreen(
                                     selected = selectedSource == "saved",
                                     onClick = {
                                         viewModel.selectSaved()
-                                        scope.launch { drawerState.close() }
+                                        scope.launch { 
+                                            listState.scrollToItem(0)
+                                            drawerState.close() 
+                                        }
                                     },
                                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                                 )
