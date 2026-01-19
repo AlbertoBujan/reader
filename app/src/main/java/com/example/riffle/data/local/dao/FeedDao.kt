@@ -86,6 +86,9 @@ interface FeedDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSource(source: SourceEntity)
 
+    @Query("SELECT * FROM sources WHERE url = :url LIMIT 1")
+    suspend fun getSourceByUrl(url: String): SourceEntity?
+
     @Query("DELETE FROM sources WHERE url = :url")
     suspend fun deleteSource(url: String)
 

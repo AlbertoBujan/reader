@@ -85,4 +85,13 @@
     <string name="update_download_title">Actualizando Riffle</string>
     <string name="update_download_desc">Descargando nueva versión...</string>
 
+
+
+    <!-- OPML -->
+    <string name="settings_export_opml">Exportar Feeds (OPML)</string>
+    <string name="settings_import_opml">Importar Feeds (OPML)</string>
+    <string name="msg_opml_import_success">Feeds importados correctamente</string>
+    <string name="msg_opml_export_success">Feeds exportados correctamente</string>
+    <string name="msg_opml_error">Error: %1$s</string>
+
 </resources>

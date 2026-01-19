@@ -62,6 +62,7 @@ class MainViewModel @Inject constructor(
     private val syncFeedsUseCase: SyncFeedsUseCase,
     private val markArticleReadUseCase: MarkArticleReadUseCase,
     private val feedDao: FeedDao,
+    private val feedRepository: com.example.riffle.domain.repository.FeedRepository,
     private val preferencesManager: PreferencesManager,
     private val clearbitService: ClearbitService,
     getAllSourcesUseCase: GetAllSourcesUseCase,
@@ -531,6 +532,37 @@ class MainViewModel @Inject constructor(
             } finally {
                 _isSearching.value = false
             }
+        }
+    }
+
+    fun importOpml(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.article_loading))
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    feedRepository.importOpml(stream)
+                }
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_import_success))
+                sync()
+            } catch (e: Exception) {
+                 _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_error, e.localizedMessage ?: "Unknown"))
+                 e.printStackTrace()
+            }
+        }
+    }
+
+    fun exportOpml(uri: android.net.Uri) {
+        viewModelScope.launch {
+             try {
+                 val opmlContent = feedRepository.exportOpml()
+                 context.contentResolver.openOutputStream(uri)?.use { stream ->
+                     stream.write(opmlContent.toByteArray())
+                 }
+                  _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_export_success))
+             } catch (e: Exception) {
+                  _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_error, e.localizedMessage ?: "Unknown"))
+                  e.printStackTrace()
+             }
         }
     }
 

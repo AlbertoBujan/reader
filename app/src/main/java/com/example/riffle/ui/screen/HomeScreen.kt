@@ -5,6 +5,8 @@ import android.content.ClipDescription
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -83,6 +85,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
@@ -643,6 +646,20 @@ fun HomeScreen(
 
 
 
+    val exportOpmlLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/x-opml"),
+        onResult = { uri ->
+            uri?.let { viewModel.exportOpml(it) }
+        }
+    )
+
+    val importOpmlLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            uri?.let { viewModel.importOpml(it) }
+        }
+    )
+
             if (showSettingsDialog) {
                 SettingsDialog(
                     onDismiss = { showSettingsDialog = false },
@@ -658,7 +675,9 @@ fun HomeScreen(
                         val localeList = if (code == "system") LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(code)
                         AppCompatDelegate.setApplicationLocales(localeList)
                     },
-                    modelStatuses = modelStatuses
+                    modelStatuses = modelStatuses,
+                    onImportOpml = { importOpmlLauncher.launch(arrayOf("text/xml", "application/xml", "text/x-opml")) },
+                    onExportOpml = { exportOpmlLauncher.launch("riffle_backup.opml") }
                 )
             }
 
@@ -832,14 +851,15 @@ fun SettingsDialog(
     onDismiss: () -> Unit,
     markAsReadOnScroll: Boolean,
     onToggleMarkAsReadOnScroll: (Boolean) -> Unit,
-
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit,
     geminiApiKey: String,
     onApiKeyChange: (String) -> Unit,
     language: String,
     onLanguageChange: (String) -> Unit,
-    modelStatuses: Map<String, String>
+    modelStatuses: Map<String, String>,
+    onImportOpml: () -> Unit,
+    onExportOpml: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
@@ -877,7 +897,6 @@ fun SettingsDialog(
                     Switch(
                         checked = markAsReadOnScroll,
                         onCheckedChange = onToggleMarkAsReadOnScroll
-
                     )
                 }
                 HorizontalDivider()
@@ -913,8 +932,42 @@ fun SettingsDialog(
                          }
                     }
                 }
-                
                 HorizontalDivider()
+                
+                // OPML Section
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Backup", 
+                    style = MaterialTheme.typography.labelLarge, 
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedButton(
+                    onClick = onImportOpml,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_import_opml))
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedButton(
+                    onClick = onExportOpml,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_export_opml))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {

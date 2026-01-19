@@ -11,4 +11,7 @@ interface FeedRepository {
     suspend fun addSource(url: String, title: String?, iconUrl: String? = null)
     suspend fun syncFeeds()
     suspend fun markAsRead(link: String)
+    
+    suspend fun importOpml(inputStream: java.io.InputStream)
+    suspend fun exportOpml(): String
 }
