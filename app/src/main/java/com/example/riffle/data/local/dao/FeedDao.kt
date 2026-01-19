@@ -76,6 +76,13 @@ interface FeedDao {
     @Query("UPDATE articles SET isSaved = :isSaved WHERE link = :link")
     suspend fun updateArticleSavedStatus(link: String, isSaved: Boolean)
 
+    @Query("DELETE FROM articles WHERE pubDate < :threshold AND isSaved = 0")
+    suspend fun deleteOldArticles(threshold: Long)
+
+    @Query("SELECT * FROM articles WHERE title LIKE '%' || :query || '%' ORDER BY pubDate DESC")
+    fun searchArticles(query: String): Flow<List<ArticleEntity>>
+
+
     // Source Management
     @Query("SELECT * FROM sources")
     fun getAllSources(): Flow<List<SourceEntity>>

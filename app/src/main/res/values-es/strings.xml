@@ -11,6 +11,11 @@
     <string name="nav_uncategorized">Sin categoría</string>
     <string name="nav_settings">Ajustes</string>
     <string name="nav_menu">Menú</string>
+    <string name="action_back">Atrás</string>
+    <string name="action_clear">Borrar</string>
+    <string name="action_search">Buscar</string>
+    <string name="search_articles_hint">Buscar artículos...</string>
+
     
     <!-- Feed / Articles -->
     <string name="feed_filtered">Feed Filtrado</string>

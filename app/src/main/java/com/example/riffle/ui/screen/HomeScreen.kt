@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -54,6 +56,8 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -255,6 +259,9 @@ fun HomeScreen(
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
     val modelStatuses by viewModel.modelStatuses.collectAsState()
     
+    val isArticleSearching by viewModel.isArticleSearching.collectAsState()
+    val articleSearchQuery by viewModel.articleSearchQuery.collectAsState()
+    
     var showUnifiedDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -265,10 +272,30 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         viewModel.messageEvent.collect { message: String ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(articleSearchQuery) {
+        if (isArticleSearching) {
+            listState.scrollToItem(0)
+        }
+    }
+    
+    LaunchedEffect(isArticleSearching) {
+        if (isArticleSearching) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(isArticleSearching) {
+        if (!isArticleSearching) {
+            listState.scrollToItem(0)
         }
     }
 
@@ -454,44 +481,88 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                when {
-                                    selectedSource == "saved" -> stringResource(R.string.nav_read_later)
-                                    selectedSource == null -> stringResource(R.string.app_name)
-                                    selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
-                                    else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
-                                }
+                    title = {
+                        if (isArticleSearching) {
+                            TextField(
+                                value = articleSearchQuery,
+                                onValueChange = { viewModel.updateArticleSearchQuery(it) },
+                                placeholder = { Text(stringResource(R.string.search_articles_hint)) },
+                                singleLine = true,
+                                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { /* Search happens on type, or dismiss keyboard */ })
                             )
-                            val currentUnread = when {
-                                selectedSource == "saved" -> 0
-                                selectedSource == null -> unreadCounts.values.sum()
-                                selectedSource!!.startsWith("folder:") -> {
-                                    val folderName = selectedSource!!.removePrefix("folder:")
-                                    sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
-                                }
-                                else -> unreadCounts[selectedSource] ?: 0
-                            }
-                            if (currentUnread > 0) {
-                                Spacer(Modifier.width(8.dp))
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "($currentUnread)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    when {
+                                        selectedSource == "saved" -> stringResource(R.string.nav_read_later)
+                                        selectedSource == null -> stringResource(R.string.app_name)
+                                        selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
+                                        else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
+                                    }
                                 )
+                                val currentUnread = when {
+                                    selectedSource == "saved" -> 0
+                                    selectedSource == null -> unreadCounts.values.sum()
+                                    selectedSource!!.startsWith("folder:") -> {
+                                        val folderName = selectedSource!!.removePrefix("folder:")
+                                        sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
+                                    }
+                                    else -> unreadCounts[selectedSource] ?: 0
+                                }
+                                if (currentUnread > 0) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "($currentUnread)",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                        if (isArticleSearching) {
+                            IconButton(onClick = { viewModel.stopArticleSearch() }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                            }
+                        } else {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                            }
                         }
                     },
                     actions = {
-                        if (selectedSource != "saved") {
-                            IconButton(onClick = { viewModel.markAllAsRead() }) {
-                                Icon(Icons.Default.DoneAll, contentDescription = stringResource(R.string.mark_all_read))
+                        if (isArticleSearching) {
+                            if (articleSearchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.updateArticleSearchQuery("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear))
+                                }
+                            }
+                        } else {
+                            if (selectedSource != "saved") {
+                                IconButton(onClick = { viewModel.startArticleSearch() }) {
+                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
+                                }
+                                IconButton(onClick = { viewModel.markAllAsRead() }) {
+                                    Icon(Icons.Default.DoneAll, contentDescription = stringResource(R.string.mark_all_read))
+                                }
+                            } else {
+                                // Search in saved logic could be added here if desired, 
+                                // currently logic supports searching in saved view too because of ViewModel impl
+                                IconButton(onClick = { viewModel.startArticleSearch() }) {
+                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
+                                }
                             }
                         }
                     }
