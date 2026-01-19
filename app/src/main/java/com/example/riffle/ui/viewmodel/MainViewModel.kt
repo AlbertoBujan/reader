@@ -89,6 +89,13 @@ class MainViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    private val _articleSearchQuery = MutableStateFlow("")
+    val articleSearchQuery: StateFlow<String> = _articleSearchQuery.asStateFlow()
+
+    fun setArticleSearchQuery(query: String) {
+        _articleSearchQuery.value = query
+    }
+
     // --- ZONA IA: Variables para el resumen ---
     private val _summaryState = MutableStateFlow<String?>(null)
     val summaryState: StateFlow<String?> = _summaryState.asStateFlow()
@@ -237,27 +244,36 @@ class MainViewModel @Inject constructor(
         sync()
     }
 
+    private data class FilterState(
+        val selector: String?,
+        val hiddenLinks: Set<String>,
+        val limit: Int,
+        val searchQuery: String
+    )
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks, _articleLimit) { selector, hiddenLinks, limit ->
-        Triple(selector, hiddenLinks, limit)
+    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks, _articleLimit, _articleSearchQuery) { selector, hiddenLinks, limit, searchQuery ->
+        FilterState(selector, hiddenLinks, limit, searchQuery)
     }
-    .flatMapLatest { (selector, hiddenLinks, limit) ->
+    .flatMapLatest { state ->
         val articlesFlow = when {
-            selector == "saved" -> feedDao.getSavedArticles()
-            selector == null -> getArticlesUseCase()
-            selector.startsWith("folder:") -> {
-                val folderName = selector.removePrefix("folder:")
+            state.selector == "saved" -> feedDao.getSavedArticles()
+            state.selector == null -> getArticlesUseCase()
+            state.selector.startsWith("folder:") -> {
+                val folderName = state.selector.removePrefix("folder:")
                 feedDao.getArticlesByFolder(folderName)
             }
-            else -> getArticlesUseCase(selector)
+            else -> getArticlesUseCase(state.selector)
         }
         articlesFlow.map<List<ArticleEntity>, FeedUiState> { articles ->
-            val filtered = if (selector == "saved") {
+            val filtered = if (state.searchQuery.isNotEmpty()) {
+                articles.filter { it.title.contains(state.searchQuery, ignoreCase = true) }
+            } else if (state.selector == "saved") {
                 articles
             } else {
-                articles.filter { it.link !in hiddenLinks }
+                articles.filter { it.link !in state.hiddenLinks }
             }
-            FeedUiState.Success(filtered.take(limit))
+            FeedUiState.Success(filtered.take(state.limit))
         }
     }
     .catch { emit(FeedUiState.Error(it.message ?: context.getString(com.example.riffle.R.string.msg_unknown_error))) }
@@ -286,17 +302,20 @@ class MainViewModel @Inject constructor(
         _articleLimit.value = 20
         updateHiddenArticles()
         _selectedSource.value = url
+        _articleSearchQuery.value = "" // Clear search when switching source
     }
 
     fun selectSaved() {
         _articleLimit.value = 20
         _selectedSource.value = "saved"
+        _articleSearchQuery.value = "" // Clear search
     }
 
     fun selectFolder(name: String) {
         _articleLimit.value = 20
         updateHiddenArticles()
         _selectedSource.value = "folder:$name"
+        _articleSearchQuery.value = "" // Clear search
     }
 
     fun loadMore() {
@@ -390,22 +409,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun markAllAsRead() {
-        viewModelScope.launch {
-            val selector = _selectedSource.value
-            when {
-                selector == "saved" -> return@launch 
-                selector == null -> feedDao.markAllArticlesAsRead()
-                selector.startsWith("folder:") -> {
-                    val folderName = selector.removePrefix("folder:")
-                    feedDao.markArticlesAsReadByFolder(folderName)
-                }
-                else -> feedDao.markArticlesAsReadBySource(selector)
-            }
-            updateHiddenArticles()
-            sync() 
-        }
-    }
 
     fun toggleSaveArticle(link: String, isSaved: Boolean) {
         viewModelScope.launch {

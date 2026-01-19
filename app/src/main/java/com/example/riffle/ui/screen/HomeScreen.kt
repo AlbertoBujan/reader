@@ -110,6 +110,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
@@ -241,6 +243,11 @@ fun HomeScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onArticleClick: (String, Boolean) -> Unit
 ) {
+    val articleSearchQuery by viewModel.articleSearchQuery.collectAsState()
+    var isSearchActive by remember { mutableStateOf(false) }
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+
+    // Restore missing state variables
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val sources by viewModel.sources.collectAsState()
@@ -266,19 +273,32 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        viewModel.messageEvent.collect { message: String ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    LaunchedEffect(isSearchActive) {
+        if (isSearchActive) {
+            focusRequester.requestFocus()
         }
     }
 
-    // Manejo del botón atrás de Android
+    // Scroll al inicio cuando se busca
+    LaunchedEffect(articleSearchQuery) {
+        if (articleSearchQuery.isNotEmpty()) {
+            listState.scrollToItem(0)
+        }
+    }
+
+    // Manejo del botón atrás de Android: Si busca, cerrar búsqueda
+    BackHandler(enabled = isSearchActive) {
+         isSearchActive = false
+         viewModel.setArticleSearchQuery("")
+    }
+
+    // Manejo del botón atrás de Android (Drawer)
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
     }
     
-    // Si el drawer está cerrado, el botón atrás abrirá el drawer la primera vez
-    if (drawerState.isClosed) {
+    // Si el drawer está cerrado y NO busca, el botón atrás abrirá el drawer la primera vez
+    if (drawerState.isClosed && !isSearchActive) {
         BackHandler(enabled = true) {
             scope.launch { drawerState.open() }
         }
@@ -453,49 +473,84 @@ fun HomeScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                TopAppBar(
-                    title = { 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                when {
-                                    selectedSource == "saved" -> stringResource(R.string.nav_read_later)
-                                    selectedSource == null -> stringResource(R.string.app_name)
-                                    selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
-                                    else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
+                if (isSearchActive) {
+                    TopAppBar(
+                        title = {
+                            TextField(
+                                value = articleSearchQuery,
+                                onValueChange = { viewModel.setArticleSearchQuery(it) },
+                                placeholder = { Text("Buscar artículos...") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester),
+                                singleLine = true,
+                                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                ),
+                                trailingIcon = {
+                                    if (articleSearchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.setArticleSearchQuery("") }) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Clear") // Using Delete icon as Clear X
+                                        }
+                                    }
                                 }
                             )
-                            val currentUnread = when {
-                                selectedSource == "saved" -> 0
-                                selectedSource == null -> unreadCounts.values.sum()
-                                selectedSource!!.startsWith("folder:") -> {
-                                    val folderName = selectedSource!!.removePrefix("folder:")
-                                    sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
-                                }
-                                else -> unreadCounts[selectedSource] ?: 0
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { 
+                                isSearchActive = false
+                                viewModel.setArticleSearchQuery("")
+                            }) {
+                                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.article_back), modifier = Modifier.rotate(180f))
                             }
-                            if (currentUnread > 0) {
-                                Spacer(Modifier.width(8.dp))
+                        }
+                    )
+                } else {
+                    TopAppBar(
+                        title = { 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "($currentUnread)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    when {
+                                        selectedSource == "saved" -> stringResource(R.string.nav_read_later)
+                                        selectedSource == null -> stringResource(R.string.app_name)
+                                        selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
+                                        else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
+                                    }
                                 )
+                                val currentUnread = when {
+                                    selectedSource == "saved" -> 0
+                                    selectedSource == null -> unreadCounts.values.sum()
+                                    selectedSource!!.startsWith("folder:") -> {
+                                        val folderName = selectedSource!!.removePrefix("folder:")
+                                        sources.filter { it.folderName == folderName }.sumOf { unreadCounts[it.url] ?: 0 }
+                                    }
+                                    else -> unreadCounts[selectedSource] ?: 0
+                                }
+                                if (currentUnread > 0) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "($currentUnread)",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { isSearchActive = true }) {
+                                Icon(Icons.Default.Search, contentDescription = "Search Articles")
                             }
                         }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
-                        }
-                    },
-                    actions = {
-                        if (selectedSource != "saved") {
-                            IconButton(onClick = { viewModel.markAllAsRead() }) {
-                                Icon(Icons.Default.DoneAll, contentDescription = stringResource(R.string.mark_all_read))
-                            }
-                        }
-                    }
-                )
+                    )
+                }
             }
         ) { padding ->
             PullToRefreshBox(
