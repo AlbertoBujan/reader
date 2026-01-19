@@ -10,6 +10,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -389,29 +390,28 @@ fun HomeScreen(
                                 )
                             }
 
-                            item(key = "uncategorized_header") {
-                                val orphanSources = sources.filter { it.folderName == null }
-                                if (orphanSources.isNotEmpty()) {
+                            val orphanSources = sources.filter { it.folderName == null }
+                            if (orphanSources.isNotEmpty()) {
+                                item(key = "uncategorized_header") {
                                     Text(
                                         text = stringResource(R.string.nav_uncategorized),
                                         style = MaterialTheme.typography.labelMedium,
                                         modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 8.dp),
                                         color = MaterialTheme.colorScheme.primary
                                     )
-                                    orphanSources.forEach { source ->
-                                        key(source.url) {
-                                            SwipeableSourceItem(
-                                                source = source,
-                                                isSelected = selectedSource == source.url,
-                                                onClick = {
-                                                    viewModel.selectSource(source.url)
-                                                    scope.launch { drawerState.close() }
-                                                },
-                                                onDelete = { viewModel.deleteSource(source.url) },
-                                                onRename = { renamingSource = source }
-                                            )
-                                        }
-                                    }
+                                }
+                                items(orphanSources, key = { it.url }) { source ->
+                                    SwipeableSourceItem(
+                                        source = source,
+                                        isSelected = selectedSource == source.url,
+                                        onClick = {
+                                            viewModel.selectSource(source.url)
+                                            scope.launch { drawerState.close() }
+                                        },
+                                        onDelete = { viewModel.deleteSource(source.url) },
+                                        onRename = { renamingSource = source },
+                                        modifier = Modifier.animateItem()
+                                    )
                                 }
                             }
                         }
@@ -1171,7 +1171,7 @@ fun FolderItem(
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
         ) {
-            Column {
+            Column(modifier = Modifier.animateContentSize()) {
                 sources.forEach { source ->
                     key(source.url) {
                         SwipeableSourceItem(
@@ -1194,12 +1194,14 @@ fun SwipeableSourceItem(
     isSelected: Boolean,
     onClick: (String) -> Unit,
     onDelete: () -> Unit,
-    onRename: () -> Unit
+
+    onRename: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SwipeableItem(
         onDelete = onDelete,
         onEdit = onRename,
-        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+        modifier = modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
         shape = CircleShape
     ) {
         SourceDrawerItemContent(source, isSelected, onClick)
