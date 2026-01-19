@@ -555,9 +555,7 @@ fun HomeScreen(
                                 IconButton(onClick = { viewModel.startArticleSearch() }) {
                                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
                                 }
-                                IconButton(onClick = { viewModel.markAllAsRead() }) {
-                                    Icon(Icons.Default.DoneAll, contentDescription = stringResource(R.string.mark_all_read))
-                                }
+
                             } else {
                                 // Search in saved logic could be added here if desired, 
                                 // currently logic supports searching in saved view too because of ViewModel impl

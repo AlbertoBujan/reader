@@ -251,12 +251,12 @@ class MainViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<FeedUiState> = combine(
         combine(_selectedSource, _hiddenArticleLinks, _articleLimit) { selector, hiddenLinks, limit -> Triple(selector, hiddenLinks, limit) },
-        combine(_isArticleSearching, _articleSearchQuery, _isInitialSync) { isSearching, query, isInitialSync -> Triple(isSearching, query, isInitialSync) }
-    ) { (selector, hiddenLinks, limit), (isSearching, query, isInitialSync) ->
-        CombinedState(selector, hiddenLinks, limit, isSearching, query, isInitialSync)
+        combine(_isArticleSearching, _articleSearchQuery, _isInitialSync, _isRefreshing) { isSearching, query, isInitialSync, isRefreshing -> Quadruple(isSearching, query, isInitialSync, isRefreshing) }
+    ) { (selector, hiddenLinks, limit), (isSearching, query, isInitialSync, isRefreshing) ->
+        CombinedState(selector, hiddenLinks, limit, isSearching, query, isInitialSync, isRefreshing)
     }
     .flatMapLatest { state ->
-        if (state.isInitialSync) {
+        if (state.isInitialSync || state.isRefreshing) {
             return@flatMapLatest flowOf(FeedUiState.Loading)
         }
         val articlesFlow = when {
@@ -591,5 +591,8 @@ data class CombinedState(
     val limit: Int,
     val isArticleSearching: Boolean,
     val searchQuery: String,
-    val isInitialSync: Boolean
+    val isInitialSync: Boolean,
+    val isRefreshing: Boolean
 )
+
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
