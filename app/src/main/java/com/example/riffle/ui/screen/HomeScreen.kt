@@ -1422,12 +1422,12 @@ fun SwipeableArticleItem(
             )
         }
     ) {
-        ArticleItem(article, sourceName, onArticleClick)
+        ArticleItem(article, sourceName, onArticleClick, isReadLaterView)
     }
 }
 
 @Composable
-fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, Boolean) -> Unit) {
+fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, Boolean) -> Unit, isReadLaterView: Boolean = false) {
     Card(
         onClick = { onClick(article.link, article.isRead) },
         shape = RoundedCornerShape(12.dp),
@@ -1436,14 +1436,14 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
         Row(
             modifier = Modifier
                 .padding(16.dp)
-                .alpha(if (article.isRead) 0.5f else 1f)
+                .alpha(if (article.isRead && !isReadLaterView) 0.5f else 1f)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = article.title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (article.isRead) Color.Gray else Color.Unspecified,
+                        color = if (article.isRead && !isReadLaterView) Color.Gray else Color.Unspecified,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
