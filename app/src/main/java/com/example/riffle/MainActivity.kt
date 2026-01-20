@@ -308,7 +308,23 @@ fun RiffleApp(viewModel: MainViewModel) {
                 onArticleClick = { link, _ ->
                      val encodedUrl = URLEncoder.encode(link, StandardCharsets.UTF_8.toString())
                      navController.navigate("reader/$encodedUrl")
+                },
+                onNavigateToFeedSearch = {
+                    navController.navigate("search_feed")
                 }
+            )
+        }
+
+        composable(
+            route = "search_feed",
+            enterTransition = { slideInHorizontally(tween(300)) { it } },
+            exitTransition = { slideOutHorizontally(tween(300)) { it } },
+            popEnterTransition = { slideInHorizontally(tween(300)) { it } },
+            popExitTransition = { slideOutHorizontally(tween(200)) { it } }
+        ) {
+            com.example.riffle.ui.screen.SearchFeedScreen(
+                onBack = { navController.popBackStack() },
+                viewModel = viewModel
             )
         }
         

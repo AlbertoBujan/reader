@@ -96,6 +96,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -244,7 +246,8 @@ fun SkeletonArticleItem() {
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel = hiltViewModel(),
-    onArticleClick: (String, Boolean) -> Unit
+    onArticleClick: (String, Boolean) -> Unit,
+    onNavigateToFeedSearch: () -> Unit
 ) {
     val articleSearchQuery by viewModel.articleSearchQuery.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
@@ -265,7 +268,6 @@ fun HomeScreen(
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
     val modelStatuses by viewModel.modelStatuses.collectAsState()
     
-    var showUnifiedDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var renamingSource by remember { mutableStateOf<SourceEntity?>(null) }
@@ -275,6 +277,8 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+
 
     LaunchedEffect(isSearchActive) {
         if (isSearchActive) {
@@ -462,7 +466,7 @@ fun HomeScreen(
                         Spacer(Modifier.height(12.dp))
                     }
                     FloatingActionButton(
-                        onClick = { showUnifiedDialog = true },
+                        onClick = onNavigateToFeedSearch,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp)
@@ -482,7 +486,7 @@ fun HomeScreen(
                             TextField(
                                 value = articleSearchQuery,
                                 onValueChange = { viewModel.setArticleSearchQuery(it) },
-                                placeholder = { Text("Buscar artículos...") },
+                                placeholder = { Text(stringResource(R.string.search_articles_placeholder)) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester),
@@ -532,7 +536,14 @@ fun HomeScreen(
                                     }
                                     else -> unreadCounts[selectedSource] ?: 0
                                 }
-                                if (currentUnread > 0) {
+                                if (isRefreshing) {
+                                    Spacer(Modifier.width(8.dp))
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else if (currentUnread > 0) {
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         text = "($currentUnread)",
@@ -556,12 +567,21 @@ fun HomeScreen(
                 }
             }
         ) { padding ->
+            val pullState = rememberPullToRefreshState()
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = { viewModel.sync() },
+                state = pullState,
                 modifier = Modifier
                     .padding(padding)
-                    .fillMaxSize()
+                    .fillMaxSize(),
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullState,
+                        isRefreshing = false, // Force false to show arrow but hide spinner
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
             ) {
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
@@ -627,13 +647,6 @@ fun HomeScreen(
                 }
             }
 
-            if (showUnifiedDialog) {
-                UnifiedAddFeedDialog(
-                    onDismiss = { showUnifiedDialog = false },
-                    viewModel = viewModel
-                )
-            }
-            
             if (showFolderDialog) {
                 AddFolderDialog(
                     onDismiss = { showFolderDialog = false },
@@ -708,109 +721,7 @@ fun HomeScreen(
     }
 }
 
-@Composable
-fun UnifiedAddFeedDialog(onDismiss: () -> Unit, viewModel: MainViewModel) {
-    var query by remember { mutableStateOf("") }
-    val feeds by viewModel.discoveredFeeds.collectAsState()
-    val isSearching by viewModel.isSearching.collectAsState()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dialog_add_feed_title)) },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = { Text("Search or URL") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardActions = KeyboardActions(onDone = { viewModel.searchFeeds(query) }),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
-                    )
-                    IconButton(onClick = { viewModel.searchFeeds(query) }, enabled = query.isNotBlank() && !isSearching) {
-                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.nav_search_feeds))
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                if (isSearching) {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                        if (query.isNotBlank() && !isSearching && feeds.isEmpty()) {
-                             item {
-                                 TextButton(
-                                     onClick = {
-                                         viewModel.addSource(query, null)
-                                         onDismiss()
-                                     },
-                                     modifier = Modifier.fillMaxWidth()
-                                 ) {
-                                     Icon(Icons.Default.Add, null)
-                                     Spacer(Modifier.width(8.dp))
-                                     Text("Add \"$query\" directly")
-                                 }
-                             }
-                        }
-                        items(feeds) { feed ->
-                            ListItem(
-                                leadingContent = {
-                                    if (feed.iconUrl != null) {
-                                        AsyncImage(
-                                            model = feed.iconUrl,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(32.dp).clip(CircleShape)
-                                        )
-                                    } else {
-                                        Icon(Icons.Default.RssFeed, null)
-                                    }
-                                },
-                                headlineContent = { Text(feed.siteName ?: feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                supportingContent = { 
-                                    Text(
-                                        text = feed.url, 
-                                        maxLines = 3, 
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.bodySmall
-                                    ) 
-                                },
-                                trailingContent = {
-                                    IconButton(onClick = { 
-                                        viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
-                                        onDismiss()
-                                    }) {
-                                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-             TextButton(
-                 onClick = {
-                     if (query.isNotBlank()) {
-                         viewModel.addSource(query, null)
-                         onDismiss()
-                     }
-                 },
-                 enabled = query.isNotBlank()
-             ) {
-                 Text(stringResource(R.string.dialog_add))
-             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
-        }
-    )
-}
 
 @Composable
 fun RenameSourceDialog(initialTitle: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
