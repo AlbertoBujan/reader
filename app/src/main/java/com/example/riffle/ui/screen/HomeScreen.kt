@@ -96,6 +96,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -534,7 +536,14 @@ fun HomeScreen(
                                     }
                                     else -> unreadCounts[selectedSource] ?: 0
                                 }
-                                if (currentUnread > 0) {
+                                if (isRefreshing) {
+                                    Spacer(Modifier.width(8.dp))
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else if (currentUnread > 0) {
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         text = "($currentUnread)",
@@ -558,12 +567,21 @@ fun HomeScreen(
                 }
             }
         ) { padding ->
+            val pullState = rememberPullToRefreshState()
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = { viewModel.sync() },
+                state = pullState,
                 modifier = Modifier
                     .padding(padding)
-                    .fillMaxSize()
+                    .fillMaxSize(),
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullState,
+                        isRefreshing = false, // Force false to show arrow but hide spinner
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
             ) {
                 when (val state = uiState) {
                     is FeedUiState.Loading -> {
