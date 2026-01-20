@@ -42,4 +42,12 @@ class PreferencesManager @Inject constructor(@ApplicationContext context: Contex
     fun setLanguage(language: String) {
         sharedPreferences.edit().putString("language", language).apply()
     }
+
+    fun getSyncInterval(): Long {
+        return sharedPreferences.getLong("sync_interval", 1L)
+    }
+
+    fun setSyncInterval(hours: Long) {
+        sharedPreferences.edit().putLong("sync_interval", hours).apply()
+    }
 }

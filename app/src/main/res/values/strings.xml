@@ -56,6 +56,8 @@
     <string name="settings_language_system">System Default</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_es">Español</string>
+    <string name="settings_sync_interval">Background Sync Interval</string>
+    <string name="settings_sync_interval_hours">%1$d hours</string>
 
     <!-- Toasts / Messages -->
     <string name="msg_removed_read_later">Removed from Read Later</string>

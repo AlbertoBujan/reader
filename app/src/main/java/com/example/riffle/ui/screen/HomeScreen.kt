@@ -676,6 +676,8 @@ fun HomeScreen(
                         AppCompatDelegate.setApplicationLocales(localeList)
                     },
                     modelStatuses = modelStatuses,
+                    syncInterval = viewModel.syncInterval.collectAsState().value,
+                    onSyncIntervalChange = { viewModel.setSyncInterval(it) },
                     onImportOpml = { importOpmlLauncher.launch(arrayOf("text/xml", "application/xml", "text/x-opml")) },
                     onExportOpml = { exportOpmlLauncher.launch("riffle_backup.opml") }
                 )
@@ -857,11 +859,15 @@ fun SettingsDialog(
     onApiKeyChange: (String) -> Unit,
     language: String,
     onLanguageChange: (String) -> Unit,
+
     modelStatuses: Map<String, String>,
+    syncInterval: Long,
+    onSyncIntervalChange: (Long) -> Unit,
     onImportOpml: () -> Unit,
     onExportOpml: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expandedLanguage by remember { mutableStateOf(false) }
+    var expandedInterval by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
 
     if (showStatsDialog) {
@@ -905,32 +911,55 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(stringResource(R.string.settings_language))
-                    Box {
+                     Text(stringResource(R.string.settings_language), modifier = Modifier.weight(1f))
+                     Box {
+                          Text(
+                              text = when(language) {
+                                  "en" -> stringResource(R.string.settings_language_en)
+                                  "es" -> stringResource(R.string.settings_language_es)
+                                  else -> stringResource(R.string.settings_language_system)
+                              },
+                              color = MaterialTheme.colorScheme.primary,
+                              modifier = Modifier.clickable { expandedLanguage = true }.padding(8.dp)
+                          )
+                          DropdownMenu(expanded = expandedLanguage, onDismissRequest = { expandedLanguage = false }) {
+                              DropdownMenuItem(
+                                  text = { Text(stringResource(R.string.settings_language_system)) },
+                                  onClick = { onLanguageChange("system"); expandedLanguage = false }
+                              )
+                              DropdownMenuItem(
+                                  text = { Text(stringResource(R.string.settings_language_en)) },
+                                  onClick = { onLanguageChange("en"); expandedLanguage = false }
+                              )
+                              DropdownMenuItem(
+                                  text = { Text(stringResource(R.string.settings_language_es)) },
+                                  onClick = { onLanguageChange("es"); expandedLanguage = false }
+                              )
+                          }
+                     }
+                }
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                     Text(stringResource(R.string.settings_sync_interval), modifier = Modifier.weight(1f))
+                     Box {
                          Text(
-                             text = when(language) {
-                                 "en" -> stringResource(R.string.settings_language_en)
-                                 "es" -> stringResource(R.string.settings_language_es)
-                                 else -> stringResource(R.string.settings_language_system)
-                             },
+                             text = stringResource(R.string.settings_sync_interval_hours, syncInterval),
                              color = MaterialTheme.colorScheme.primary,
-                             modifier = Modifier.clickable { expanded = true }.padding(8.dp)
+                             modifier = Modifier.clickable { expandedInterval = true }.padding(8.dp)
                          )
-                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                             DropdownMenuItem(
-                                 text = { Text(stringResource(R.string.settings_language_system)) },
-                                 onClick = { onLanguageChange("system"); expanded = false }
-                             )
-                             DropdownMenuItem(
-                                 text = { Text(stringResource(R.string.settings_language_en)) },
-                                 onClick = { onLanguageChange("en"); expanded = false }
-                             )
-                             DropdownMenuItem(
-                                 text = { Text(stringResource(R.string.settings_language_es)) },
-                                 onClick = { onLanguageChange("es"); expanded = false }
-                             )
+                         DropdownMenu(expanded = expandedInterval, onDismissRequest = { expandedInterval = false }) {
+                             listOf(1L, 6L, 12L, 24L).forEach { hours ->
+                                 DropdownMenuItem(
+                                     text = { Text(stringResource(R.string.settings_sync_interval_hours, hours)) },
+                                     onClick = { onSyncIntervalChange(hours); expandedInterval = false }
+                                 )
+                             }
                          }
-                    }
+                     }
                 }
                 HorizontalDivider()
                 

@@ -123,6 +123,30 @@ class MainViewModel @Inject constructor(
     private val _modelStatuses = MutableStateFlow<Map<String, String>>(emptyMap())
     val modelStatuses: StateFlow<Map<String, String>> = _modelStatuses.asStateFlow()
 
+    private val _syncInterval = MutableStateFlow(preferencesManager.getSyncInterval())
+    val syncInterval: StateFlow<Long> = _syncInterval.asStateFlow()
+
+    fun setSyncInterval(hours: Long) {
+        _syncInterval.value = hours
+        preferencesManager.setSyncInterval(hours)
+        
+        // Reschedule Work
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+
+        val syncRequest = androidx.work.PeriodicWorkRequestBuilder<com.example.riffle.worker.FeedSyncWorker>(hours, java.util.concurrent.TimeUnit.HOURS)
+            .setConstraints(constraints)
+            .build()
+
+        androidx.work.WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "FeedSync",
+            androidx.work.ExistingPeriodicWorkPolicy.UPDATE,
+            syncRequest
+        )
+    }
+
     // Función que llama a la IA
     fun summarizeArticle(title: String, content: String) {
         val currentKey = _geminiApiKey.value
@@ -249,7 +273,7 @@ class MainViewModel @Inject constructor(
         // Carga inicial de artículos para ocultar
         updateHiddenArticles()
         // Sync inicial una sola vez
-        sync()
+
     }
 
     private data class FilterState(

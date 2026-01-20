@@ -56,6 +56,8 @@
     <string name="settings_language_system">Por defecto del sistema</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_es">Español</string>
+    <string name="settings_sync_interval">Sincronización en segundo plano</string>
+    <string name="settings_sync_interval_hours">%1$d horas</string>
 
     <!-- Toasts / Messages -->
     <string name="msg_removed_read_later">Eliminado de Leer más tarde</string>
