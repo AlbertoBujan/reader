@@ -9,12 +9,17 @@ import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+data class ParsedFeed(
+    val articles: List<ArticleEntity>,
+    val imageUrl: String? = null
+)
+
 class RssParser {
 
     private val ns: String? = null
 
     @Throws(XmlPullParserException::class, IOException::class)
-    fun parse(inputStream: InputStream, sourceUrl: String): List<ArticleEntity> {
+    fun parse(inputStream: InputStream, sourceUrl: String): ParsedFeed {
         inputStream.use {
             val parser: XmlPullParser = Xml.newPullParser()
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
@@ -25,39 +30,65 @@ class RssParser {
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
-    private fun readFeed(parser: XmlPullParser, sourceUrl: String): List<ArticleEntity> {
-        val entries = mutableListOf<ArticleEntity>()
+    private fun readFeed(parser: XmlPullParser, sourceUrl: String): ParsedFeed {
+        var entries = listOf<ArticleEntity>()
+        var imageUrl: String? = null
 
-        parser.require(XmlPullParser.START_TAG, ns, "rss")
-        while (parser.next() != XmlPullParser.END_TAG) {
-            if (parser.eventType != XmlPullParser.START_TAG) {
-                continue
+        // Flexible root tag check
+        if (parser.name == "rss") {
+             while (parser.next() != XmlPullParser.END_TAG) {
+                if (parser.eventType != XmlPullParser.START_TAG) continue
+                if (parser.name == "channel") {
+                     val result = readChannel(parser, sourceUrl)
+                     entries = result.articles
+                     imageUrl = result.imageUrl
+                } else {
+                    skip(parser)
+                }
             }
-            // Look for the <channel> tag
-            if (parser.name == "channel") {
-                 entries.addAll(readChannel(parser, sourceUrl))
-            } else {
-                skip(parser)
-            }
+        } else if (parser.name == "feed") {
+            // Basic Atom support just in case, though structure is different.
+            // For now assuming existing logic primarily targets RSS structure within this method.
+             val result = readChannel(parser, sourceUrl) // Reusing readChannel/readEntry logic best effort
+             entries = result.articles
+        } else {
+            // Try to proceed if possible or throw
         }
-        return entries
+
+        return ParsedFeed(entries, imageUrl)
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
-    private fun readChannel(parser: XmlPullParser, sourceUrl: String): List<ArticleEntity> {
+    private fun readChannel(parser: XmlPullParser, sourceUrl: String): ParsedFeed {
         val entries = mutableListOf<ArticleEntity>()
+        var imageUrl: String? = null
         
         while (parser.next() != XmlPullParser.END_TAG) {
             if (parser.eventType != XmlPullParser.START_TAG) {
                 continue
             }
-            if (parser.name == "item") {
-                entries.add(readEntry(parser, sourceUrl))
+            when (parser.name) {
+                "item" -> entries.add(readEntry(parser, sourceUrl))
+                "image" -> imageUrl = readImage(parser)
+                else -> skip(parser)
+            }
+        }
+        return ParsedFeed(entries, imageUrl)
+    }
+
+    @Throws(XmlPullParserException::class, IOException::class)
+    private fun readImage(parser: XmlPullParser): String? {
+        parser.require(XmlPullParser.START_TAG, ns, "image")
+        var url: String? = null
+        while (parser.next() != XmlPullParser.END_TAG) {
+            if (parser.eventType != XmlPullParser.START_TAG) continue
+            if (parser.name == "url") {
+                url = readText(parser, "url")
             } else {
                 skip(parser)
             }
         }
-        return entries
+        return url
     }
 
     @Throws(XmlPullParserException::class, IOException::class)

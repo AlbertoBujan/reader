@@ -27,15 +27,18 @@ class FeedRepositoryImpl(
     override suspend fun addSource(url: String, title: String?, iconUrl: String?) {
         try {
             val response = withContext(Dispatchers.IO) { feedService.fetchFeed(url) }
-            val articles = withContext(Dispatchers.Default) {
+            val parsedFeed = withContext(Dispatchers.Default) {
                 rssParser.parse(response.byteStream(), url)
             }
             
             val sourceTitle = if (!title.isNullOrBlank()) title else "Feed from $url" 
             
-            val source = SourceEntity(url = url, title = sourceTitle, iconUrl = iconUrl)
+            // Prefer provided iconUrl, fallback to parsed one
+            val finalIconUrl = iconUrl ?: parsedFeed.imageUrl
+
+            val source = SourceEntity(url = url, title = sourceTitle, iconUrl = finalIconUrl)
             feedDao.insertSource(source)
-            feedDao.insertArticles(articles)
+            feedDao.insertArticles(parsedFeed.articles)
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
@@ -60,10 +63,15 @@ class FeedRepositoryImpl(
     suspend fun syncSource(source: SourceEntity) {
         try {
             val response = feedService.fetchFeed(source.url)
-            val articles = withContext(Dispatchers.Default) {
+            val parsedFeed = withContext(Dispatchers.Default) {
                 rssParser.parse(response.byteStream(), source.url)
             }
-            feedDao.insertArticles(articles)
+            feedDao.insertArticles(parsedFeed.articles)
+            
+            // Update Icon if changed
+            if (!parsedFeed.imageUrl.isNullOrBlank() && parsedFeed.imageUrl != source.iconUrl) {
+                feedDao.updateSourceIcon(source.url, parsedFeed.imageUrl)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

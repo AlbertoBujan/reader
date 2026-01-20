@@ -98,6 +98,9 @@ interface FeedDao {
     @Query("UPDATE sources SET title = :newTitle WHERE url = :url")
     suspend fun updateSourceTitle(url: String, newTitle: String)
 
+    @Query("UPDATE sources SET iconUrl = :iconUrl WHERE url = :url")
+    suspend fun updateSourceIcon(url: String, iconUrl: String?)
+
     // Folder Management
     @Query("SELECT * FROM folders")
     fun getAllFolders(): Flow<List<FolderEntity>>
