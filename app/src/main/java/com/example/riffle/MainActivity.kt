@@ -61,10 +61,34 @@ import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.riffle.worker.FeedSyncWorker
+import java.util.concurrent.TimeUnit
+
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Schedule background sync
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+
+        val syncRequest = PeriodicWorkRequestBuilder<FeedSyncWorker>(1, TimeUnit.HOURS)
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "FeedSync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
         
         enableEdgeToEdge()
 
