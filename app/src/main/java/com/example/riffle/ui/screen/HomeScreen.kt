@@ -98,6 +98,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -576,11 +577,13 @@ fun HomeScreen(
                     .padding(padding)
                     .fillMaxSize(),
                 indicator = {
-                    PullToRefreshDefaults.Indicator(
-                        state = pullState,
-                        isRefreshing = false, // Force false to show arrow but hide spinner
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
+                    if (!isRefreshing) {
+                        PullToRefreshDefaults.Indicator(
+                            state = pullState,
+                            isRefreshing = false,
+                            modifier = Modifier.align(Alignment.TopCenter)
+                        )
+                    }
                 }
             ) {
                 when (val state = uiState) {
@@ -857,20 +860,33 @@ fun SettingsDialog(
                 ) {
                      Text(stringResource(R.string.settings_sync_interval), modifier = Modifier.weight(1f))
                      Box {
-                         Text(
-                             text = stringResource(R.string.settings_sync_interval_hours, syncInterval),
-                             color = MaterialTheme.colorScheme.primary,
-                             modifier = Modifier.clickable { expandedInterval = true }.padding(8.dp)
-                         )
-                         DropdownMenu(expanded = expandedInterval, onDismissRequest = { expandedInterval = false }) {
-                             listOf(1L, 6L, 12L, 24L).forEach { hours ->
-                                 DropdownMenuItem(
-                                     text = { Text(stringResource(R.string.settings_sync_interval_hours, hours)) },
-                                     onClick = { onSyncIntervalChange(hours); expandedInterval = false }
-                                 )
-                             }
-                         }
+                          val intervalString = if (syncInterval == 1L) {
+                               stringResource(R.string.settings_sync_interval_hour, syncInterval)
+                          } else {
+                               stringResource(R.string.settings_sync_interval_hours, syncInterval)
+                          }
+                          Text(
+                              text = intervalString,
+                              color = MaterialTheme.colorScheme.primary,
+                              modifier = Modifier.clickable { expandedInterval = true }.padding(8.dp)
+                          )
+                          DropdownMenu(expanded = expandedInterval, onDismissRequest = { expandedInterval = false }) {
+                              listOf(1L, 6L, 12L, 24L).forEach { hours ->
+                                  DropdownMenuItem(
+                                      text = {
+                                           val text = if (hours == 1L) {
+                                               stringResource(R.string.settings_sync_interval_hour, hours)
+                                           } else {
+                                               stringResource(R.string.settings_sync_interval_hours, hours)
+                                           }
+                                           Text(text) 
+                                      },
+                                      onClick = { onSyncIntervalChange(hours); expandedInterval = false }
+                                  )
+                              }
+                          }
                      }
+
                 }
                 HorizontalDivider()
                 
@@ -883,32 +899,47 @@ fun SettingsDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                OutlinedButton(
-                    onClick = onImportOpml,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings_import_opml))
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                OutlinedButton(
-                    onClick = onExportOpml,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.settings_export_opml))
+                    OutlinedButton(
+                        onClick = onImportOpml,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        // Shorten text if needed or keep as is. Using existing strings
+                        Text(stringResource(R.string.settings_import_opml), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    
+                    OutlinedButton(
+                        onClick = onExportOpml,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                         // Shorten text if needed or keep as is. Using existing strings
+                        Text(stringResource(R.string.settings_export_opml), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider()
 
                 Spacer(modifier = Modifier.height(16.dp))
+                
+                // AI Settings / Integrations
+                Spacer(modifier = Modifier.height(16.dp))
+                // Section Header
+                Text(
+                     text = stringResource(R.string.settings_section_ai),
+                     style = MaterialTheme.typography.labelLarge,
+                     color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.settings_gemini_key), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
@@ -921,7 +952,9 @@ fun SettingsDialog(
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                TextField(
+                
+                // Modern Outlined/Filled Input with visual transformation
+                OutlinedTextField(
                     value = geminiApiKey,
                     onValueChange = onApiKeyChange,
                     label = { Text(stringResource(R.string.settings_gemini_key_hint)) },
@@ -929,12 +962,13 @@ fun SettingsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.bodySmall,
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password)
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
         },
         confirmButton = {
-            Button(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_close)) }
+            Button(onClick = { onDismiss() }) { Text(stringResource(R.string.action_done)) }
         }
     )
 }
@@ -1496,8 +1530,6 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                         text = article.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = if (article.isRead && !isReadLaterView) Color.Gray else Color.Unspecified,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                     if (article.isSaved) {
@@ -1512,7 +1544,8 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${formatDate(article.pubDate)} • ${sourceName ?: article.sourceUrl}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }

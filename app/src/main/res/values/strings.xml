@@ -36,6 +36,7 @@
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_rename">Rename</string>
     <string name="dialog_close">Close</string>
+    <string name="action_done">Done</string>
     <string name="dialog_add">Add</string>
     
     <string name="dialog_rename_source_title">Rename Feed</string>
@@ -51,6 +52,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_dark_mode">Dark Mode</string>
     <string name="settings_mark_read_scroll">Mark as read on scroll</string>
+    <string name="settings_section_ai">AI Settings</string>
     <string name="settings_gemini_key">Gemini API Key</string>
     <string name="settings_gemini_key_hint">Paste your API Key here</string>
     <string name="settings_language">Language</string>
@@ -59,6 +61,7 @@
     <string name="settings_language_es">Español</string>
     <string name="settings_sync_interval">Background Sync Interval</string>
     <string name="settings_sync_interval_hours">%1$d hours</string>
+    <string name="settings_sync_interval_hour">%1$d hour</string>
 
     <!-- Toasts / Messages -->
     <string name="msg_removed_read_later">Removed from Read Later</string>

@@ -181,7 +181,7 @@ fun ArticleReaderScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
                 // 4. LA TARJETA DEL RESUMEN (APARECE ARRIBA)
                 AnimatedVisibility(visible = summary != null || isSummarizing) {
@@ -244,10 +244,15 @@ fun ArticleReaderScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Clean text from description (HTML to plain text)
+                // Clean text from description (HTML to plain text)
+                // First remove script tags and their content, then parse HTML
+                val htmlDescription = article!!.description ?: ""
+                val noScriptDescription = htmlDescription.replace(Regex("<script.*?>.*?</script>", RegexOption.DOT_MATCHES_ALL), "")
+                
                 val cleanDescription = HtmlCompat.fromHtml(
-                    article!!.description ?: "",
+                    noScriptDescription,
                     HtmlCompat.FROM_HTML_MODE_LEGACY
-                ).toString().trim()
+                ).toString().replace("\uFFFC", "").trim()
 
                 Text(
                     text = cleanDescription,
