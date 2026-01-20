@@ -1530,8 +1530,6 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                         text = article.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = if (article.isRead && !isReadLaterView) Color.Gray else Color.Unspecified,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                     if (article.isSaved) {
