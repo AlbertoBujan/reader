@@ -6,6 +6,7 @@ import com.example.riffle.data.local.AppDatabase
 import com.example.riffle.data.local.dao.FeedDao
 import com.example.riffle.data.remote.ClearbitService
 import com.example.riffle.data.remote.FeedService
+import com.example.riffle.data.remote.FeedSearchService
 import com.example.riffle.data.remote.RssParser
 import com.example.riffle.data.repository.FeedRepositoryImpl
 import com.example.riffle.domain.repository.FeedRepository
@@ -60,6 +61,9 @@ object AppModule {
         sslContext.init(null, trustAllCerts, java.security.SecureRandom())
 
         return OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
             .hostnameVerifier { _, _ -> true }
             .build()
@@ -84,6 +88,17 @@ object AppModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ClearbitService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFeedSearchService(client: OkHttpClient): FeedSearchService {
+        return Retrofit.Builder()
+            .baseUrl("https://feedsearch.dev/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(FeedSearchService::class.java)
     }
 
     @Provides

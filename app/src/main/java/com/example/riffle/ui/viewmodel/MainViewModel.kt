@@ -10,6 +10,7 @@ import com.example.riffle.data.local.entity.ArticleWithSource
 import com.example.riffle.data.local.entity.FolderEntity
 import com.example.riffle.data.local.entity.SourceEntity
 import com.example.riffle.data.remote.ClearbitService
+import com.example.riffle.data.remote.FeedSearchService
 import com.example.riffle.domain.usecase.AddSourceUseCase
 import com.example.riffle.domain.usecase.GetAllSourcesUseCase
 import com.example.riffle.domain.usecase.GetArticlesUseCase
@@ -64,6 +65,7 @@ class MainViewModel @Inject constructor(
     private val feedDao: FeedDao,
     private val feedRepository: com.example.riffle.domain.repository.FeedRepository,
     private val preferencesManager: PreferencesManager,
+    private val feedSearchService: FeedSearchService,
     private val clearbitService: ClearbitService,
     getAllSourcesUseCase: GetAllSourcesUseCase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
@@ -458,135 +460,58 @@ class MainViewModel @Inject constructor(
             _isSearching.value = true
             _discoveredFeeds.value = emptyList()
             try {
-                val discovered = withContext(Dispatchers.IO) {
-                    val results = mutableListOf<DiscoveredFeed>()
-                    val cleanQuery = query.trim().lowercase()
-                    
-                    val domainsToTry = mutableListOf<String>()
-                    var clearbitName: String? = null
-                    var queryIconUrl: String? = null
+                _discoveredFeeds.value = withContext(Dispatchers.IO) {
+                    try {
+                        val cleanQuery = query.trim().lowercase()
+                        val domainsToSearch = mutableSetOf<String>()
 
-                    if (!cleanQuery.contains(".") || !cleanQuery.startsWith("http")) {
-                        try {
-                            val suggestions = clearbitService.suggestCompanies(cleanQuery)
-                            suggestions.forEach { suggestion ->
-                                domainsToTry.add(suggestion.domain)
-                                if (clearbitName == null) clearbitName = suggestion.name
-                                if (queryIconUrl == null) queryIconUrl = suggestion.logo
-                            }
-                        } catch (e: Exception) {
-                            Log.e("FeedSearch", "Clearbit error: ${e.message}")
-                        }
-                    }
-                    
-                    if (!domainsToTry.contains(cleanQuery)) {
-                        domainsToTry.add(0, cleanQuery)
-                        if (!cleanQuery.contains(".")) {
-                            domainsToTry.add(cleanQuery + ".es")
-                            domainsToTry.add(cleanQuery + ".com")
-                        }
-                    }
-
-                    for (domain in domainsToTry) {
-                        val urlsToTry = mutableListOf<String>()
-                        if (domain.startsWith("http")) {
-                            urlsToTry.add(domain)
+                        // 1. If it looks like a URL or has a TLD, search directly
+                        if (cleanQuery.contains(".") || cleanQuery.startsWith("http")) {
+                            domainsToSearch.add(cleanQuery)
                         } else {
-                            urlsToTry.add("https://$domain")
-                            urlsToTry.add("https://www.$domain")
-                            urlsToTry.add("http://$domain")
-                        }
-
-                        for (baseUrl in urlsToTry) {
+                            // 2. Otherwise, use clearbit to find domains
                             try {
-                                val doc = Jsoup.connect(baseUrl)
-                                    .userAgent("Mozilla/5.0")
-                                    .timeout(5000)
-                                    .sslSocketFactory(createTrustAllSslSocketFactory())
-                                    .followRedirects(true)
-                                    .get()
-
-                                // Intentar extraer el icono manualmente iterando tags para mayor precisión
-                                try {
-                                    val links = doc.select("link[href]")
-                                    var bestIcon: String? = null
-                                    
-                                    // 1. Buscar Apple Touch Icon (buena calidad)
-                                    bestIcon = links.find { 
-                                        it.attr("rel").lowercase().contains("apple-touch-icon") && it.attr("abs:href").isNotBlank()
-                                    }?.attr("abs:href")
-
-                                    // 2. Si no hay, buscar Shortcut Icon
-                                    if (bestIcon == null) {
-                                        bestIcon = links.find { 
-                                            it.attr("rel").lowercase().contains("shortcut icon") && it.attr("abs:href").isNotBlank()
-                                        }?.attr("abs:href")
-                                    }
-
-                                    // 3. Fallback a icono estándar
-                                    if (bestIcon == null) {
-                                        bestIcon = links.find { 
-                                            it.attr("rel").lowercase() == "icon" && it.attr("abs:href").isNotBlank()
-                                        }?.attr("abs:href")
-                                    }
-
-                                    if (bestIcon != null) {
-                                        queryIconUrl = bestIcon
-                                    }
-                                } catch (e: Exception) {
-                                    // Ignorar error al extraer icono
-                                }
-
-                                doc.select("link[type*=rss], link[type*=atom], link[type*=xml][rel=alternate]").forEach { element ->
-                                    val href = element.attr("abs:href")
-                                    val title = element.attr("title").ifBlank { doc.title() }
-                                    if (href.isNotBlank()) {
-                                        results.add(DiscoveredFeed(title, href, queryIconUrl, clearbitName))
-                                    }
-                                }
-
-                                if (results.isEmpty()) {
-                                    doc.select("a[href*=rss], a[href*=feed]").forEach { element ->
-                                        val href = element.attr("abs:href")
-                                        if (href.contains(".xml") || href.contains("rss") || href.contains("feed")) {
-                                            results.add(DiscoveredFeed(element.text().ifBlank { "Feed: ${doc.title()}" }, href, queryIconUrl, clearbitName))
-                                        }
-                                    }
-                                }
-                                
-                                if (results.isNotEmpty()) break
-                                
-                            } catch (e: Exception) { }
+                                val suggestions = clearbitService.suggestCompanies(cleanQuery)
+                                suggestions.forEach { domainsToSearch.add(it.domain) }
+                            } catch (e: Exception) {
+                                Log.e("FeedSearch", "Clearbit lookup failed: ${e.message}")
+                            }
+                            // Fallback: append .com just in case
+                            if (domainsToSearch.isEmpty()) {
+                                domainsToSearch.add("$cleanQuery.com")
+                            }
                         }
 
-                        if (results.isEmpty()) {
-                            val commonPaths = listOf("/feed", "/rss", "/rss.xml", "/index.xml")
-                            val host = if (domain.startsWith("http")) {
-                                try { URL(domain).host } catch (e: Exception) { domain }
-                            } else { domain }
-                            
-                            for (path in commonPaths) {
-                                val testUrl = "https://$host$path"
-                                try {
-                                    val response = Jsoup.connect(testUrl)
-                                        .userAgent("Mozilla/5.0")
-                                        .timeout(3000)
-                                        .sslSocketFactory(createTrustAllSslSocketFactory())
-                                        .ignoreContentType(true)
-                                        .execute()
-                                    if (response.contentType()?.contains("xml") == true) {
-                                        results.add(DiscoveredFeed("Feed: $path", testUrl, queryIconUrl, clearbitName))
-                                    }
-                                } catch (e: Exception) { }
+                        // 3. Search FeedSearch for collected domains
+                        // We run this for up to 3 domains to avoid spamming, though usually 1-2.
+                        val results = mutableListOf<DiscoveredFeed>()
+                        
+                        // We can run these concurrently for speed
+                        // Using async/awaitAll would be better but simple loop is fine for small count
+                         domainsToSearch.take(3).forEach { domain ->
+                            try {
+                                val searchResults = feedSearchService.search(domain)
+                                searchResults.forEach { dto ->
+                                    // Use defaults if fields missing
+                                    results.add(DiscoveredFeed(
+                                        title = dto.title.ifBlank { "Feed from $domain" },
+                                        url = dto.selfUrl ?: dto.url,
+                                        iconUrl = dto.favicon,
+                                        siteName = dto.title 
+                                    ))
+                                }
+                            } catch (e: Exception) {
+                                Log.e("FeedSearch", "FeedSearch for $domain failed: ${e.message}")
                             }
                         }
                         
-                        if (results.isNotEmpty()) break
+                        results.distinctBy { it.url }
+                        
+                    } catch (e: Exception) {
+                        Log.e("FeedSearch", "API Error: ${e.message}")
+                        emptyList()
                     }
-
-                    results.distinctBy { it.url }
                 }
-                _discoveredFeeds.value = discovered
             } catch (e: Exception) {
                 Log.e("FeedSearch", "SearchFeeds error: ${e.message}")
             } finally {
