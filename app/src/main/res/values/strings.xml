@@ -20,6 +20,7 @@
     <string name="article_no_content">No content</string>
     <string name="article_open_browser">Open in Browser</string>
     <string name="article_back">Back</string>
+    <string name="search_articles_placeholder">Search articles...</string>
     
     <!-- AI Summary -->
     <string name="ai_summary_title">Smart Summary</string>

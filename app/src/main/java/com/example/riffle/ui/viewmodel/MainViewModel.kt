@@ -448,6 +448,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun clearFeedSearch() {
+        _discoveredFeeds.value = emptyList()
+        _isSearching.value = false
+    }
+
     fun searchFeeds(query: String) {
         viewModelScope.launch {
             _isSearching.value = true
@@ -500,6 +505,37 @@ class MainViewModel @Inject constructor(
                                     .sslSocketFactory(createTrustAllSslSocketFactory())
                                     .followRedirects(true)
                                     .get()
+
+                                // Intentar extraer el icono manualmente iterando tags para mayor precisión
+                                try {
+                                    val links = doc.select("link[href]")
+                                    var bestIcon: String? = null
+                                    
+                                    // 1. Buscar Apple Touch Icon (buena calidad)
+                                    bestIcon = links.find { 
+                                        it.attr("rel").lowercase().contains("apple-touch-icon") && it.attr("abs:href").isNotBlank()
+                                    }?.attr("abs:href")
+
+                                    // 2. Si no hay, buscar Shortcut Icon
+                                    if (bestIcon == null) {
+                                        bestIcon = links.find { 
+                                            it.attr("rel").lowercase().contains("shortcut icon") && it.attr("abs:href").isNotBlank()
+                                        }?.attr("abs:href")
+                                    }
+
+                                    // 3. Fallback a icono estándar
+                                    if (bestIcon == null) {
+                                        bestIcon = links.find { 
+                                            it.attr("rel").lowercase() == "icon" && it.attr("abs:href").isNotBlank()
+                                        }?.attr("abs:href")
+                                    }
+
+                                    if (bestIcon != null) {
+                                        queryIconUrl = bestIcon
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignorar error al extraer icono
+                                }
 
                                 doc.select("link[type*=rss], link[type*=atom], link[type*=xml][rel=alternate]").forEach { element ->
                                     val href = element.attr("abs:href")
