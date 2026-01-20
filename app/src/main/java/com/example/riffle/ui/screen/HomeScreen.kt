@@ -1544,7 +1544,8 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${formatDate(article.pubDate)} • ${sourceName ?: article.sourceUrl}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
