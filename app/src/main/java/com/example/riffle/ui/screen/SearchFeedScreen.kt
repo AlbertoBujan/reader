@@ -70,6 +70,14 @@ fun SearchFeedScreen(
     val feeds by viewModel.discoveredFeeds.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val focusRequester = remember { FocusRequester() }
+    var isExpanded by remember { mutableStateOf(false) }
+
+    // Reset expansion when search results change or new search begins
+    LaunchedEffect(isSearching) {
+        if (isSearching) {
+            isExpanded = false
+        }
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -160,7 +168,9 @@ fun SearchFeedScreen(
                         }
                     }
                     
-                    items(feeds) { feed ->
+                    val displayedFeeds = if (isExpanded) feeds else feeds.take(5)
+                    
+                    items(displayedFeeds) { feed ->
                         ListItem(
                             leadingContent = {
                                 if (feed.iconUrl != null) {
@@ -191,6 +201,17 @@ fun SearchFeedScreen(
                                 }
                             }
                         )
+                    }
+
+                    if (!isExpanded && feeds.size > 5) {
+                        item {
+                            TextButton(
+                                onClick = { isExpanded = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.action_show_more))
+                            }
+                        }
                     }
                 }
             }

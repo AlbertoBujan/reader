@@ -37,6 +37,7 @@
     <string name="dialog_rename">Rename</string>
     <string name="dialog_close">Close</string>
     <string name="action_done">Done</string>
+    <string name="action_show_more">Show more</string>
     <string name="dialog_add">Add</string>
     
     <string name="dialog_rename_source_title">Rename Feed</string>
