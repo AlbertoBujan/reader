@@ -101,4 +101,63 @@
     <string name="msg_opml_export_success">Feeds exported successfully</string>
     <string name="msg_opml_error">Error: %1$s</string>
 
+
+    <string-array name="loading_phrases">
+        <item>Waking up the server hamsters...</item>
+        <item>Searching under the digital rugs...</item>
+        <item>Asking my mom, she always finds everything...</item>
+        <item>Bribing the algorithm with cookies...</item>
+        <item>Turning the crank to get this started...</item>
+        <item>Hiring private detectives...</item>
+        <item>Untangling the cables in the back...</item>
+        <item>Searching... (and watching cat videos)...</item>
+        <item>The intern went to the archive, be right back...</item>
+        <item>Blowing the dust off old data...</item>
+        <item>Looking even on the last page of Google...</item>
+        <item>Shaking the magic box to see what comes out...</item>
+        <item>Convincing the data to cooperate...</item>
+        <item>Counting on my fingers so I don\'t mess up...</item>
+        <item>Combing the internet (literally)...</item>
+        <item>One moment, I dropped a screw...</item>
+        <item>Consulting the crystal ball...</item>
+        <item>Putting order to the chaos...</item>
+        <item>Are you sure you spelled it right? Just kidding, searching...</item>
+        <item>Aligning satellites for coverage...</item>
+        <item>Reading Wikipedia at full speed...</item>
+        <item>Having a quick coffee before continuing...</item>
+        <item>Juggling your results...</item>
+        <item>Looking for a needle in a haystack...</item>
+        <item>Phoning a friend for help...</item>
+        <item>Looking between the cushions of the virtual sofa...</item>
+        <item>Petting the router to make it go faster...</item>
+        <item>Translating your wishes into binary code...</item>
+        <item>Putting new batteries in the flashlight...</item>
+        <item>Pushing zeros and ones uphill...</item>
+        <item>Waiting for the carrier pigeon to return...</item>
+        <item>Sacrificing a pixel to the Internet gods...</item>
+        <item>Looking for the instruction manual...</item>
+        <item>Pretending to work while it loads...</item>
+        <item>Are you sure I left it here? One moment...</item>
+        <item>Sending an explorer with a machete into the data jungle...</item>
+        <item>This is harder than folding a fitted sheet...</item>
+        <item>Playing hide and seek with the results (and they are winning)...</item>
+        <item>Buying time with funny phrases...</item>
+        <item>Consulting the 4K crystal ball...</item>
+        <item>Inflating the results with an air pump...</item>
+        <item>Cleaning my glasses to see better...</item>
+        <item>Untangling the server headphones...</item>
+        <item>Asking a stranger for directions...</item>
+        <item>Shoveling coal into the steam engine...</item>
+        <item>Searching... (insert elevator music here)...</item>
+        <item>Trying to remember where I put that...</item>
+        <item>Sending smoke signals to the database...</item>
+        <item>Running in circles, but with style...</item>
+        <item>Gathering the committee of digital wise men...</item>
+        <item>Yelling at the computer to see if it reacts...</item>
+        <item>Looking for the padlock key...</item>
+        <item>Hold my beer, I\'m going in...</item>
+        <item>Sweeping up the leftover bits...</item>
+        <item>Winding up the mechanism...</item>
+    </string-array>
+
 </resources>

@@ -1,5 +1,8 @@
 package com.example.riffle.ui.screen
 
+import androidx.compose.ui.res.stringArrayResource
+import kotlinx.coroutines.delay
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -143,8 +146,35 @@ fun SearchFeedScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (isSearching) {
+                val phrases = stringArrayResource(R.array.loading_phrases)
+                var currentPhrase by remember { mutableStateOf(phrases.random()) }
+                
+                LaunchedEffect(Unit) {
+                    while(true) {
+                        delay(3000)
+                        currentPhrase = phrases.random()
+                    }
+                }
+
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 4.dp
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = currentPhrase,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             } else {
                 LazyColumn(

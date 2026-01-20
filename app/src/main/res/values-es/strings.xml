@@ -101,4 +101,63 @@
     <string name="msg_opml_export_success">Feeds exportados correctamente</string>
     <string name="msg_opml_error">Error: %1$s</string>
 
+
+    <string-array name="loading_phrases">
+        <item>Despertando a los hámsters del servidor...</item>
+        <item>Buscando debajo de las alfombras digitales...</item>
+        <item>Preguntándole a mi madre, ella siempre lo encuentra todo...</item>
+        <item>Sobornando al algoritmo con galletas...</item>
+        <item>Girando la manivela para que esto arranque...</item>
+        <item>Contratando detectives privados...</item>
+        <item>Desenredando los cables de atrás...</item>
+        <item>Buscando... (y de paso viendo vídeos de gatitos)...</item>
+        <item>El becario ha ido al archivo, ya vuelve...</item>
+        <item>Soplando el polvo de los datos antiguos...</item>
+        <item>Mirando hasta en la última página de Google...</item>
+        <item>Agitando la caja mágica a ver qué sale...</item>
+        <item>Convenciendo a los datos para que cooperen...</item>
+        <item>Contando con los dedos para no equivocarme...</item>
+        <item>Peinando internet (literalmente)...</item>
+        <item>Un momento, se me ha caído un tornillo...</item>
+        <item>Consultando la bola de cristal...</item>
+        <item>Poniendo en orden el caos...</item>
+        <item>¿Seguro que lo has escrito bien? Es broma, buscando...</item>
+        <item>Alineando los satélites para tener cobertura...</item>
+        <item>Leyendo la Wikipedia a toda velocidad...</item>
+        <item>Tomándome un café rápido antes de seguir...</item>
+        <item>Haciendo malabares con tus resultados...</item>
+        <item>Buscando la aguja en el pajar...</item>
+        <item>Llamando a un amigo para que me ayude...</item>
+        <item>Mirando entre los cojines del sofá virtual...</item>
+        <item>Acariciando el router para que vaya más rápido...</item>
+        <item>Traduciendo tus deseos a código binario...</item>
+        <item>Poniéndole pilas nuevas a la linterna...</item>
+        <item>Empujando los ceros y unos cuesta arriba...</item>
+        <item>Esperando a que vuelva la paloma mensajera...</item>
+        <item>Sacrificando un píxel a los dioses de Internet...</item>
+        <item>Buscando el manual de instrucciones...</item>
+        <item>Haciendo como que trabajo mientras carga...</item>
+        <item>¿Seguro que lo dejé aquí? Un momento...</item>
+        <item>Enviando a un explorador con machete a la jungla de datos...</item>
+        <item>Esto es más difícil que doblar una sábana bajera...</item>
+        <item>Jugando al escondite con los resultados (y van ganando)...</item>
+        <item>Comprando tiempo con frases graciosas...</item>
+        <item>Cambiando la junta de la trócola...</item>
+        <item>Hinchando los resultados con una bomba de aire...</item>
+        <item>Limpiando mis gafas para ver mejor...</item>
+        <item>Desenredando los auriculares del servidor...</item>
+        <item>Pidiéndole indicaciones a un desconocido...</item>
+        <item>Echándole carbón a la máquina de vapor...</item>
+        <item>Buscando... (inserte música de ascensor aquí)...</item>
+        <item>Intentando recordar dónde guardé eso...</item>
+        <item>Haciendo señales de humo a la base de datos...</item>
+        <item>Corriendo en círculos, pero con estilo...</item>
+        <item>Reuniendo al comité de sabios digitales...</item>
+        <item>Gritándole al ordenador a ver si reacciona...</item>
+        <item>Buscando la llave del candado...</item>
+        <item>Sostén mi cerveza, voy a entrar ahí...</item>
+        <item>Barriendo los bits que sobran...</item>
+        <item>Dándole cuerda al mecanismo...</item>
+    </string-array>
+
 </resources>
