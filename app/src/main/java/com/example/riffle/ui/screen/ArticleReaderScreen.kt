@@ -12,6 +12,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -91,6 +93,9 @@ fun ArticleReaderScreen(
     val summary by viewModel.summaryState.collectAsState()
     val isSummarizing by viewModel.isSummarizing.collectAsState()
 
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
     // Limpiamos el resumen al salir de la pantalla
     DisposableEffect(Unit) {
         onDispose { viewModel.clearSummary() }
@@ -155,6 +160,9 @@ fun ArticleReaderScreen(
                                 title = article!!.title,
                                 content = article!!.description ?: noContentString
                             )
+                            coroutineScope.launch {
+                                scrollState.animateScrollTo(0)
+                            }
                         }
                     },
                     containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -180,7 +188,7 @@ fun ArticleReaderScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
                 // 4. LA TARJETA DEL RESUMEN (APARECE ARRIBA)
