@@ -99,6 +99,14 @@ class MainViewModel @Inject constructor(
         _articleSearchQuery.value = query
     }
 
+    // Startup scroll logic
+    var hasPerformedStartupScroll: Boolean = false
+        private set
+
+    fun markStartupScrollPerformed() {
+        hasPerformedStartupScroll = true
+    }
+
     // --- ZONA IA: Variables para el resumen ---
     private val _summaryState = MutableStateFlow<String?>(null)
     val summaryState: StateFlow<String?> = _summaryState.asStateFlow()
