@@ -1507,7 +1507,7 @@ fun ArticleList(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 32.dp, bottom = 16.dp),
+                        .height(screenHeight), // Full screen height to allow hiding previous items
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1517,9 +1517,6 @@ fun ArticleList(
                         textAlign = TextAlign.Center
                     )
                 }
-            }
-            item {
-                Spacer(modifier = Modifier.height(screenHeight - 60.dp))
             }
         }
     }
