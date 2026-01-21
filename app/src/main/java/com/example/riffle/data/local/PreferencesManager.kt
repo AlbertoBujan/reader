@@ -50,4 +50,12 @@ class PreferencesManager @Inject constructor(@ApplicationContext context: Contex
     fun setSyncInterval(hours: Long) {
         sharedPreferences.edit().putLong("sync_interval", hours).apply()
     }
+
+    fun getSortOrder(): String {
+        return sharedPreferences.getString("sort_order", "newest") ?: "newest"
+    }
+
+    fun setSortOrder(order: String) {
+        sharedPreferences.edit().putString("sort_order", order).apply()
+    }
 }

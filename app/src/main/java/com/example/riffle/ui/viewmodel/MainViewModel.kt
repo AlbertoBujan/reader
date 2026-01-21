@@ -291,11 +291,18 @@ class MainViewModel @Inject constructor(
         NEWEST, OLDEST
     }
 
-    private val _sortOrder = MutableStateFlow(SortOrder.NEWEST)
+    private val _sortOrder = MutableStateFlow(
+        try {
+            SortOrder.valueOf(preferencesManager.getSortOrder())
+        } catch (e: Exception) {
+            SortOrder.NEWEST
+        }
+    )
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
 
-    fun toggleSortOrder() {
-        _sortOrder.value = if (_sortOrder.value == SortOrder.NEWEST) SortOrder.OLDEST else SortOrder.NEWEST
+    fun setSortOrder(order: SortOrder) {
+        _sortOrder.value = order
+        preferencesManager.setSortOrder(order.name)
     }
 
     private data class FilterState(
