@@ -113,7 +113,7 @@ fun SearchFeedScreen(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
-                        keyboardActions = KeyboardActions(onDone = { viewModel.searchFeeds(query) }),
+                        keyboardActions = KeyboardActions(onSearch = { viewModel.searchFeeds(query) }),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         trailingIcon = {
                             if (query.isNotEmpty()) {

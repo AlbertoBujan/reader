@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
@@ -501,7 +502,7 @@ fun HomeScreen(
                                 trailingIcon = {
                                     if (articleSearchQuery.isNotEmpty()) {
                                         IconButton(onClick = { viewModel.setArticleSearchQuery("") }) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Clear") // Using Delete icon as Clear X
+                                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear") // Using Close icon as Clear X
                                         }
                                     }
                                 }
