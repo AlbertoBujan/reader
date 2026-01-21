@@ -101,6 +101,12 @@
     <string name="msg_opml_export_success">Feeds exportados correctamente</string>
     <string name="msg_opml_error">Error: %1$s</string>
 
+    <!-- Articles Settings -->
+    <string name="settings_section_articles">Artículos</string>
+    <string name="settings_sort_order">Orden</string>
+    <string name="settings_sort_newest">Nuevos primero</string>
+    <string name="settings_sort_oldest">Antiguos primero</string>
+
 
     <string-array name="loading_phrases">
         <item>Despertando a los hámsters del servidor...</item>

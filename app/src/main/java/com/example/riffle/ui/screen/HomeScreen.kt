@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -258,6 +259,7 @@ fun HomeScreen(
     // Restore missing state variables
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
     val sources by viewModel.sources.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val selectedSource by viewModel.selectedSource.collectAsState()
@@ -561,6 +563,7 @@ fun HomeScreen(
                             }
                         },
                         actions = {
+
                             IconButton(onClick = { isSearchActive = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search Articles")
                             }
@@ -610,12 +613,17 @@ fun HomeScreen(
                         }
                         
                         // Startup ONLY scroll
-                        LaunchedEffect(isRefreshing, state) {
-                            if (!viewModel.hasPerformedStartupScroll && !isRefreshing && state.articles.isNotEmpty()) {
-                                listState.scrollToItem(0)
-                                viewModel.markStartupScrollPerformed()
+                            LaunchedEffect(isRefreshing, state) {
+                                if (!viewModel.hasPerformedStartupScroll && !isRefreshing && state.articles.isNotEmpty()) {
+                                    listState.scrollToItem(0)
+                                    viewModel.markStartupScrollPerformed()
+                                }
                             }
-                        }
+                            
+                            // Scroll to top when sort order changes
+                            LaunchedEffect(sortOrder) {
+                                listState.scrollToItem(0)
+                            }
 
                         key(selectedSource) {
                             ArticleList(
@@ -704,7 +712,9 @@ fun HomeScreen(
                     syncInterval = viewModel.syncInterval.collectAsState().value,
                     onSyncIntervalChange = { viewModel.setSyncInterval(it) },
                     onImportOpml = { importOpmlLauncher.launch(arrayOf("text/xml", "application/xml", "text/x-opml")) },
-                    onExportOpml = { exportOpmlLauncher.launch("riffle_backup.opml") }
+                    onExportOpml = { exportOpmlLauncher.launch("riffle_backup.opml") },
+                    sortOrder = sortOrder,
+                    onSortOrderChange = { viewModel.setSortOrder(it) }
                 )
             }
 
@@ -787,10 +797,13 @@ fun SettingsDialog(
     syncInterval: Long,
     onSyncIntervalChange: (Long) -> Unit,
     onImportOpml: () -> Unit,
-    onExportOpml: () -> Unit
+    onExportOpml: () -> Unit,
+    sortOrder: MainViewModel.SortOrder,
+    onSortOrderChange: (MainViewModel.SortOrder) -> Unit
 ) {
     var expandedLanguage by remember { mutableStateOf(false) }
     var expandedInterval by remember { mutableStateOf(false) }
+    var expandedSort by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
 
     if (showStatsDialog) {
@@ -805,30 +818,6 @@ fun SettingsDialog(
         title = { Text(stringResource(R.string.settings_title)) },
         text = {
             Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.settings_dark_mode))
-                    Switch(
-                        checked = isDarkMode,
-                        onCheckedChange = onToggleDarkMode
-                    )
-                }
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.settings_mark_read_scroll))
-                    Switch(
-                        checked = markAsReadOnScroll,
-                        onCheckedChange = onToggleMarkAsReadOnScroll
-                    )
-                }
-                HorizontalDivider()
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -857,6 +846,64 @@ fun SettingsDialog(
                               DropdownMenuItem(
                                   text = { Text(stringResource(R.string.settings_language_es)) },
                                   onClick = { onLanguageChange("es"); expandedLanguage = false }
+                              )
+                          }
+                     }
+                }
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.settings_dark_mode))
+                    Switch(
+                        checked = isDarkMode,
+                        onCheckedChange = onToggleDarkMode
+                    )
+                }
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.settings_section_articles), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.settings_mark_read_scroll))
+                    Switch(
+                        checked = markAsReadOnScroll,
+                        onCheckedChange = onToggleMarkAsReadOnScroll
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                     Text(stringResource(R.string.settings_sort_order), modifier = Modifier.weight(1f))
+                     Box {
+                          Text(
+                              text = when(sortOrder) {
+                                  MainViewModel.SortOrder.NEWEST -> stringResource(R.string.settings_sort_newest)
+                                  MainViewModel.SortOrder.OLDEST -> stringResource(R.string.settings_sort_oldest)
+                              },
+                              color = MaterialTheme.colorScheme.primary,
+                              modifier = Modifier.clickable { expandedSort = true }.padding(8.dp)
+                          )
+                          DropdownMenu(expanded = expandedSort, onDismissRequest = { expandedSort = false }) {
+                              DropdownMenuItem(
+                                  text = { Text(stringResource(R.string.settings_sort_newest)) },
+                                  onClick = { onSortOrderChange(MainViewModel.SortOrder.NEWEST); expandedSort = false }
+                              )
+                              DropdownMenuItem(
+                                  text = { Text(stringResource(R.string.settings_sort_oldest)) },
+                                  onClick = { onSortOrderChange(MainViewModel.SortOrder.OLDEST); expandedSort = false }
                               )
                           }
                      }
@@ -1460,7 +1507,7 @@ fun ArticleList(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 32.dp, bottom = 16.dp),
+                        .height(screenHeight), // Full screen height to allow hiding previous items
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1470,9 +1517,6 @@ fun ArticleList(
                         textAlign = TextAlign.Center
                     )
                 }
-            }
-            item {
-                Spacer(modifier = Modifier.height(screenHeight - 60.dp))
             }
         }
     }

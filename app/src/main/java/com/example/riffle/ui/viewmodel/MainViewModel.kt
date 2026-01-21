@@ -286,16 +286,36 @@ class MainViewModel @Inject constructor(
 
     }
 
+    // Sorting
+    enum class SortOrder {
+        NEWEST, OLDEST
+    }
+
+    private val _sortOrder = MutableStateFlow(
+        try {
+            SortOrder.valueOf(preferencesManager.getSortOrder())
+        } catch (e: Exception) {
+            SortOrder.NEWEST
+        }
+    )
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
+    fun setSortOrder(order: SortOrder) {
+        _sortOrder.value = order
+        preferencesManager.setSortOrder(order.name)
+    }
+
     private data class FilterState(
         val selector: String?,
         val hiddenLinks: Set<String>,
         val limit: Int,
-        val searchQuery: String
+        val searchQuery: String,
+        val sortOrder: SortOrder
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks, _articleLimit, _articleSearchQuery) { selector, hiddenLinks, limit, searchQuery ->
-        FilterState(selector, hiddenLinks, limit, searchQuery)
+    val uiState: StateFlow<FeedUiState> = combine(_selectedSource, _hiddenArticleLinks, _articleLimit, _articleSearchQuery, _sortOrder) { selector, hiddenLinks, limit, searchQuery, sortOrder ->
+        FilterState(selector, hiddenLinks, limit, searchQuery, sortOrder)
     }
     .flatMapLatest { state ->
         val articlesFlow = when {
@@ -308,13 +328,21 @@ class MainViewModel @Inject constructor(
             else -> getArticlesUseCase(state.selector)
         }
         articlesFlow.map<List<ArticleEntity>, FeedUiState> { articles ->
-            val filtered = if (state.searchQuery.isNotEmpty()) {
+            var filtered = if (state.searchQuery.isNotEmpty()) {
                 articles.filter { it.title.contains(state.searchQuery, ignoreCase = true) }
             } else if (state.selector == "saved") {
                 articles
             } else {
                 articles.filter { it.link !in state.hiddenLinks }
             }
+
+            // Apply sorting
+            filtered = if (state.sortOrder == SortOrder.OLDEST) {
+                filtered.sortedBy { it.pubDate }
+            } else {
+                filtered.sortedByDescending { it.pubDate }
+            }
+            
             FeedUiState.Success(filtered.take(state.limit))
         }
     }
