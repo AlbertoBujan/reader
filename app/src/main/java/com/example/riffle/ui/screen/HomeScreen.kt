@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -258,6 +259,7 @@ fun HomeScreen(
     // Restore missing state variables
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
     val sources by viewModel.sources.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val selectedSource by viewModel.selectedSource.collectAsState()
@@ -561,6 +563,12 @@ fun HomeScreen(
                             }
                         },
                         actions = {
+                            IconButton(onClick = { viewModel.toggleSortOrder() }) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.SwapVert,
+                                    contentDescription = "Sort Articles"
+                                )
+                            }
                             IconButton(onClick = { isSearchActive = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "Search Articles")
                             }
@@ -610,12 +618,17 @@ fun HomeScreen(
                         }
                         
                         // Startup ONLY scroll
-                        LaunchedEffect(isRefreshing, state) {
-                            if (!viewModel.hasPerformedStartupScroll && !isRefreshing && state.articles.isNotEmpty()) {
-                                listState.scrollToItem(0)
-                                viewModel.markStartupScrollPerformed()
+                            LaunchedEffect(isRefreshing, state) {
+                                if (!viewModel.hasPerformedStartupScroll && !isRefreshing && state.articles.isNotEmpty()) {
+                                    listState.scrollToItem(0)
+                                    viewModel.markStartupScrollPerformed()
+                                }
                             }
-                        }
+                            
+                            // Scroll to top when sort order changes
+                            LaunchedEffect(sortOrder) {
+                                listState.scrollToItem(0)
+                            }
 
                         key(selectedSource) {
                             ArticleList(
