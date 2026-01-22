@@ -2,8 +2,11 @@ package com.example.riffle.ui.screen
 
 import androidx.compose.ui.res.stringArrayResource
 import kotlinx.coroutines.delay
-
 import androidx.activity.compose.BackHandler
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -162,10 +165,11 @@ fun SearchFeedScreen(
                         verticalArrangement = Arrangement.Center,
                         modifier = Modifier.padding(32.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 4.dp
+                        val composition by rememberLottieComposition(LottieCompositionSpec.Asset("loading.json"))
+                        LottieAnimation(
+                            composition = composition,
+                            iterations = LottieConstants.IterateForever,
+                            modifier = Modifier.size(200.dp)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(

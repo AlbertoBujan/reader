@@ -23,7 +23,7 @@ android {
         applicationId = "com.example.riffle"
         minSdk = 24
         targetSdk = 34
-versionCode = 29
+versionCode = 30
         versionName = "2.4.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -120,4 +120,7 @@ dependencies {
 
     // El SDK de Google AI
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Lottie
+    implementation("com.airbnb.android:lottie-compose:6.0.0")
 }
