@@ -455,6 +455,31 @@ fun HomeScreen(
                                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
                             }
                         }
+                        
+                        HorizontalDivider()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(NavigationDrawerItemDefaults.ItemPadding)
+                                .clickable {
+                                    showSettingsDialog = true
+                                    scope.launch { drawerState.close() }
+                                }
+                                .padding(vertical = 12.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.app_name) + " ${com.example.riffle.BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
         }
     ) {
         Scaffold(
