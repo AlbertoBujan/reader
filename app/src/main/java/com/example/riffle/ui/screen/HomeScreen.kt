@@ -334,114 +334,125 @@ fun HomeScreen(
                             }
                         }
                         
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            item(key = "all_feeds") {
-                                val totalUnread = unreadCounts.values.sum()
-                                NavigationDrawerItem(
-                                    icon = { Icon(Icons.Filled.RssFeed, null) },
-                                    label = { 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(stringResource(R.string.nav_all_feeds))
-                                            if (totalUnread > 0) {
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(
-                                                    text = totalUnread.toString(),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
+                        Box(modifier = Modifier.weight(1f)) {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                item(key = "all_feeds") {
+                                    val totalUnread = unreadCounts.values.sum()
+                                    NavigationDrawerItem(
+                                        icon = { Icon(Icons.Filled.RssFeed, null) },
+                                        label = { 
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(stringResource(R.string.nav_all_feeds))
+                                                if (totalUnread > 0) {
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text(
+                                                        text = totalUnread.toString(),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
                                             }
-                                        }
-                                    },
-                                    selected = selectedSource == null,
-                                    onClick = {
-                                        viewModel.selectSource(null)
-                                        viewModel.sync()
-                                        scope.launch { 
-                                            listState.scrollToItem(0)
-                                            drawerState.close() 
-                                        }
-                                    },
-                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                                )
-                            }
-
-                            item(key = "read_later") {
-                                NavigationDrawerItem(
-                                    icon = { Icon(Icons.Default.Bookmark, null) },
-                                    label = { 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(stringResource(R.string.nav_read_later))
-                                            if (savedCount > 0) {
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(
-                                                    text = savedCount.toString(),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
+                                        },
+                                        selected = selectedSource == null,
+                                        onClick = {
+                                            viewModel.selectSource(null)
+                                            viewModel.sync()
+                                            scope.launch { 
+                                                listState.scrollToItem(0)
+                                                drawerState.close() 
                                             }
-                                        }
-                                    },
-                                    selected = selectedSource == "saved",
-                                    onClick = {
-                                        viewModel.selectSaved()
-                                        scope.launch { 
-                                            listState.scrollToItem(0)
-                                            drawerState.close() 
-                                        }
-                                    },
-                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                                )
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            }
-
-                            items(folders, key = { it.name }) { folder ->
-                                val folderSources = sources.filter { it.folderName == folder.name }
-                                val folderUnread = folderSources.sumOf { unreadCounts[it.url] ?: 0 }
-                                FolderItem(
-                                    folderName = folder.name,
-                                    sources = folderSources,
-                                    folderUnreadCount = folderUnread,
-                                    selectedSource = selectedSource,
-                                    onFolderClick = { name ->
-                                        viewModel.selectFolder(name)
-                                    },
-                                    onSourceClick = { url ->
-                                        viewModel.selectSource(url)
-                                        scope.launch { drawerState.close() }
-                                    },
-                                    onDeleteSource = { url -> viewModel.deleteSource(url) },
-                                    onRenameSource = { source -> renamingSource = source },
-                                    onRenameFolder = { name -> renamingFolder = name },
-                                    onDeleteFolder = { name -> viewModel.deleteFolder(name) },
-                                    onDrop = { sourceUrl ->
-                                        viewModel.moveSourceToFolder(sourceUrl, folder.name)
-                                    }
-                                )
-                            }
-
-                            val orphanSources = sources.filter { it.folderName == null }
-                            if (orphanSources.isNotEmpty()) {
-                                item(key = "uncategorized_header") {
-                                    Text(
-                                        text = stringResource(R.string.nav_uncategorized),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 8.dp),
-                                        color = MaterialTheme.colorScheme.primary
+                                        },
+                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                                     )
                                 }
-                                items(orphanSources, key = { it.url }) { source ->
-                                    SwipeableSourceItem(
-                                        source = source,
-                                        isSelected = selectedSource == source.url,
+
+                                item(key = "read_later") {
+                                    NavigationDrawerItem(
+                                        icon = { Icon(Icons.Default.Bookmark, null) },
+                                        label = { 
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(stringResource(R.string.nav_read_later))
+                                                if (savedCount > 0) {
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text(
+                                                        text = savedCount.toString(),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        selected = selectedSource == "saved",
                                         onClick = {
-                                            viewModel.selectSource(source.url)
+                                            viewModel.selectSaved()
+                                            scope.launch { 
+                                                listState.scrollToItem(0)
+                                                drawerState.close() 
+                                            }
+                                        },
+                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                    )
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                                }
+
+                                items(folders, key = { it.name }) { folder ->
+                                    val folderSources = sources.filter { it.folderName == folder.name }
+                                    val folderUnread = folderSources.sumOf { unreadCounts[it.url] ?: 0 }
+                                    FolderItem(
+                                        folderName = folder.name,
+                                        sources = folderSources,
+                                        folderUnreadCount = folderUnread,
+                                        selectedSource = selectedSource,
+                                        onFolderClick = { name ->
+                                            viewModel.selectFolder(name)
+                                        },
+                                        onSourceClick = { url ->
+                                            viewModel.selectSource(url)
                                             scope.launch { drawerState.close() }
                                         },
-                                        onDelete = { viewModel.deleteSource(source.url) },
-                                        onRename = { renamingSource = source },
-                                        modifier = Modifier.animateItem()
+                                        onDeleteSource = { url -> viewModel.deleteSource(url) },
+                                        onRenameSource = { source -> renamingSource = source },
+                                        onRenameFolder = { name -> renamingFolder = name },
+                                        onDeleteFolder = { name -> viewModel.deleteFolder(name) },
+                                        onDrop = { sourceUrl ->
+                                            viewModel.moveSourceToFolder(sourceUrl, folder.name)
+                                        }
                                     )
                                 }
+
+                                val orphanSources = sources.filter { it.folderName == null }
+                                if (orphanSources.isNotEmpty()) {
+                                    item(key = "uncategorized_header") {
+                                        Text(
+                                            text = stringResource(R.string.nav_uncategorized),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 8.dp),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    items(orphanSources, key = { it.url }) { source ->
+                                        SwipeableSourceItem(
+                                            source = source,
+                                            isSelected = selectedSource == source.url,
+                                            onClick = {
+                                                viewModel.selectSource(source.url)
+                                                scope.launch { drawerState.close() }
+                                            },
+                                            onDelete = { viewModel.deleteSource(source.url) },
+                                            onRename = { renamingSource = source },
+                                            modifier = Modifier.animateItem()
+                                        )
+                                    }
+                                }
+                            }
+
+                            FloatingActionButton(
+                                onClick = onNavigateToFeedSearch,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(16.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
                             }
                         }
                         
@@ -466,14 +477,6 @@ fun HomeScreen(
                             )
                         }
                         Spacer(Modifier.height(12.dp))
-                    }
-                    FloatingActionButton(
-                        onClick = onNavigateToFeedSearch,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
                     }
                 }
             }
@@ -1408,7 +1411,7 @@ fun ArticleList(
             }
     }
 
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
     
     if (markAsReadOnScroll && !isReadLaterView) {
         var lastProcessedIndex by remember { mutableStateOf(listState.firstVisibleItemIndex) }
@@ -1459,8 +1462,9 @@ fun ArticleList(
             item {
                 Box(
                     modifier = Modifier
+                        .fillParentMaxHeight()
                         .fillMaxWidth()
-                        .padding(top = 32.dp, bottom = 16.dp),
+                        .padding(bottom = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1472,7 +1476,7 @@ fun ArticleList(
                 }
             }
             item {
-                Spacer(modifier = Modifier.height(screenHeight - 60.dp))
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
