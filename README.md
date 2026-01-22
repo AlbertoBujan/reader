@@ -2,8 +2,6 @@
 
 **Riffle** is a modern, minimalist, and powerful RSS reader built for Android using Jetpack Compose. It focuses on a clean reading experience, enhanced by AI summaries and intuitive feed management.
 
-![Riffle Banner](https://via.placeholder.com/1200x400.png?text=Riffle+RSS+Reader) *<!-- Replace with actual screenshot/banner if available -->*
-
 ## ✨ Features
 
 ### 📖 **Distraction-Free Reading**
