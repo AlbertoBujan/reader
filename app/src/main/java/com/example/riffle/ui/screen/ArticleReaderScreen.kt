@@ -3,6 +3,8 @@ package com.example.riffle.ui.screen
 
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,6 +98,21 @@ fun ArticleReaderScreen(
 
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
+
+    var tts: TextToSpeech? by remember { mutableStateOf(null) }
+    var isSpeaking by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale("es", "ES")
+            }
+        }
+        onDispose {
+            tts?.stop()
+            tts?.shutdown()
+        }
+    }
 
     // Limpiamos el resumen al salir de la pantalla
     DisposableEffect(Unit) {
@@ -209,8 +227,30 @@ fun ArticleReaderScreen(
                                 Text(
                                     text = stringResource(R.string.ai_summary_title),
                                     style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
                                 )
+
+                                if (!isSummarizing && summary != null) {
+                                    IconButton(
+                                        onClick = {
+                                            if (isSpeaking) {
+                                                tts?.stop()
+                                                isSpeaking = false
+                                            } else {
+                                                tts?.speak(summary, TextToSpeech.QUEUE_FLUSH, null, "SummaryTTS")
+                                                isSpeaking = true
+                                            }
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.GraphicEq,
+                                            contentDescription = "Leer resumen",
+                                            tint = if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             
