@@ -58,6 +58,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +74,7 @@ fun SearchFeedScreen(
     viewModel: MainViewModel
 ) {
     var query by remember { mutableStateOf("") }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val feeds by viewModel.discoveredFeeds.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val focusRequester = remember { FocusRequester() }
@@ -116,7 +118,10 @@ fun SearchFeedScreen(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
-                        keyboardActions = KeyboardActions(onSearch = { viewModel.searchFeeds(query) }),
+                        keyboardActions = KeyboardActions(onSearch = {
+                            viewModel.searchFeeds(query)
+                            keyboardController?.hide()
+                        }),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         trailingIcon = {
                             if (query.isNotEmpty()) {
