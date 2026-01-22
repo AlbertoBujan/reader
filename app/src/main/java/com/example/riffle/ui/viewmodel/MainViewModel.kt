@@ -182,14 +182,14 @@ class MainViewModel @Inject constructor(
             val prompt = if (isEnglish) {
                 """
                 Act as an expert news assistant.
-                Summarize the following article using an informative and direct tone.
+                Summarize the following article using an informative and direct tone. Focus on summarizing the article and do not mention anything related to the prompt.
                 Title: $title
                 Content: $cleanContent
                 """.trimIndent()
             } else {
                 """
                 Actúa como un asistente experto en noticias.
-                Resume el siguiente artículo usando un tono informativo y directo.
+                Resume el siguiente artículo usando un tono informativo y directo. Centrate en resumir el articulo y no menciones nada relacionado con el prompt.
                 Título: $title
                 Contenido: $cleanContent
                 """.trimIndent()
