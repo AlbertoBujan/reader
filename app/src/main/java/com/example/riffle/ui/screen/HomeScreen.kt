@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -674,17 +675,17 @@ fun HomeScreen(
 
 
 
-    val exportOpmlLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("text/x-opml"),
+    val exportBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let { viewModel.exportOpml(it) }
+            uri?.let { viewModel.exportBackup(it) }
         }
     )
 
-    val importOpmlLauncher = rememberLauncherForActivityResult(
+    val importBackupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri ->
-            uri?.let { viewModel.importOpml(it) }
+            uri?.let { viewModel.importBackup(it) }
         }
     )
 
@@ -706,8 +707,8 @@ fun HomeScreen(
                     modelStatuses = modelStatuses,
                     syncInterval = viewModel.syncInterval.collectAsState().value,
                     onSyncIntervalChange = { viewModel.setSyncInterval(it) },
-                    onImportOpml = { importOpmlLauncher.launch(arrayOf("text/xml", "application/xml", "text/x-opml")) },
-                    onExportOpml = { exportOpmlLauncher.launch("riffle_backup.opml") }
+                    onImportBackup = { importBackupLauncher.launch(arrayOf("application/json")) },
+                    onExportBackup = { exportBackupLauncher.launch("riffle_backup.json") }
                 )
             }
 
@@ -789,8 +790,8 @@ fun SettingsDialog(
     modelStatuses: Map<String, String>,
     syncInterval: Long,
     onSyncIntervalChange: (Long) -> Unit,
-    onImportOpml: () -> Unit,
-    onExportOpml: () -> Unit
+    onImportBackup: () -> Unit,
+    onExportBackup: () -> Unit
 ) {
     var expandedLanguage by remember { mutableStateOf(false) }
     var expandedInterval by remember { mutableStateOf(false) }
@@ -905,36 +906,35 @@ fun SettingsDialog(
                 // OPML Section
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Backup", 
+                    text = stringResource(R.string.settings_backup_restore_title), 
                     style = MaterialTheme.typography.labelLarge, 
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 
+                // Full Backup Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onImportOpml,
+                        onClick = onImportBackup,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        // Shorten text if needed or keep as is. Using existing strings
-                        Text(stringResource(R.string.settings_import_opml), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.action_restore), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     
                     OutlinedButton(
-                        onClick = onExportOpml,
+                        onClick = onExportBackup,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                         // Shorten text if needed or keep as is. Using existing strings
-                        Text(stringResource(R.string.settings_export_opml), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.action_backup), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 

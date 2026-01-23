@@ -83,6 +83,12 @@ interface FeedDao {
     @Query("SELECT * FROM sources")
     suspend fun getAllSourcesList(): List<SourceEntity>
 
+    @Query("SELECT * FROM folders")
+    suspend fun getAllFoldersList(): List<FolderEntity>
+
+    @Query("SELECT * FROM articles WHERE isSaved = 1")
+    suspend fun getSavedArticlesList(): List<ArticleEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSource(source: SourceEntity)
 

@@ -67,6 +67,7 @@ class MainViewModel @Inject constructor(
     private val preferencesManager: PreferencesManager,
     private val feedSearchService: FeedSearchService,
     private val clearbitService: ClearbitService,
+    private val backupManager: com.example.riffle.data.local.BackupManager,
     getAllSourcesUseCase: GetAllSourcesUseCase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
@@ -528,34 +529,34 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun importOpml(uri: android.net.Uri) {
+
+    fun exportBackup(uri: android.net.Uri) {
         viewModelScope.launch {
             try {
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.article_loading))
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    feedRepository.importOpml(stream)
+                context.contentResolver.openOutputStream(uri)?.let { stream ->
+                    backupManager.exportBackup(stream)
                 }
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_import_success))
-                sync()
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_export_success))
             } catch (e: Exception) {
-                 _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_error, e.localizedMessage ?: "Unknown"))
-                 e.printStackTrace()
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_export_failed, e.localizedMessage ?: "Unknown"))
+                e.printStackTrace()
             }
         }
     }
 
-    fun exportOpml(uri: android.net.Uri) {
+    fun importBackup(uri: android.net.Uri) {
         viewModelScope.launch {
-             try {
-                 val opmlContent = feedRepository.exportOpml()
-                 context.contentResolver.openOutputStream(uri)?.use { stream ->
-                     stream.write(opmlContent.toByteArray())
-                 }
-                  _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_export_success))
-             } catch (e: Exception) {
-                  _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_opml_error, e.localizedMessage ?: "Unknown"))
-                  e.printStackTrace()
-             }
+            try {
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_importing))
+                context.contentResolver.openInputStream(uri)?.let { stream ->
+                    backupManager.importBackup(stream)
+                }
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_import_success))
+                sync() // Refresh data
+            } catch (e: Exception) {
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_import_failed, e.localizedMessage ?: "Unknown"))
+                e.printStackTrace()
+            }
         }
     }
 
