@@ -110,4 +110,10 @@ object AppModule {
     ): FeedRepository {
         return FeedRepositoryImpl(feedDao, feedService, rssParser)
     }
+
+    @Provides
+    @Singleton
+    fun provideGson(): com.google.gson.Gson {
+        return com.google.gson.Gson()
+    }
 }

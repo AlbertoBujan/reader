@@ -101,6 +101,16 @@
     <string name="msg_opml_export_success">Feeds exportados correctamente</string>
     <string name="msg_opml_error">Error: %1$s</string>
 
+    <!-- Backup -->
+    <string name="settings_backup_restore_title">Copia de Seguridad y Restauración</string>
+    <string name="action_backup">Crear Copia</string>
+    <string name="action_restore">Restaurar</string>
+    <string name="msg_backup_export_success">Copia de seguridad exportada correctamente</string>
+    <string name="msg_backup_importing">Importando copia de seguridad...</string>
+    <string name="msg_backup_import_success">Copia de seguridad importada correctamente</string>
+    <string name="msg_backup_export_failed">Error al exportar: %1$s</string>
+    <string name="msg_backup_import_failed">Error al importar: %1$s</string>
+
 
     <string-array name="loading_phrases">
         <item>Despertando a los hámsters del servidor...</item>
