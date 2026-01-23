@@ -23,8 +23,8 @@ android {
         applicationId = "com.example.riffle"
         minSdk = 24
         targetSdk = 34
-versionCode = 31
-        versionName = "2.4.4"
+versionCode = 32
+        versionName = "2.4.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

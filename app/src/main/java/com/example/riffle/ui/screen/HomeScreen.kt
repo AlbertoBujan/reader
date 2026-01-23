@@ -614,7 +614,7 @@ fun HomeScreen(
                         
                         // Startup ONLY scroll
                         LaunchedEffect(isRefreshing, state) {
-                            if (!viewModel.hasPerformedStartupScroll && state.articles.isNotEmpty()) {
+                            if (!viewModel.hasPerformedStartupScroll && state.articles.isNotEmpty() && !isRefreshing) {
                                 listState.scrollToItem(0)
                                 viewModel.markStartupScrollPerformed()
                             }
