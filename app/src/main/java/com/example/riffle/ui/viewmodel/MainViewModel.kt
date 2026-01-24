@@ -49,6 +49,13 @@ sealed interface FeedUiState {
     data class Error(val message: String) : FeedUiState
 }
 
+sealed interface SourceAdditionState {
+    data object Idle : SourceAdditionState
+    data class Loading(val targetUrl: String) : SourceAdditionState
+    data object Success : SourceAdditionState
+    data class Error(val title: String, val message: String) : SourceAdditionState
+}
+
 data class DiscoveredFeed(
     val title: String,
     val url: String,
@@ -381,14 +388,44 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private val _sourceAdditionState = MutableStateFlow<SourceAdditionState>(SourceAdditionState.Idle)
+    val sourceAdditionState: StateFlow<SourceAdditionState> = _sourceAdditionState.asStateFlow()
+
+    fun clearSourceAdditionState() {
+        _sourceAdditionState.value = SourceAdditionState.Idle
+    }
+
     fun addSource(url: String, title: String?, iconUrl: String? = null) {
         viewModelScope.launch {
+            _sourceAdditionState.value = SourceAdditionState.Loading(url)
             try {
                 addSourceUseCase(url, title, iconUrl)
                 _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_feed_added))
+                _sourceAdditionState.value = SourceAdditionState.Success
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 404) {
+                     _sourceAdditionState.value = SourceAdditionState.Error(
+                         title = context.getString(com.example.riffle.R.string.error_feed_not_found_title),
+                         message = context.getString(com.example.riffle.R.string.error_feed_not_found_message, url)
+                     )
+                } else if (e.code() in 400..599) {
+                    _sourceAdditionState.value = SourceAdditionState.Error(
+                        title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
+                        message = context.getString(com.example.riffle.R.string.error_feed_http, e.code())
+                    )
+                } else {
+                    _sourceAdditionState.value = SourceAdditionState.Error(
+                        title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
+                        message = e.localizedMessage ?: context.getString(com.example.riffle.R.string.msg_unknown_error)
+                    )
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_feed_error, e.message))
+                _sourceAdditionState.value = SourceAdditionState.Error(
+                    title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
+                    message = e.localizedMessage ?: context.getString(com.example.riffle.R.string.msg_unknown_error)
+                )
             }
         }
     }

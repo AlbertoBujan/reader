@@ -6,6 +6,7 @@
     <string name="nav_subscriptions">Subscriptions</string>
     <string name="nav_new_folder">New Folder</string>
     <string name="nav_search_feeds">Search Feeds</string>
+    <string name="title_all_feeds">All Feeds</string>
     <string name="nav_all_feeds">All Feeds</string>
     <string name="nav_read_later">Read Later</string>
     <string name="nav_uncategorized">Uncategorized</string>
@@ -21,6 +22,7 @@
     <string name="article_open_browser">Open in Browser</string>
     <string name="article_back">Back</string>
     <string name="search_articles_placeholder">Search articles...</string>
+    <string name="search_add_directly">Add "%1$s" directly</string>
     
     <!-- AI Summary -->
     <string name="ai_summary_title">Smart Summary</string>
@@ -32,6 +34,11 @@
     <!-- Dialogs -->
     <string name="dialog_add_folder_title">New Folder</string>
     <string name="dialog_add_folder_label">Folder Name</string>
+    <string name="dialog_delete_feed_title">Delete "%1$s"</string>
+    <string name="dialog_delete_feed_message">Are you sure you want to delete this feed?</string>
+    <string name="dialog_delete_folder_title">Delete "%1$s"</string>
+    <string name="dialog_delete_folder_message">Are you sure you want to delete this folder and all its feeds?</string>
+    <string name="dialog_delete">Delete</string>
     <string name="dialog_confirm">Confirm</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_rename">Rename</string>
@@ -170,4 +177,9 @@
         <item>Winding up the mechanism...</item>
     </string-array>
 
+    <string name="error_feed_not_found_title">Feed Not Found</string>
+    <string name="error_feed_not_found_message">We couldn\'t find a valid feed at: %1$s</string>
+    <string name="error_feed_generic_title">Error Adding Feed</string>
+
+    <string name="error_feed_http">Server Error (%1$d). Please check the URL or try again later.</string>
 </resources>

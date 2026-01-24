@@ -100,6 +100,46 @@ fun SearchFeedScreen(
     // Clear results when leaving screen? Maybe not necessary but good practice to clear text field
     // But we are using local state for query.
 
+    val sourceAdditionState by viewModel.sourceAdditionState.collectAsState()
+
+    var showDialog by remember { mutableStateOf(false) }
+    var dialogTitle by remember { mutableStateOf("") }
+    var dialogMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(sourceAdditionState) {
+        when (val state = sourceAdditionState) {
+            is com.example.riffle.ui.viewmodel.SourceAdditionState.Success -> {
+                viewModel.clearSourceAdditionState()
+                onBack()
+            }
+            is com.example.riffle.ui.viewmodel.SourceAdditionState.Error -> {
+                dialogTitle = state.title
+                dialogMessage = state.message
+                showDialog = true
+            }
+            else -> {}
+        }
+    }
+
+    if (showDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { 
+                showDialog = false 
+                viewModel.clearSourceAdditionState()
+            },
+            title = { Text(dialogTitle) },
+            text = { Text(dialogMessage) },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showDialog = false
+                    viewModel.clearSourceAdditionState()
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -193,16 +233,27 @@ fun SearchFeedScreen(
                 ) {
                     if (query.isNotBlank() && !isSearching && feeds.isEmpty()) {
                         item {
+                            val isDirectLoading = (sourceAdditionState is com.example.riffle.ui.viewmodel.SourceAdditionState.Loading) && 
+                                (sourceAdditionState as com.example.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == query
+                            
                             TextButton(
                                 onClick = {
                                     viewModel.addSource(query, null)
-                                    onBack()
                                 },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !isDirectLoading
                             ) {
-                                Icon(Icons.Default.Add, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Add \"$query\" directly")
+                                if (isDirectLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                } else {
+                                    Icon(Icons.Default.Add, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.search_add_directly, query))
+                                }
                             }
                         }
                     }
@@ -210,6 +261,9 @@ fun SearchFeedScreen(
                     val displayedFeeds = if (isExpanded) feeds else feeds.take(5)
                     
                     items(displayedFeeds) { feed ->
+                        val isItemLoading = (sourceAdditionState is com.example.riffle.ui.viewmodel.SourceAdditionState.Loading) && 
+                            (sourceAdditionState as com.example.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == feed.url
+                        
                         ListItem(
                             leadingContent = {
                                 if (feed.iconUrl != null) {
@@ -232,11 +286,25 @@ fun SearchFeedScreen(
                                 ) 
                             },
                             trailingContent = {
-                                IconButton(onClick = { 
-                                    viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
-                                    onBack()
-                                }) {
-                                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
+                                if (isItemLoading) {
+                                    Box(
+                                        modifier = Modifier.size(48.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                } else {
+                                    IconButton(
+                                        onClick = { 
+                                            viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
+                                        },
+                                        enabled = !(sourceAdditionState is com.example.riffle.ui.viewmodel.SourceAdditionState.Loading)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
+                                    }
                                 }
                             }
                         )

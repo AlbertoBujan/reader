@@ -6,6 +6,7 @@
     <string name="nav_subscriptions">Suscripciones</string>
     <string name="nav_new_folder">Nueva Carpeta</string>
     <string name="nav_search_feeds">Buscar Feeds</string>
+    <string name="title_all_feeds">Todos</string>
     <string name="nav_all_feeds">Todos los Feeds</string>
     <string name="nav_read_later">Leer más tarde</string>
     <string name="nav_uncategorized">Sin categoría</string>
@@ -21,6 +22,7 @@
     <string name="article_open_browser">Abrir en Navegador</string>
     <string name="article_back">Atrás</string>
     <string name="search_articles_placeholder">Buscar artículos...</string>
+    <string name="search_add_directly">Añadir "%1$s" directamente</string>
     
     <!-- AI Summary -->
     <string name="ai_summary_title">Resumen Inteligente</string>
@@ -32,6 +34,11 @@
     <!-- Dialogs -->
     <string name="dialog_add_folder_title">Nueva Carpeta</string>
     <string name="dialog_add_folder_label">Nombre de la Carpeta</string>
+    <string name="dialog_delete_feed_title">Eliminar "%1$s"</string>
+    <string name="dialog_delete_feed_message">¿Estás seguro de que quieres eliminar este feed?</string>
+    <string name="dialog_delete_folder_title">Eliminar "%1$s"</string>
+    <string name="dialog_delete_folder_message">¿Estás seguro de que quieres eliminar esta carpeta y todos sus feeds?</string>
+    <string name="dialog_delete">Eliminar</string>
     <string name="dialog_confirm">Confirmar</string>
     <string name="dialog_cancel">Cancelar</string>
     <string name="dialog_rename">Renombrar</string>
@@ -170,4 +177,9 @@
         <item>Dándole cuerda al mecanismo...</item>
     </string-array>
 
+    <string name="error_feed_not_found_title">Web no encontrada</string>
+    <string name="error_feed_not_found_message">No hemos podido encontrar ningún feed en: %1$s</string>
+    <string name="error_feed_generic_title">Error al añadir</string>
+
+    <string name="error_feed_http">Error del servidor (%1$d). Comprueba la URL o inténtalo más tarde.</string>
 </resources>

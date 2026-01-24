@@ -276,12 +276,38 @@ fun HomeScreen(
     var renamingSource by remember { mutableStateOf<SourceEntity?>(null) }
     var renamingFolder by remember { mutableStateOf<String?>(null) }
 
+    var sourceToDelete by remember { mutableStateOf<String?>(null) }
+    var folderToDelete by remember { mutableStateOf<String?>(null) }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    if (sourceToDelete != null) {
+        val sourceTitle = sources.find { it.url == sourceToDelete }?.title ?: sourceToDelete ?: ""
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.dialog_delete_feed_title, sourceTitle),
+            text = stringResource(R.string.dialog_delete_feed_message),
+            onDismiss = { sourceToDelete = null },
+            onConfirm = {
+                sourceToDelete?.let { viewModel.deleteSource(it) }
+                sourceToDelete = null
+            }
+        )
+    }
 
+    if (folderToDelete != null) {
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.dialog_delete_folder_title, folderToDelete ?: ""),
+            text = stringResource(R.string.dialog_delete_folder_message),
+            onDismiss = { folderToDelete = null },
+            onConfirm = {
+                folderToDelete?.let { viewModel.deleteFolder(it) }
+                folderToDelete = null
+            }
+        )
+    }
 
     LaunchedEffect(isSearchActive) {
         if (isSearchActive) {
@@ -411,10 +437,10 @@ fun HomeScreen(
                                             viewModel.selectSource(url)
                                             scope.launch { drawerState.close() }
                                         },
-                                        onDeleteSource = { url -> viewModel.deleteSource(url) },
+                                        onDeleteSource = { url -> sourceToDelete = url },
                                         onRenameSource = { source -> renamingSource = source },
                                         onRenameFolder = { name -> renamingFolder = name },
-                                        onDeleteFolder = { name -> viewModel.deleteFolder(name) },
+                                        onDeleteFolder = { name -> folderToDelete = name },
                                         onDrop = { sourceUrl ->
                                             viewModel.moveSourceToFolder(sourceUrl, folder.name)
                                         }
@@ -439,7 +465,7 @@ fun HomeScreen(
                                                 viewModel.selectSource(source.url)
                                                 scope.launch { drawerState.close() }
                                             },
-                                            onDelete = { viewModel.deleteSource(source.url) },
+                                            onDelete = { sourceToDelete = source.url },
                                             onRename = { renamingSource = source },
                                             modifier = Modifier.animateItem()
                                         )
@@ -528,7 +554,7 @@ fun HomeScreen(
                                 Text(
                                     when {
                                         selectedSource == "saved" -> stringResource(R.string.nav_read_later)
-                                        selectedSource == null -> stringResource(R.string.app_name)
+                                        selectedSource == null -> stringResource(R.string.title_all_feeds)
                                         selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
                                         else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
                                     }
@@ -996,14 +1022,13 @@ fun SwipeActionBackground(dismissState: SwipeToDismissBoxState, shape: Shape, is
     val isShare = direction == SwipeToDismissBoxValue.StartToEnd
     val color = when {
         isShare -> Color(0xFF4CAF50)
-        isReadLaterView -> Color(0xFFE53935)
-        else -> Color(0xFFFFD600)
+        isReadLaterView || isSaved -> Color(0xFFE53935) // Red for remove
+        else -> Color(0xFFFFD600) // Yellow for save
     }
     val alignment = if (isShare) Alignment.CenterStart else Alignment.CenterEnd
     val icon = when {
         isShare -> Icons.Default.Share
-        isReadLaterView -> Icons.Default.BookmarkRemove
-        isSaved -> Icons.Default.Bookmark
+        isReadLaterView || isSaved -> Icons.Default.BookmarkRemove
         else -> Icons.Default.BookmarkBorder
     }
 
@@ -1085,7 +1110,7 @@ fun SwipeableItem(
             when (it) {
                 SwipeToDismissBoxValue.EndToStart -> {
                     onDelete()
-                    true
+                    false
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onEdit()
@@ -1493,21 +1518,36 @@ fun SwipeableArticleItem(
     isReadLaterView: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val currentOnToggleSave by rememberUpdatedState(onToggleSave)
+    val currentOnShare by rememberUpdatedState(onShare)
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             when (it) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    onShare()
+                    currentOnShare()
                     false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onToggleSave()
+                    currentOnToggleSave()
                     false
                 }
                 else -> false
             }
         }
     )
+
+    // Visual State Logic: Prevent flash by only updating the background icon/color when the swipe is settled
+    var displayedIsSaved by remember(article.link) { mutableStateOf(article.isSaved) }
+    
+    LaunchedEffect(article.isSaved, dismissState.targetValue, dismissState.progress) {
+        val isSettled = dismissState.targetValue == SwipeToDismissBoxValue.Settled && 
+                       dismissState.progress.absoluteValue < 0.05f // Tolerance for floating point
+        
+        if (isSettled) {
+            displayedIsSaved = article.isSaved
+        }
+    }
 
     SwipeToDismissBox(
         state = dismissState,
@@ -1517,7 +1557,7 @@ fun SwipeableArticleItem(
                 dismissState = dismissState, 
                 shape = RoundedCornerShape(12.dp),
                 isReadLaterView = isReadLaterView,
-                isSaved = article.isSaved
+                isSaved = displayedIsSaved
             )
         }
     ) {
@@ -1620,6 +1660,33 @@ fun ModelStatsDialog(
         confirmButton = {
             Button(onClick = onDismiss) {
                 Text(stringResource(R.string.dialog_close))
+            }
+        }
+    )
+}
+
+@Composable
+fun DeleteConfirmationDialog(
+    title: String,
+    text: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(text) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.dialog_delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_cancel))
             }
         }
     )
