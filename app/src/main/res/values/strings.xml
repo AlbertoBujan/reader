@@ -181,4 +181,5 @@
     <string name="error_feed_not_found_message">We couldn\'t find a valid feed at: %1$s</string>
     <string name="error_feed_generic_title">Error Adding Feed</string>
 
+    <string name="error_feed_http">Server Error (%1$d). Please check the URL or try again later.</string>
 </resources>

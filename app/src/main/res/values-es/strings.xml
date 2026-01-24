@@ -181,4 +181,5 @@
     <string name="error_feed_not_found_message">No hemos podido encontrar ningún feed en: %1$s</string>
     <string name="error_feed_generic_title">Error al añadir</string>
 
+    <string name="error_feed_http">Error del servidor (%1$d). Comprueba la URL o inténtalo más tarde.</string>
 </resources>

@@ -408,6 +408,11 @@ class MainViewModel @Inject constructor(
                          title = context.getString(com.example.riffle.R.string.error_feed_not_found_title),
                          message = context.getString(com.example.riffle.R.string.error_feed_not_found_message, url)
                      )
+                } else if (e.code() in 400..599) {
+                    _sourceAdditionState.value = SourceAdditionState.Error(
+                        title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
+                        message = context.getString(com.example.riffle.R.string.error_feed_http, e.code())
+                    )
                 } else {
                     _sourceAdditionState.value = SourceAdditionState.Error(
                         title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
