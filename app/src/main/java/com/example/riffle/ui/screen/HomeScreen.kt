@@ -996,14 +996,13 @@ fun SwipeActionBackground(dismissState: SwipeToDismissBoxState, shape: Shape, is
     val isShare = direction == SwipeToDismissBoxValue.StartToEnd
     val color = when {
         isShare -> Color(0xFF4CAF50)
-        isReadLaterView -> Color(0xFFE53935)
-        else -> Color(0xFFFFD600)
+        isReadLaterView || isSaved -> Color(0xFFE53935) // Red for remove
+        else -> Color(0xFFFFD600) // Yellow for save
     }
     val alignment = if (isShare) Alignment.CenterStart else Alignment.CenterEnd
     val icon = when {
         isShare -> Icons.Default.Share
-        isReadLaterView -> Icons.Default.BookmarkRemove
-        isSaved -> Icons.Default.Bookmark
+        isReadLaterView || isSaved -> Icons.Default.BookmarkRemove
         else -> Icons.Default.BookmarkBorder
     }
 
@@ -1493,21 +1492,36 @@ fun SwipeableArticleItem(
     isReadLaterView: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val currentOnToggleSave by rememberUpdatedState(onToggleSave)
+    val currentOnShare by rememberUpdatedState(onShare)
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             when (it) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    onShare()
+                    currentOnShare()
                     false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onToggleSave()
+                    currentOnToggleSave()
                     false
                 }
                 else -> false
             }
         }
     )
+
+    // Visual State Logic: Prevent flash by only updating the background icon/color when the swipe is settled
+    var displayedIsSaved by remember(article.link) { mutableStateOf(article.isSaved) }
+    
+    LaunchedEffect(article.isSaved, dismissState.targetValue, dismissState.progress) {
+        val isSettled = dismissState.targetValue == SwipeToDismissBoxValue.Settled && 
+                       dismissState.progress.absoluteValue < 0.05f // Tolerance for floating point
+        
+        if (isSettled) {
+            displayedIsSaved = article.isSaved
+        }
+    }
 
     SwipeToDismissBox(
         state = dismissState,
@@ -1517,7 +1531,7 @@ fun SwipeableArticleItem(
                 dismissState = dismissState, 
                 shape = RoundedCornerShape(12.dp),
                 isReadLaterView = isReadLaterView,
-                isSaved = article.isSaved
+                isSaved = displayedIsSaved
             )
         }
     ) {
