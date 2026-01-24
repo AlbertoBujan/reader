@@ -6,6 +6,7 @@
     <string name="nav_subscriptions">Subscriptions</string>
     <string name="nav_new_folder">New Folder</string>
     <string name="nav_search_feeds">Search Feeds</string>
+    <string name="title_all_feeds">All Feeds</string>
     <string name="nav_all_feeds">All Feeds</string>
     <string name="nav_read_later">Read Later</string>
     <string name="nav_uncategorized">Uncategorized</string>

@@ -528,7 +528,7 @@ fun HomeScreen(
                                 Text(
                                     when {
                                         selectedSource == "saved" -> stringResource(R.string.nav_read_later)
-                                        selectedSource == null -> stringResource(R.string.app_name)
+                                        selectedSource == null -> stringResource(R.string.title_all_feeds)
                                         selectedSource!!.startsWith("folder:") -> stringResource(R.string.folder_prefix, selectedSource!!.removePrefix("folder:"))
                                         else -> sources.find { it.url == selectedSource }?.title ?: stringResource(R.string.feed_filtered)
                                     }

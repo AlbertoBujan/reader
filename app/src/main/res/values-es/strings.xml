@@ -6,6 +6,7 @@
     <string name="nav_subscriptions">Suscripciones</string>
     <string name="nav_new_folder">Nueva Carpeta</string>
     <string name="nav_search_feeds">Buscar Feeds</string>
+    <string name="title_all_feeds">Todos</string>
     <string name="nav_all_feeds">Todos los Feeds</string>
     <string name="nav_read_later">Leer más tarde</string>
     <string name="nav_uncategorized">Sin categoría</string>
