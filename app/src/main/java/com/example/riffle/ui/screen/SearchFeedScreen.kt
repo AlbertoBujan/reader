@@ -202,7 +202,7 @@ fun SearchFeedScreen(
                             ) {
                                 Icon(Icons.Default.Add, null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Add \"$query\" directly")
+                                Text(stringResource(R.string.search_add_directly, query))
                             }
                         }
                     }
