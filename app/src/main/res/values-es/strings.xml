@@ -34,6 +34,11 @@
     <!-- Dialogs -->
     <string name="dialog_add_folder_title">Nueva Carpeta</string>
     <string name="dialog_add_folder_label">Nombre de la Carpeta</string>
+    <string name="dialog_delete_feed_title">Eliminar "%1$s"</string>
+    <string name="dialog_delete_feed_message">¿Estás seguro de que quieres eliminar este feed?</string>
+    <string name="dialog_delete_folder_title">Eliminar "%1$s"</string>
+    <string name="dialog_delete_folder_message">¿Estás seguro de que quieres eliminar esta carpeta y todos sus feeds?</string>
+    <string name="dialog_delete">Eliminar</string>
     <string name="dialog_confirm">Confirmar</string>
     <string name="dialog_cancel">Cancelar</string>
     <string name="dialog_rename">Renombrar</string>

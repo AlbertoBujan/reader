@@ -34,6 +34,11 @@
     <!-- Dialogs -->
     <string name="dialog_add_folder_title">New Folder</string>
     <string name="dialog_add_folder_label">Folder Name</string>
+    <string name="dialog_delete_feed_title">Delete "%1$s"</string>
+    <string name="dialog_delete_feed_message">Are you sure you want to delete this feed?</string>
+    <string name="dialog_delete_folder_title">Delete "%1$s"</string>
+    <string name="dialog_delete_folder_message">Are you sure you want to delete this folder and all its feeds?</string>
+    <string name="dialog_delete">Delete</string>
     <string name="dialog_confirm">Confirm</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_rename">Rename</string>

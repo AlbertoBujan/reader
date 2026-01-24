@@ -276,12 +276,38 @@ fun HomeScreen(
     var renamingSource by remember { mutableStateOf<SourceEntity?>(null) }
     var renamingFolder by remember { mutableStateOf<String?>(null) }
 
+    var sourceToDelete by remember { mutableStateOf<String?>(null) }
+    var folderToDelete by remember { mutableStateOf<String?>(null) }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    if (sourceToDelete != null) {
+        val sourceTitle = sources.find { it.url == sourceToDelete }?.title ?: sourceToDelete ?: ""
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.dialog_delete_feed_title, sourceTitle),
+            text = stringResource(R.string.dialog_delete_feed_message),
+            onDismiss = { sourceToDelete = null },
+            onConfirm = {
+                sourceToDelete?.let { viewModel.deleteSource(it) }
+                sourceToDelete = null
+            }
+        )
+    }
 
+    if (folderToDelete != null) {
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.dialog_delete_folder_title, folderToDelete ?: ""),
+            text = stringResource(R.string.dialog_delete_folder_message),
+            onDismiss = { folderToDelete = null },
+            onConfirm = {
+                folderToDelete?.let { viewModel.deleteFolder(it) }
+                folderToDelete = null
+            }
+        )
+    }
 
     LaunchedEffect(isSearchActive) {
         if (isSearchActive) {
@@ -411,10 +437,10 @@ fun HomeScreen(
                                             viewModel.selectSource(url)
                                             scope.launch { drawerState.close() }
                                         },
-                                        onDeleteSource = { url -> viewModel.deleteSource(url) },
+                                        onDeleteSource = { url -> sourceToDelete = url },
                                         onRenameSource = { source -> renamingSource = source },
                                         onRenameFolder = { name -> renamingFolder = name },
-                                        onDeleteFolder = { name -> viewModel.deleteFolder(name) },
+                                        onDeleteFolder = { name -> folderToDelete = name },
                                         onDrop = { sourceUrl ->
                                             viewModel.moveSourceToFolder(sourceUrl, folder.name)
                                         }
@@ -439,7 +465,7 @@ fun HomeScreen(
                                                 viewModel.selectSource(source.url)
                                                 scope.launch { drawerState.close() }
                                             },
-                                            onDelete = { viewModel.deleteSource(source.url) },
+                                            onDelete = { sourceToDelete = source.url },
                                             onRename = { renamingSource = source },
                                             modifier = Modifier.animateItem()
                                         )
@@ -1084,7 +1110,7 @@ fun SwipeableItem(
             when (it) {
                 SwipeToDismissBoxValue.EndToStart -> {
                     onDelete()
-                    true
+                    false
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onEdit()
@@ -1634,6 +1660,33 @@ fun ModelStatsDialog(
         confirmButton = {
             Button(onClick = onDismiss) {
                 Text(stringResource(R.string.dialog_close))
+            }
+        }
+    )
+}
+
+@Composable
+fun DeleteConfirmationDialog(
+    title: String,
+    text: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(text) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.dialog_delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_cancel))
             }
         }
     )
