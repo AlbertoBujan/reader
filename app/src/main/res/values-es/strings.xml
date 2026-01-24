@@ -177,4 +177,8 @@
         <item>Dándole cuerda al mecanismo...</item>
     </string-array>
 
+    <string name="error_feed_not_found_title">Web no encontrada</string>
+    <string name="error_feed_not_found_message">No hemos podido encontrar ningún feed en: %1$s</string>
+    <string name="error_feed_generic_title">Error al añadir</string>
+
 </resources>
