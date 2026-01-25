@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "455036780108",
+    "project_id": "riffle-2f2f4",
+    "storage_bucket": "riffle-2f2f4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:455036780108:android:249b2283c75e867fd77ee9",
+        "android_client_info": {
+          "package_name": "com.example.riffle"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "455036780108-32nf3u9hsffhg694qfnhbo08tg23mck5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.riffle",
+            "certificate_hash": "6d80432bf4ccb925f27eb5902db8f65b3b42e21d"
+          }
+        },
+        {
+          "client_id": "455036780108-5drqf232p958nqgj0tij3nmbun77isba.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHpIW_5lTGVph8fhnMqECeP_Dyr20DJ2A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "455036780108-5drqf232p958nqgj0tij3nmbun77isba.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

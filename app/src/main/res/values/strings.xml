@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Riffle</string>
+    <!-- Placeholder: Replace with actual Web Client ID if Google Services fails to generate it or while configuring -->
+    <string name="default_web_client_id" translatable="false">1:455036780108:android:249b2283c75e867fd77ee9</string>
 
     <!-- Navigation / Drawer -->
     <string name="nav_subscriptions">Subscriptions</string>

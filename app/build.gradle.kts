@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.compose)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -123,4 +124,10 @@ dependencies {
 
     // Lottie
     implementation("com.airbnb.android:lottie-compose:6.0.0")
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.play.services.auth)
 }

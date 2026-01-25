@@ -15,8 +15,14 @@ import java.io.InputStream
 class FeedRepositoryImpl(
     private val feedDao: FeedDao,
     private val feedService: FeedService,
-    private val rssParser: RssParser
+    private val rssParser: RssParser,
+    private val firestoreHelper: com.example.riffle.data.remote.FirestoreHelper? = null 
 ) : FeedRepository {
+    
+    init {
+        firestoreHelper?.startSync()
+    }
+
 
     override fun getAllArticles() = feedDao.getAllArticles()
 
@@ -39,6 +45,10 @@ class FeedRepositoryImpl(
             val source = SourceEntity(url = url, title = sourceTitle, iconUrl = finalIconUrl)
             feedDao.insertSource(source)
             feedDao.insertArticles(parsedFeed.articles)
+            
+            // Sync to cloud
+            firestoreHelper?.addSourceToCloud(source)
+            
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
@@ -58,6 +68,8 @@ class FeedRepositoryImpl(
 
     override suspend fun markAsRead(link: String) {
         feedDao.markArticleAsRead(link)
+        // Sync to cloud
+        firestoreHelper?.markReadInCloud(link)
     }
     
     suspend fun syncSource(source: SourceEntity) {
