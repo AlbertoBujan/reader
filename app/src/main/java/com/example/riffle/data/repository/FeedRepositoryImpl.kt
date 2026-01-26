@@ -15,8 +15,14 @@ import java.io.InputStream
 class FeedRepositoryImpl(
     private val feedDao: FeedDao,
     private val feedService: FeedService,
-    private val rssParser: RssParser
+    private val rssParser: RssParser,
+    private val firestoreHelper: com.example.riffle.data.remote.FirestoreHelper? = null 
 ) : FeedRepository {
+    
+    init {
+        firestoreHelper?.startSync()
+    }
+
 
     override fun getAllArticles() = feedDao.getAllArticles()
 
@@ -39,6 +45,13 @@ class FeedRepositoryImpl(
             val source = SourceEntity(url = url, title = sourceTitle, iconUrl = finalIconUrl)
             feedDao.insertSource(source)
             feedDao.insertArticles(parsedFeed.articles)
+            
+            // Re-apply states
+            firestoreHelper?.applyRemoteStates()
+            
+            // Sync to cloud
+            firestoreHelper?.addSourceToCloud(source)
+            
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
@@ -58,6 +71,42 @@ class FeedRepositoryImpl(
 
     override suspend fun markAsRead(link: String) {
         feedDao.markArticleAsRead(link)
+        // Sync to cloud
+        firestoreHelper?.markReadInCloud(link)
+    }
+
+    override suspend fun toggleArticleSaved(link: String, isSaved: Boolean) {
+        feedDao.updateArticleSavedStatus(link, isSaved)
+        // Sync to cloud
+        firestoreHelper?.updateSavedStatusInCloud(link, isSaved)
+    }
+
+    override suspend fun moveSourceToFolder(url: String, folderName: String?) {
+        feedDao.updateSourceFolder(url, folderName)
+        // Sync to cloud
+        firestoreHelper?.updateSourceFolderInCloud(url, folderName)
+    }
+
+    override suspend fun deleteSource(url: String) {
+        feedDao.deleteSource(url)
+        firestoreHelper?.deleteSourceFromCloud(url)
+    }
+
+    override suspend fun deleteFolder(folderName: String) {
+        // Find feeds in folder before local deletion (which cascades)
+        val allSources = feedDao.getAllSourcesList()
+        val feedsInFolder = allSources.filter { it.folderName == folderName }
+        
+        feedDao.deleteFolder(folderName)
+        
+        feedsInFolder.forEach { source ->
+            firestoreHelper?.deleteSourceFromCloud(source.url)
+        }
+    }
+
+    override suspend fun renameSource(url: String, newTitle: String) {
+        feedDao.updateSourceTitle(url, newTitle)
+        firestoreHelper?.updateSourceTitleInCloud(url, newTitle)
     }
     
     suspend fun syncSource(source: SourceEntity) {
@@ -67,6 +116,9 @@ class FeedRepositoryImpl(
                 rssParser.parse(response.byteStream(), source.url)
             }
             feedDao.insertArticles(parsedFeed.articles)
+            
+            // Re-apply remote states (read/saved) to ensure consistent state
+            firestoreHelper?.applyRemoteStates()
             
             // Update Icon if changed
             if (!parsedFeed.imageUrl.isNullOrBlank() && parsedFeed.imageUrl != source.iconUrl) {

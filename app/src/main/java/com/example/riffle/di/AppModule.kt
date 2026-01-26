@@ -4,12 +4,18 @@ import android.content.Context
 import androidx.room.Room
 import com.example.riffle.data.local.AppDatabase
 import com.example.riffle.data.local.dao.FeedDao
+import com.example.riffle.data.remote.AuthManager
 import com.example.riffle.data.remote.ClearbitService
 import com.example.riffle.data.remote.FeedService
 import com.example.riffle.data.remote.FeedSearchService
 import com.example.riffle.data.remote.RssParser
 import com.example.riffle.data.repository.FeedRepositoryImpl
 import com.example.riffle.domain.repository.FeedRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -106,14 +112,28 @@ object AppModule {
     fun provideFeedRepository(
         feedDao: FeedDao,
         feedService: FeedService,
-        rssParser: RssParser
+        rssParser: RssParser,
+        firestoreHelper: com.example.riffle.data.remote.FirestoreHelper
     ): FeedRepository {
-        return FeedRepositoryImpl(feedDao, feedService, rssParser)
+        return FeedRepositoryImpl(feedDao, feedService, rssParser, firestoreHelper)
     }
 
     @Provides
     @Singleton
     fun provideGson(): com.google.gson.Gson {
         return com.google.gson.Gson()
+    }
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = Firebase.auth
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = Firebase.firestore
+
+    @Provides
+    @Singleton
+    fun provideAuthManager(auth: FirebaseAuth, @ApplicationContext context: Context): AuthManager {
+        return AuthManager(auth, context)
     }
 }

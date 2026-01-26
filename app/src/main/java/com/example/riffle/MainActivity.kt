@@ -22,8 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
+import com.example.riffle.data.remote.AuthManager
+import javax.inject.Inject
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -71,6 +74,9 @@ import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+    
+    @Inject lateinit var authManager: AuthManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -172,7 +178,7 @@ class MainActivity : AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    RiffleApp(viewModel)
+                    RiffleApp(viewModel, authManager)
                     
                     // Show custom update dialog
                     updateInfo.value?.let { update ->
@@ -292,10 +298,32 @@ class MainActivity : AppCompatActivity() {
 }
 
 @Composable
-fun RiffleApp(viewModel: MainViewModel) {
+fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
     val navController = rememberNavController()
+    val currentUser by authManager.currentUser.collectAsState()
     
-    NavHost(navController = navController, startDestination = "home") {
+    // Choose start destination based on auth state (or preferences, if we allowed skip)
+    // For now simple: if no user -> login. 
+    // Ideally we might check preference "hasSkippedLogin" too.
+    val startDest = if (currentUser == null) "login" else "home"
+    
+    NavHost(navController = navController, startDestination = startDest) {
+        composable("login") {
+            com.example.riffle.ui.screen.LoginScreen(
+                authManager = authManager,
+                onLoginSuccess = {
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onSkip = {
+                     navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+            )
+        }
+        
         composable(
             route = "home",
             enterTransition = { slideInHorizontally(tween(300)) { -it } },

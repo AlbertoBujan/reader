@@ -72,6 +72,7 @@ class MainViewModel @Inject constructor(
     private val feedDao: FeedDao,
     private val feedRepository: com.example.riffle.domain.repository.FeedRepository,
     private val preferencesManager: PreferencesManager,
+    private val firestoreHelper: com.example.riffle.data.remote.FirestoreHelper,
     private val feedSearchService: FeedSearchService,
     private val clearbitService: ClearbitService,
     private val backupManager: com.example.riffle.data.local.BackupManager,
@@ -81,18 +82,16 @@ class MainViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
-
+    
     private val _messageEvent = kotlinx.coroutines.flow.MutableSharedFlow<String>()
     val messageEvent = _messageEvent.asSharedFlow()
 
     private val _selectedSource = MutableStateFlow<String?>(null)
     val selectedSource: StateFlow<String?> = _selectedSource.asStateFlow()
 
-    private val _markAsReadOnScroll = MutableStateFlow(preferencesManager.isMarkAsReadOnScroll())
-    val markAsReadOnScroll: StateFlow<Boolean> = _markAsReadOnScroll.asStateFlow()
+    val markAsReadOnScroll: StateFlow<Boolean> = preferencesManager.isMarkAsReadOnScrollFlow
 
-    private val _isDarkMode = MutableStateFlow(preferencesManager.isDarkMode())
-    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+    val isDarkMode: StateFlow<Boolean> = preferencesManager.isDarkModeFlow
 
     private val _discoveredFeeds = MutableStateFlow<List<DiscoveredFeed>>(emptyList())
     val discoveredFeeds: StateFlow<List<DiscoveredFeed>> = _discoveredFeeds.asStateFlow()
@@ -128,25 +127,28 @@ class MainViewModel @Inject constructor(
     fun updateGeminiApiKey(key: String) {
         _geminiApiKey.value = key
         preferencesManager.setGeminiApiKey(key)
+        // Note: API keys shouldn't necessarily be synced for security, but user requested settings sync.
+        // Assuming secure user-specific storage in Firestore rules.
+        // Or skipped? Let's skip API key to be safe unless requested specifically.
     }
 
-    private val _language = MutableStateFlow(preferencesManager.getLanguage())
-    val language: StateFlow<String> = _language.asStateFlow()
+    val language: StateFlow<String> = preferencesManager.languageFlow
 
     fun setLanguage(code: String) {
-        _language.value = code
+        // _language.value = code  <-- Removed local backing field
         preferencesManager.setLanguage(code)
+        firestoreHelper.updateSettingInCloud("language", code)
     }
 
     private val _modelStatuses = MutableStateFlow<Map<String, String>>(emptyMap())
     val modelStatuses: StateFlow<Map<String, String>> = _modelStatuses.asStateFlow()
 
-    private val _syncInterval = MutableStateFlow(preferencesManager.getSyncInterval())
-    val syncInterval: StateFlow<Long> = _syncInterval.asStateFlow()
+    val syncInterval: StateFlow<Long> = preferencesManager.syncIntervalFlow
 
     fun setSyncInterval(hours: Long) {
-        _syncInterval.value = hours
+        // _syncInterval.value = hours <-- Removed
         preferencesManager.setSyncInterval(hours)
+        firestoreHelper.updateSettingInCloud("sync_interval", hours)
         
         // Reschedule Work
         val constraints = androidx.work.Constraints.Builder()
@@ -184,7 +186,7 @@ class MainViewModel @Inject constructor(
                 content.take(10000)
             }
             
-            val currentLanguage = _language.value
+            val currentLanguage = language.value
             val isEnglish = currentLanguage == "en" || (currentLanguage == "system" && java.util.Locale.getDefault().language == "en")
 
             val prompt = if (isEnglish) {
@@ -373,18 +375,18 @@ class MainViewModel @Inject constructor(
     }
 
     fun toggleMarkAsReadOnScroll(enabled: Boolean) {
-        _markAsReadOnScroll.value = enabled
         preferencesManager.setMarkAsReadOnScroll(enabled)
+        firestoreHelper.updateSettingInCloud("mark_on_scroll", enabled)
     }
 
     fun toggleDarkMode(enabled: Boolean) {
-        _isDarkMode.value = enabled
         preferencesManager.setDarkMode(enabled)
+        firestoreHelper.updateSettingInCloud("theme", if (enabled) 1 else 0) // Mapping 1=dark, 0=light based on remote listener
     }
 
     fun renameSource(url: String, newTitle: String) {
         viewModelScope.launch {
-            feedDao.updateSourceTitle(url, newTitle)
+            feedRepository.renameSource(url, newTitle)
         }
     }
 
@@ -432,7 +434,7 @@ class MainViewModel @Inject constructor(
 
     fun deleteSource(url: String) {
         viewModelScope.launch {
-            feedDao.deleteSource(url)
+            feedRepository.deleteSource(url)
             if (_selectedSource.value == url) {
                 _selectedSource.value = null
             }
@@ -447,7 +449,7 @@ class MainViewModel @Inject constructor(
 
     fun deleteFolder(name: String) {
         viewModelScope.launch {
-            feedDao.deleteFolder(name)
+            feedRepository.deleteFolder(name)
             if (_selectedSource.value == "folder:$name") {
                 _selectedSource.value = null
             }
@@ -465,7 +467,7 @@ class MainViewModel @Inject constructor(
 
     fun moveSourceToFolder(url: String, folderName: String?) {
         viewModelScope.launch {
-            feedDao.updateSourceFolder(url, folderName)
+            feedRepository.moveSourceToFolder(url, folderName)
         }
     }
 
@@ -492,7 +494,7 @@ class MainViewModel @Inject constructor(
 
     fun toggleSaveArticle(link: String, isSaved: Boolean) {
         viewModelScope.launch {
-            feedDao.updateArticleSavedStatus(link, !isSaved)
+            feedRepository.toggleArticleSaved(link, !isSaved)
         }
     }
 
