@@ -46,6 +46,9 @@ class FeedRepositoryImpl(
             feedDao.insertSource(source)
             feedDao.insertArticles(parsedFeed.articles)
             
+            // Re-apply states
+            firestoreHelper?.applyRemoteStates()
+            
             // Sync to cloud
             firestoreHelper?.addSourceToCloud(source)
             
@@ -71,6 +74,40 @@ class FeedRepositoryImpl(
         // Sync to cloud
         firestoreHelper?.markReadInCloud(link)
     }
+
+    override suspend fun toggleArticleSaved(link: String, isSaved: Boolean) {
+        feedDao.updateArticleSavedStatus(link, isSaved)
+        // Sync to cloud
+        firestoreHelper?.updateSavedStatusInCloud(link, isSaved)
+    }
+
+    override suspend fun moveSourceToFolder(url: String, folderName: String?) {
+        feedDao.updateSourceFolder(url, folderName)
+        // Sync to cloud
+        firestoreHelper?.updateSourceFolderInCloud(url, folderName)
+    }
+
+    override suspend fun deleteSource(url: String) {
+        feedDao.deleteSource(url)
+        firestoreHelper?.deleteSourceFromCloud(url)
+    }
+
+    override suspend fun deleteFolder(folderName: String) {
+        // Find feeds in folder before local deletion (which cascades)
+        val allSources = feedDao.getAllSourcesList()
+        val feedsInFolder = allSources.filter { it.folderName == folderName }
+        
+        feedDao.deleteFolder(folderName)
+        
+        feedsInFolder.forEach { source ->
+            firestoreHelper?.deleteSourceFromCloud(source.url)
+        }
+    }
+
+    override suspend fun renameSource(url: String, newTitle: String) {
+        feedDao.updateSourceTitle(url, newTitle)
+        firestoreHelper?.updateSourceTitleInCloud(url, newTitle)
+    }
     
     suspend fun syncSource(source: SourceEntity) {
         try {
@@ -79,6 +116,9 @@ class FeedRepositoryImpl(
                 rssParser.parse(response.byteStream(), source.url)
             }
             feedDao.insertArticles(parsedFeed.articles)
+            
+            // Re-apply remote states (read/saved) to ensure consistent state
+            firestoreHelper?.applyRemoteStates()
             
             // Update Icon if changed
             if (!parsedFeed.imageUrl.isNullOrBlank() && parsedFeed.imageUrl != source.iconUrl) {

@@ -11,6 +11,11 @@ interface FeedRepository {
     suspend fun addSource(url: String, title: String?, iconUrl: String? = null)
     suspend fun syncFeeds()
     suspend fun markAsRead(link: String)
+    suspend fun toggleArticleSaved(link: String, isSaved: Boolean)
+    suspend fun moveSourceToFolder(url: String, folderName: String?)
+    suspend fun deleteSource(url: String)
+    suspend fun deleteFolder(folderName: String)
+    suspend fun renameSource(url: String, newTitle: String)
     
     suspend fun importOpml(inputStream: java.io.InputStream)
     suspend fun exportOpml(): String
