@@ -75,7 +75,8 @@ class MainViewModel @Inject constructor(
     private val firestoreHelper: com.example.riffle.data.remote.FirestoreHelper,
     private val feedSearchService: FeedSearchService,
     private val clearbitService: ClearbitService,
-    private val backupManager: com.example.riffle.data.local.BackupManager,
+
+    private val authManager: com.example.riffle.data.remote.AuthManager,
     getAllSourcesUseCase: GetAllSourcesUseCase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
@@ -112,6 +113,31 @@ class MainViewModel @Inject constructor(
 
     fun markStartupScrollPerformed() {
         hasPerformedStartupScroll = true
+    }
+
+    // --- Authentication ---
+    val currentUser = authManager.currentUser
+
+    fun signIn(idToken: String) {
+        viewModelScope.launch {
+            try {
+                authManager.signInWithGoogle(idToken)
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_login_success))
+            } catch (e: Exception) {
+                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_login_error, e.message))
+            }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            authManager.signOut()
+            _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_logout_success))
+        }
+    }
+
+    fun getSignInIntent(): android.content.Intent {
+        return authManager.getSignInIntent()
     }
 
     // --- ZONA IA: Variables para el resumen ---
@@ -569,35 +595,7 @@ class MainViewModel @Inject constructor(
     }
 
 
-    fun exportBackup(uri: android.net.Uri) {
-        viewModelScope.launch {
-            try {
-                context.contentResolver.openOutputStream(uri)?.let { stream ->
-                    backupManager.exportBackup(stream)
-                }
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_export_success))
-            } catch (e: Exception) {
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_export_failed, e.localizedMessage ?: "Unknown"))
-                e.printStackTrace()
-            }
-        }
-    }
 
-    fun importBackup(uri: android.net.Uri) {
-        viewModelScope.launch {
-            try {
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_importing))
-                context.contentResolver.openInputStream(uri)?.let { stream ->
-                    backupManager.importBackup(stream)
-                }
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_import_success))
-                sync() // Refresh data
-            } catch (e: Exception) {
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_backup_import_failed, e.localizedMessage ?: "Unknown"))
-                e.printStackTrace()
-            }
-        }
-    }
 
     private fun createTrustAllSslSocketFactory(): SSLSocketFactory {
         val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
