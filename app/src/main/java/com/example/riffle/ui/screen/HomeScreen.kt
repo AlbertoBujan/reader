@@ -62,6 +62,9 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Login
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -270,6 +273,21 @@ fun HomeScreen(
     val savedCount by viewModel.savedCount.collectAsState()
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
     val modelStatuses by viewModel.modelStatuses.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+    
+    val authLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+                account?.idToken?.let { viewModel.signIn(it) }
+            } catch (e: Exception) {
+                // Log or show error is handled in ViewModel messageEvent usually or we can toast here if needed
+            }
+        }
+    }
     
     var showFolderDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -348,6 +366,83 @@ fun HomeScreen(
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Spacer(Modifier.height(12.dp))
+                        
+                        // User Profile Section
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            if (currentUser != null) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    if (currentUser?.photoUrl != null) {
+                                        AsyncImage(
+                                            model = currentUser?.photoUrl,
+                                            contentDescription = "Profile Picture",
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.AccountCircle,
+                                            contentDescription = "Profile Picture",
+                                            modifier = Modifier.size(40.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = currentUser?.displayName ?: "User",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (currentUser?.email != null) {
+                                            Text(
+                                                text = currentUser?.email!!,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                    IconButton(onClick = { viewModel.signOut() }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ExitToApp,
+                                            contentDescription = "Logout",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = { 
+                                        val intent = viewModel.getSignInIntent()
+                                        authLauncher.launch(intent)
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Login,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = stringResource(R.string.nav_login))
+                                }
+                            }
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -701,19 +796,7 @@ fun HomeScreen(
 
 
 
-    val exportBackupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json"),
-        onResult = { uri ->
-            uri?.let { viewModel.exportBackup(it) }
-        }
-    )
 
-    val importBackupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-        onResult = { uri ->
-            uri?.let { viewModel.importBackup(it) }
-        }
-    )
 
             if (showSettingsDialog) {
                 SettingsDialog(
@@ -732,9 +815,7 @@ fun HomeScreen(
                     },
                     modelStatuses = modelStatuses,
                     syncInterval = viewModel.syncInterval.collectAsState().value,
-                    onSyncIntervalChange = { viewModel.setSyncInterval(it) },
-                    onImportBackup = { importBackupLauncher.launch(arrayOf("application/json")) },
-                    onExportBackup = { exportBackupLauncher.launch("riffle_backup.json") }
+                    onSyncIntervalChange = { viewModel.setSyncInterval(it) }
                 )
             }
 
@@ -815,9 +896,7 @@ fun SettingsDialog(
 
     modelStatuses: Map<String, String>,
     syncInterval: Long,
-    onSyncIntervalChange: (Long) -> Unit,
-    onImportBackup: () -> Unit,
-    onExportBackup: () -> Unit
+    onSyncIntervalChange: (Long) -> Unit
 ) {
     var expandedLanguage by remember { mutableStateOf(false) }
     var expandedInterval by remember { mutableStateOf(false) }
@@ -927,45 +1006,7 @@ fun SettingsDialog(
                      }
 
                 }
-                HorizontalDivider()
-                
-                // OPML Section
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.settings_backup_restore_title), 
-                    style = MaterialTheme.typography.labelLarge, 
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Full Backup Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onImportBackup,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.action_restore), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    
-                    OutlinedButton(
-                        onClick = onExportBackup,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.action_backup), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider()
+
 
                 Spacer(modifier = Modifier.height(16.dp))
                 

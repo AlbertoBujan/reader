@@ -184,4 +184,9 @@
     <string name="error_feed_generic_title">Error Adding Feed</string>
 
     <string name="error_feed_http">Server Error (%1$d). Please check the URL or try again later.</string>
+    <!-- New Strings -->
+    <string name="nav_login">Login</string>
+    <string name="msg_login_success">Logged in successfully</string>
+    <string name="msg_login_error">Login failed: %1$s</string>
+    <string name="msg_logout_success">Logged out successfully</string>
 </resources>
