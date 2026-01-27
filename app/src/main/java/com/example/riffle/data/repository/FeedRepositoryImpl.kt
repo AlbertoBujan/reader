@@ -39,8 +39,19 @@ class FeedRepositoryImpl(
             
             val sourceTitle = if (!title.isNullOrBlank()) title else "Feed from $url" 
             
-            // Prefer provided iconUrl, fallback to parsed one
-            val finalIconUrl = iconUrl ?: parsedFeed.imageUrl
+            // Priority:
+            // 1. Google Favicon Service (using siteUrl or feed url if siteUrl missing)
+            // 2. iconUrl provided (from search)
+            // 3. parsedFeed.imageUrl (from RSS)
+            
+            val siteUrl = parsedFeed.siteUrl ?: url
+            val googleFaviconUrl = "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=$siteUrl&size=64"
+            
+            val finalIconUrl = if (isValidImage(googleFaviconUrl)) {
+                googleFaviconUrl
+            } else {
+                iconUrl ?: parsedFeed.imageUrl
+            }
 
             val source = SourceEntity(url = url, title = sourceTitle, iconUrl = finalIconUrl)
             feedDao.insertSource(source)
@@ -120,12 +131,46 @@ class FeedRepositoryImpl(
             // Re-apply remote states (read/saved) to ensure consistent state
             firestoreHelper?.applyRemoteStates()
             
-            // Update Icon if changed
-            if (!parsedFeed.imageUrl.isNullOrBlank() && parsedFeed.imageUrl != source.iconUrl) {
-                feedDao.updateSourceIcon(source.url, parsedFeed.imageUrl)
+            // Update Icon logic
+            val siteUrl = parsedFeed.siteUrl ?: source.url
+            val googleFaviconUrl = "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=$siteUrl&size=64"
+            
+            // Only check/update if current is null or we want to enforce Google logic mainly?
+            // User implies we should switch to this method. 
+            // So we check if google favicon is valid and different from current.
+            
+            val newIconUrl = if (isValidImage(googleFaviconUrl)) {
+                googleFaviconUrl
+            } else {
+                 parsedFeed.imageUrl
             }
+            
+            if (newIconUrl != null && newIconUrl != source.iconUrl) {
+                feedDao.updateSourceIcon(source.url, newIconUrl)
+                // SYNC TO CLOUD
+                firestoreHelper?.updateSourceIconInCloud(source.url, newIconUrl)
+            }
+
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+    
+    private suspend fun isValidImage(url: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                connection.requestMethod = "HEAD"
+                connection.connectTimeout = 3000
+                connection.readTimeout = 3000
+                connection.connect()
+                val code = connection.responseCode
+                val contentType = connection.contentType
+                connection.disconnect()
+                code == 200 && contentType?.startsWith("image/") == true
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 
