@@ -11,7 +11,8 @@ import java.util.Locale
 
 data class ParsedFeed(
     val articles: List<ArticleEntity>,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val siteUrl: String? = null
 )
 
 class RssParser {
@@ -33,6 +34,7 @@ class RssParser {
     private fun readFeed(parser: XmlPullParser, sourceUrl: String): ParsedFeed {
         var entries = listOf<ArticleEntity>()
         var imageUrl: String? = null
+        var siteUrl: String? = null
 
         // Flexible root tag check
         if (parser.name == "rss") {
@@ -42,26 +44,28 @@ class RssParser {
                      val result = readChannel(parser, sourceUrl)
                      entries = result.articles
                      imageUrl = result.imageUrl
+                     siteUrl = result.siteUrl
                 } else {
                     skip(parser)
                 }
             }
         } else if (parser.name == "feed") {
             // Basic Atom support just in case, though structure is different.
-            // For now assuming existing logic primarily targets RSS structure within this method.
              val result = readChannel(parser, sourceUrl) // Reusing readChannel/readEntry logic best effort
              entries = result.articles
+             imageUrl = result.imageUrl
         } else {
             // Try to proceed if possible or throw
         }
 
-        return ParsedFeed(entries, imageUrl)
+        return ParsedFeed(entries, imageUrl, siteUrl)
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
     private fun readChannel(parser: XmlPullParser, sourceUrl: String): ParsedFeed {
         val entries = mutableListOf<ArticleEntity>()
         var imageUrl: String? = null
+        var siteUrl: String? = null
         
         while (parser.next() != XmlPullParser.END_TAG) {
             if (parser.eventType != XmlPullParser.START_TAG) {
@@ -70,10 +74,11 @@ class RssParser {
             when (parser.name) {
                 "item" -> entries.add(readEntry(parser, sourceUrl))
                 "image" -> imageUrl = readImage(parser)
+                "link" -> siteUrl = readText(parser, "link")
                 else -> skip(parser)
             }
         }
-        return ParsedFeed(entries, imageUrl)
+        return ParsedFeed(entries, imageUrl, siteUrl)
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
@@ -145,6 +150,10 @@ class RssParser {
         var result = ""
         if (parser.next() == XmlPullParser.TEXT) {
             result = parser.text
+            // Truncate if too long to avoid CursorWindow errors
+            if (result.length > 100000) {
+                result = result.substring(0, 100000)
+            }
             parser.nextTag()
         }
         parser.require(XmlPullParser.END_TAG, ns, tagName)
@@ -181,3 +190,4 @@ class RssParser {
         }
     }
 }
+

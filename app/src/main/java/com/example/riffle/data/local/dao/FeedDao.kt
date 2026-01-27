@@ -119,6 +119,9 @@ interface FeedDao {
 
     @Query("UPDATE folders SET name = :newName WHERE name = :oldName")
     suspend fun renameFolder(oldName: String, newName: String)
+
+    @Query("UPDATE articles SET description = SUBSTR(description, 1, 100000) WHERE LENGTH(description) > 100000")
+    suspend fun cleanupHugeArticles()
 }
 
 data class SourceUnreadCount(

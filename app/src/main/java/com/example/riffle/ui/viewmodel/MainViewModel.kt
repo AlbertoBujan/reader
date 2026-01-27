@@ -319,7 +319,13 @@ class MainViewModel @Inject constructor(
         // Carga inicial de artículos para ocultar
         updateHiddenArticles()
         // Sync inicial una sola vez
-
+        viewModelScope.launch {
+            try {
+                feedDao.cleanupHugeArticles()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private data class FilterState(

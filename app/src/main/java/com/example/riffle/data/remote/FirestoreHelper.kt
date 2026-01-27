@@ -108,10 +108,20 @@ class FirestoreHelper @Inject constructor(
                              feedDao.insertSource(source)
                              hasNewFeeds = true
                         } else if (url != null) {
-                            // Sync folder or title updates if changed
+                            // Sync folder, title or icon updates if changed
                             val existing = feedDao.getSourceByUrl(url)
-                            if (existing != null && (existing.folderName != folderName || existing.title != title)) {
-                                 feedDao.insertSource(existing.copy(folderName = folderName, title = title ?: existing.title))
+                            if (existing != null) {
+                                val needUpdate = existing.folderName != folderName || 
+                                                 existing.title != title ||
+                                                 (iconUrl != null && existing.iconUrl != iconUrl)
+                                
+                                if (needUpdate) {
+                                    feedDao.insertSource(existing.copy(
+                                        folderName = folderName, 
+                                        title = title ?: existing.title,
+                                        iconUrl = iconUrl ?: existing.iconUrl
+                                    ))
+                                }
                             }
                         }
                     }
@@ -396,6 +406,15 @@ class FirestoreHelper @Inject constructor(
         val user = auth.currentUser ?: return
         val docId = hashString(url)
         val data = hashMapOf("title" to newTitle)
+        firestore.collection("users").document(user.uid).collection("feeds")
+            .document(docId)
+            .set(data, SetOptions.merge())
+    }
+
+    fun updateSourceIconInCloud(url: String, iconUrl: String) {
+        val user = auth.currentUser ?: return
+        val docId = hashString(url)
+        val data = hashMapOf("iconUrl" to iconUrl)
         firestore.collection("users").document(user.uid).collection("feeds")
             .document(docId)
             .set(data, SetOptions.merge())
