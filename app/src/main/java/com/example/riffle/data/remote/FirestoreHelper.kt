@@ -146,14 +146,53 @@ class FirestoreHelper @Inject constructor(
             
             if (snapshot != null && snapshot.exists()) {
                 scope.launch {
-                    val items = snapshot.get("items") as? List<String> ?: emptyList()
+                    // Handle both old format (List<String>) and new format (List<Map>) for transitions
+                    val rawItems = snapshot.get("items") as? List<*> ?: emptyList<Any>()
                     
-                    // Optimization: calculating diff might be expensive if list is huge.
-                    // For now, iterate and checking cache.
-                    items.forEach { link ->
+                    val validLinks = mutableSetOf<String>()
+                    val itemsToRemove = mutableListOf<Any>()
+                    val sixMonthsAgo = System.currentTimeMillis() - (180L * 24 * 60 * 60 * 1000)
+                    
+                    rawItems.forEach { item ->
+                        when (item) {
+                            is String -> {
+                                // Old format: String URL.
+                                // We can't know the date, so we assume it's recent (keep it) OR migrate it?
+                                // Let's keep it for now to avoid accidental deletion of history.
+                                // Or we could upgrade it to object with current time? 
+                                // Better to leave as is or just read it.
+                                validLinks.add(item)
+                            }
+                            is Map<*, *> -> {
+                                val url = item["u"] as? String
+                                val timestamp = item["t"] as? Long ?: 0L
+                                
+                                if (url != null) {
+                                    if (timestamp < sixMonthsAgo) {
+                                        // Too old, mark for removal
+                                        itemsToRemove.add(item)
+                                    } else {
+                                        validLinks.add(url)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Update local DB
+                    validLinks.forEach { link ->
                         if (!remoteReadLinks.contains(link)) {
                             remoteReadLinks.add(link)
                             feedDao.markArticleAsRead(link)
+                        }
+                    }
+                    
+                    // Trigger Lazy Cleanup in Cloud
+                    if (itemsToRemove.isNotEmpty()) {
+                        // Remove the specific object instances we found
+                        // Chunking to be safe, though arrayRemove supports varargs
+                        itemsToRemove.chunked(500).forEach { chunk ->
+                            readDocRef.update("items", FieldValue.arrayRemove(*chunk.toTypedArray()))
                         }
                     }
                 }
@@ -181,13 +220,6 @@ class FirestoreHelper @Inject constructor(
                         }
                     }
                     
-                    // Handle removals (if item was in our cache but no longer in remote list)
-                    // Note: This logic depends on remoteSavedLinks being accurate.
-                    // If we want to support un-saving from other devices, we need to track logic carefully.
-                    // Ideally we sync the whole list.
-                    
-                    // For safety against large DB operations, maybe allow local to drift if unsaved elsewhere?
-                    // User requirement: sync. So if removed elsewhere, remove here.
                     val toRemove = remoteSavedLinks.minus(currentRemoteSet)
                     toRemove.forEach { link ->
                         remoteSavedLinks.remove(link)
@@ -278,21 +310,17 @@ class FirestoreHelper @Inject constructor(
 
             val userRef = firestore.collection("users").document(userId).collection("sync").document("read")
             
-            // Use arrayUnion to add without overwriting existing
-            // Note: Cloud Firestore limits arrayUnion to 10 elements per call? No, that's 'in' queries.
-            // But there is a document size limit (1MB). If array is too big, this strategy fails.
-            // However, for typical RSS reader, 10-20k items might fit (50 chars * 20000 = 1MB).
-            // This is a trade-off. For now, acceptable.
+            // New format: Map with url (u) and timestamp (t)
+            // Using short keys to save space.
+            val now = System.currentTimeMillis()
+            val objectsToAdd = validItems.map { url ->
+                mapOf("u" to url, "t" to now)
+            }
             
-            // Breaking into chunks of 500 just in case to avoid WriteBatch limits if we were using it (we aren't, but still good practice)
-            // FieldValue.arrayUnion takes varargs.
-            
-            validItems.chunked(500).forEach { chunk ->
+            objectsToAdd.chunked(500).forEach { chunk ->
                 userRef.set(mapOf("items" to FieldValue.arrayUnion(*chunk.toTypedArray())), SetOptions.merge())
                     .addOnFailureListener { e ->
-                        // Retry logic could go here, for now log
                         e.printStackTrace()
-                        // Re-queue?
                     }
             }
         }
