@@ -161,16 +161,13 @@ class FirestoreHelper @Inject constructor(
                     
                     val validLinks = mutableSetOf<String>()
                     val itemsToRemove = mutableListOf<Any>()
-                    val sixMonthsAgo = System.currentTimeMillis() - (180L * 24 * 60 * 60 * 1000)
+                    // 2 weeks retention
+                    val retentionLimit = System.currentTimeMillis() - (14L * 24 * 60 * 60 * 1000)
                     
                     rawItems.forEach { item ->
                         when (item) {
                             is String -> {
                                 // Old format: String URL.
-                                // We can't know the date, so we assume it's recent (keep it) OR migrate it?
-                                // Let's keep it for now to avoid accidental deletion of history.
-                                // Or we could upgrade it to object with current time? 
-                                // Better to leave as is or just read it.
                                 validLinks.add(item)
                             }
                             is Map<*, *> -> {
@@ -178,7 +175,7 @@ class FirestoreHelper @Inject constructor(
                                 val timestamp = item["t"] as? Long ?: 0L
                                 
                                 if (url != null) {
-                                    if (timestamp < sixMonthsAgo) {
+                                    if (timestamp < retentionLimit) {
                                         // Too old, mark for removal
                                         itemsToRemove.add(item)
                                     } else {
