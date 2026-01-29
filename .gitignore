@@ -37,3 +37,4 @@ Thumbs.db
 output-metadata.json
 *.dm
 app/release/baselineProfiles/
+.vscode/settings.json

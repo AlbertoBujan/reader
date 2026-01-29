@@ -88,14 +88,6 @@ fun LoginScreen(
                     onClick = {
                         scope.launch {
                             try {
-                                RiffleLogger.log("Limpiando estado de credenciales previo...")
-                                try {
-                                    credentialManager.clearCredentialState(ClearCredentialStateRequest())
-                                } catch (e: Exception) {
-                                    // Ignorar error al limpiar si no había nada
-                                    android.util.Log.w("AuthDebug", "Error cleaning credential state", e)
-                                }
-
                                 RiffleLogger.log("Iniciando login con Credential Manager")
                                 val googleIdOption = authManager.getGoogleIdOption()
                                 val request = GetCredentialRequest.Builder()

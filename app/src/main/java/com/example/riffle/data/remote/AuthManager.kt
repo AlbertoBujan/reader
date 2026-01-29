@@ -34,9 +34,9 @@ class AuthManager @Inject constructor(
         // Use the explicit Web Client ID as requested to fix stale token issues
         val webClientId = "455036780108-5drqf232p958nqgj0tij3nmbun77isba.apps.googleusercontent.com"
         return GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
+            .setFilterByAuthorizedAccounts(true)
             .setServerClientId(webClientId)
-            .setAutoSelectEnabled(false)
+            .setAutoSelectEnabled(true)
             .build()
     }
 
