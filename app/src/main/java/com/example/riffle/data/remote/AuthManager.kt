@@ -1,10 +1,10 @@
 package com.example.riffle.data.remote
 
 import android.content.Context
-import android.content.Intent
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import com.example.riffle.R
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -30,14 +30,14 @@ class AuthManager @Inject constructor(
         }
     }
 
-    fun getSignInIntent(): Intent {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
-            .requestEmail()
+    fun getGoogleIdOption(): GetGoogleIdOption {
+        // Use the explicit Web Client ID as requested to fix stale token issues
+        val webClientId = "455036780108-5drqf232p958nqgj0tij3nmbun77isba.apps.googleusercontent.com"
+        return GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(webClientId)
+            .setAutoSelectEnabled(false)
             .build()
-        
-        val googleSignInClient = GoogleSignIn.getClient(context, gso)
-        return googleSignInClient.signInIntent
     }
 
     suspend fun signInWithGoogle(idToken: String) {
@@ -45,10 +45,13 @@ class AuthManager @Inject constructor(
         auth.signInWithCredential(credential).await()
     }
 
-    fun signOut() {
-        auth.signOut()
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
-        val googleSignInClient = GoogleSignIn.getClient(context, gso)
-        googleSignInClient.signOut()
+    suspend fun signOut() {
+        try {
+            auth.signOut()
+            val credentialManager = CredentialManager.create(context)
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
