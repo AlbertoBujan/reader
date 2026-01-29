@@ -49,8 +49,9 @@ class FirestoreHelper @Inject constructor(
     private val queueMutex = Mutex()
 
     // --- State Caching for Race Conditions ---
-    private val remoteReadLinks = java.util.Collections.synchronizedSet(HashSet<String>())
-    private val remoteSavedLinks = java.util.Collections.synchronizedSet(HashSet<String>())
+    private val remoteReadLinks = HashSet<String>()
+    private val remoteSavedLinks = HashSet<String>()
+    private val stateMutex = Mutex()
 
     fun startSync() {
         auth.addAuthStateListener { firebaseAuth ->
@@ -187,10 +188,12 @@ class FirestoreHelper @Inject constructor(
                     }
                     
                     // Update local DB
-                    validLinks.forEach { link ->
-                        if (!remoteReadLinks.contains(link)) {
-                            remoteReadLinks.add(link)
-                            feedDao.markArticleAsRead(link)
+                    stateMutex.withLock {
+                        validLinks.forEach { link ->
+                            if (!remoteReadLinks.contains(link)) {
+                                remoteReadLinks.add(link)
+                                feedDao.markArticleAsRead(link)
+                            }
                         }
                     }
                     
@@ -219,18 +222,20 @@ class FirestoreHelper @Inject constructor(
                     val items = (snapshot.get("items") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                     val currentRemoteSet = items.toSet()
                     
-                    // Handle additions
-                    currentRemoteSet.forEach { link ->
-                        if (!remoteSavedLinks.contains(link)) {
-                            remoteSavedLinks.add(link)
-                            feedDao.updateArticleSavedStatus(link, true)
+                    stateMutex.withLock {
+                        // Handle additions
+                        currentRemoteSet.forEach { link ->
+                            if (!remoteSavedLinks.contains(link)) {
+                                remoteSavedLinks.add(link)
+                                feedDao.updateArticleSavedStatus(link, true)
+                            }
                         }
-                    }
-                    
-                    val toRemove = remoteSavedLinks.minus(currentRemoteSet)
-                    toRemove.forEach { link ->
-                        remoteSavedLinks.remove(link)
-                        feedDao.updateArticleSavedStatus(link, false)
+                        
+                        val toRemove = remoteSavedLinks.minus(currentRemoteSet)
+                        toRemove.forEach { link ->
+                            remoteSavedLinks.remove(link)
+                            feedDao.updateArticleSavedStatus(link, false)
+                        }
                     }
                 }
             }
@@ -262,8 +267,9 @@ class FirestoreHelper @Inject constructor(
 
     fun applyRemoteStates() {
         scope.launch {
-            val readCopy = remoteReadLinks.toSet() 
-            val savedCopy = remoteSavedLinks.toSet()
+            val (readCopy, savedCopy) = stateMutex.withLock {
+                Pair(remoteReadLinks.toSet(), remoteSavedLinks.toSet())
+            }
             readCopy.forEach { link -> feedDao.markArticleAsRead(link) }
             savedCopy.forEach { link -> feedDao.updateArticleSavedStatus(link, true) }
         }
