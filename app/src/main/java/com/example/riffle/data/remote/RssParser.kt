@@ -8,6 +8,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.example.riffle.util.RiffleLogger
 
 data class ParsedFeed(
     val articles: List<ArticleEntity>,
@@ -110,7 +111,7 @@ class RssParser {
                 continue
             }
             when (parser.name) {
-                "title" -> title = readText(parser, "title")
+                "title" -> title = cleanHtmlTags(readText(parser, "title"))
                 "link" -> link = readText(parser, "link")
                 "description" -> description = readText(parser, "description")
                 "pubDate" -> pubDateStr = readText(parser, "pubDate")
@@ -171,6 +172,7 @@ class RssParser {
             try {
                 return format.parse(dateStr)?.time ?: continue
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
             }
         }
         return System.currentTimeMillis()
@@ -188,6 +190,10 @@ class RssParser {
                 XmlPullParser.START_TAG -> depth++
             }
         }
+    }
+
+    private fun cleanHtmlTags(html: String): String {
+        return html.replace(Regex("<[^>]*>"), "").trim()
     }
 }
 

@@ -109,6 +109,8 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.riffle.util.RiffleLogger
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -284,6 +286,7 @@ fun HomeScreen(
                 val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
                 account?.idToken?.let { viewModel.signIn(it) }
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                 // Log or show error is handled in ViewModel messageEvent usually or we can toast here if needed
             }
         }

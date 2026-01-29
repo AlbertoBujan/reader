@@ -35,6 +35,7 @@ import com.example.riffle.ui.screen.ArticleReaderScreen
 import com.example.riffle.ui.screen.HomeScreen
 import com.example.riffle.ui.viewmodel.MainViewModel
 import com.example.riffle.ui.theme.RiffleTheme
+import com.example.riffle.util.RiffleLogger
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.URLEncoder
 import android.app.DownloadManager
@@ -64,6 +65,8 @@ import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
+
+
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -76,6 +79,7 @@ import java.util.concurrent.TimeUnit
 class MainActivity : AppCompatActivity() {
     
     @Inject lateinit var authManager: AuthManager
+    @Inject lateinit var logger: RiffleLogger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,6 +101,8 @@ class MainActivity : AppCompatActivity() {
         )
         
         enableEdgeToEdge()
+
+        logger.log("App Started")
 
         // State for update dialog
         val updateInfo = mutableStateOf<Update?>(null)

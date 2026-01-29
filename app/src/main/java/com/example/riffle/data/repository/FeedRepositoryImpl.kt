@@ -4,6 +4,7 @@ import com.example.riffle.data.local.dao.FeedDao
 import com.example.riffle.data.local.entity.SourceEntity
 import com.example.riffle.data.remote.FeedService
 import com.example.riffle.data.remote.RssParser
+import com.example.riffle.util.RiffleLogger
 import com.example.riffle.domain.repository.FeedRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -64,6 +65,7 @@ class FeedRepositoryImpl(
             firestoreHelper?.addSourceToCloud(source)
             
         } catch (e: Exception) {
+            RiffleLogger.recordException(e)
             e.printStackTrace()
             throw e
         }
@@ -152,6 +154,7 @@ class FeedRepositoryImpl(
             }
 
         } catch (e: Exception) {
+            RiffleLogger.recordException(e)
             e.printStackTrace()
         }
     }
@@ -169,6 +172,7 @@ class FeedRepositoryImpl(
                 connection.disconnect()
                 code == 200 && contentType?.startsWith("image/") == true
             } catch (e: Exception) {
+            RiffleLogger.recordException(e)
                 false
             }
         }
@@ -204,6 +208,7 @@ class FeedRepositoryImpl(
                             }
                         }
                     } catch (e: Exception) {
+            RiffleLogger.recordException(e)
                         e.printStackTrace()
                     }
                 }
@@ -245,6 +250,7 @@ class FeedRepositoryImpl(
                 // syncing 100 feeds takes time. Better let user trigger it.
                 
             } catch (e: Exception) {
+            RiffleLogger.recordException(e)
                 e.printStackTrace()
                 throw e
             }

@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.riffle.R
 import com.example.riffle.data.remote.AuthManager
+import com.example.riffle.util.RiffleLogger
 import com.example.riffle.ui.viewmodel.MainViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
@@ -64,11 +65,13 @@ fun LoginScreen(
                     try {
                         authManager.signInWithGoogle(account.idToken!!)
                     } catch (e: Exception) {
+                        RiffleLogger.recordException(e)
                         snackbarHostState.showSnackbar("Login Failed: ${e.message}")
                     }
                 }
             }
         } catch (e: ApiException) {
+            RiffleLogger.recordException(e)
             scope.launch {
                 snackbarHostState.showSnackbar("Google Sign In Failed: ${e.statusCode}")
             }
