@@ -110,7 +110,7 @@ class RssParser {
                 continue
             }
             when (parser.name) {
-                "title" -> title = readText(parser, "title")
+                "title" -> title = cleanHtmlTags(readText(parser, "title"))
                 "link" -> link = readText(parser, "link")
                 "description" -> description = readText(parser, "description")
                 "pubDate" -> pubDateStr = readText(parser, "pubDate")
@@ -188,6 +188,10 @@ class RssParser {
                 XmlPullParser.START_TAG -> depth++
             }
         }
+    }
+
+    private fun cleanHtmlTags(html: String): String {
+        return html.replace(Regex("<[^>]*>"), "").trim()
     }
 }
 
