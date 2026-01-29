@@ -189,4 +189,8 @@
     <string name="msg_login_success">Logged in successfully</string>
     <string name="msg_login_error">Login failed: %1$s</string>
     <string name="msg_logout_success">Logged out successfully</string>
+    
+    <!-- Dates -->
+    <string name="date_today">Today</string>
+    <string name="date_yesterday">Yesterday</string>
 </resources>

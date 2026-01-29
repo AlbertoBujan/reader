@@ -3,6 +3,7 @@ package com.example.riffle.ui.screen
 import androidx.compose.ui.res.stringResource
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -153,6 +154,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import androidx.compose.animation.core.animateFloat
@@ -1650,8 +1652,9 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                val context = LocalContext.current
                 Text(
-                    text = "${formatDate(article.pubDate)} • ${sourceName ?: article.sourceUrl}",
+                    text = "${formatDate(article.pubDate, context)} • ${sourceName ?: article.sourceUrl}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -1662,9 +1665,29 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
 
 
 
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+private fun formatDate(timestamp: Long, context: Context): String {
+    val date = Date(timestamp)
+    val calendar = Calendar.getInstance()
+    calendar.time = date
+    
+    val today = Calendar.getInstance()
+    val yesterday = Calendar.getInstance()
+    yesterday.add(Calendar.DAY_OF_YEAR, -1)
+    
+    val isToday = calendar.get(Calendar.YEAR) == today.get(Calendar.YEAR) && 
+                  calendar.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
+                  
+    val isYesterday = calendar.get(Calendar.YEAR) == yesterday.get(Calendar.YEAR) && 
+                      calendar.get(Calendar.DAY_OF_YEAR) == yesterday.get(Calendar.DAY_OF_YEAR)
+
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val time = timeFormat.format(date)
+
+    return when {
+        isToday -> "${context.getString(R.string.date_today)} $time"
+        isYesterday -> "${context.getString(R.string.date_yesterday)} $time"
+        else -> SimpleDateFormat("dd MMM HH:mm", Locale.getDefault()).format(date)
+    }
 }
 
 
