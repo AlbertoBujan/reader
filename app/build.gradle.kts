@@ -18,11 +18,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.riffle"
+    namespace = "com.boaxente.riffle"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.riffle"
+        applicationId = "com.boaxente.riffle"
         minSdk = 24
         targetSdk = 34
 versionCode = 46

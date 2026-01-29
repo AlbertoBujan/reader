@@ -1,4 +1,4 @@
-package com.example.riffle.ui.screen
+package com.boaxente.riffle.ui.screen
 
 
 import androidx.compose.animation.core.animateFloat
@@ -69,7 +69,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -77,8 +76,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.riffle.ui.viewmodel.MainViewModel
-import com.example.riffle.R
+import com.boaxente.riffle.ui.viewmodel.MainViewModel
+import com.boaxente.riffle.R
 import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)

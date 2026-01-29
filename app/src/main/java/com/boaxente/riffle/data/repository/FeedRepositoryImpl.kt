@@ -1,11 +1,11 @@
-package com.example.riffle.data.repository
+package com.boaxente.riffle.data.repository
 
-import com.example.riffle.data.local.dao.FeedDao
-import com.example.riffle.data.local.entity.SourceEntity
-import com.example.riffle.data.remote.FeedService
-import com.example.riffle.data.remote.RssParser
-import com.example.riffle.util.RiffleLogger
-import com.example.riffle.domain.repository.FeedRepository
+import com.boaxente.riffle.data.local.dao.FeedDao
+import com.boaxente.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.remote.FeedService
+import com.boaxente.riffle.data.remote.RssParser
+import com.boaxente.riffle.util.RiffleLogger
+import com.boaxente.riffle.domain.repository.FeedRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -17,7 +17,7 @@ class FeedRepositoryImpl(
     private val feedDao: FeedDao,
     private val feedService: FeedService,
     private val rssParser: RssParser,
-    private val firestoreHelper: com.example.riffle.data.remote.FirestoreHelper? = null 
+    private val firestoreHelper: com.boaxente.riffle.data.remote.FirestoreHelper? = null
 ) : FeedRepository {
     
     init {
@@ -181,7 +181,7 @@ class FeedRepositoryImpl(
     override suspend fun importOpml(inputStream: InputStream) {
         withContext(Dispatchers.IO) {
             try {
-                val items = com.example.riffle.utils.OpmlUtility.parse(inputStream)
+                val items = com.boaxente.riffle.utils.OpmlUtility.parse(inputStream)
                 
                 // Helper to process a source item
                 suspend fun processSource(title: String, url: String, folderName: String?) {
@@ -215,7 +215,7 @@ class FeedRepositoryImpl(
 
                 items.forEach { item ->
                     when (item) {
-                        is com.example.riffle.utils.OpmlUtility.OpmlItem.Folder -> {
+                        is com.boaxente.riffle.utils.OpmlUtility.OpmlItem.Folder -> {
                             // Insert folder? We don't have explicit FolderEntity insertion in DAO usually exposed? 
                             // Ensure folder exists or just assign sources to it.
                             // SourceEntity has ForeignKey to FolderEntity? Checking SourceEntity definition... 
@@ -234,13 +234,13 @@ class FeedRepositoryImpl(
                             // I need to add `insertFolder` to FeedDao or Repository if missing.
                             // I will add `createFolder(item.title)` call.
                             
-                            feedDao.insertFolder(com.example.riffle.data.local.entity.FolderEntity(item.title))
+                            feedDao.insertFolder(com.boaxente.riffle.data.local.entity.FolderEntity(item.title))
                             
                             item.children.forEach { child ->
                                 processSource(child.title, child.xmlUrl, item.title)
                             }
                         }
-                        is com.example.riffle.utils.OpmlUtility.OpmlItem.Source -> {
+                        is com.boaxente.riffle.utils.OpmlUtility.OpmlItem.Source -> {
                             processSource(item.title, item.xmlUrl, null)
                         }
                     }
@@ -260,7 +260,7 @@ class FeedRepositoryImpl(
     override suspend fun exportOpml(): String {
         return withContext(Dispatchers.IO) {
             val sources = feedDao.getAllSourcesList()
-            com.example.riffle.utils.OpmlUtility.generate(sources)
+            com.boaxente.riffle.utils.OpmlUtility.generate(sources)
         }
     }
 }

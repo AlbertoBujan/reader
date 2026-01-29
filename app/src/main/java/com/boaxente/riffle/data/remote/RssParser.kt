@@ -1,14 +1,14 @@
-package com.example.riffle.data.remote
+package com.boaxente.riffle.data.remote
 
 import android.util.Xml
-import com.example.riffle.data.local.entity.ArticleEntity
+import com.boaxente.riffle.data.local.entity.ArticleEntity
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.example.riffle.util.RiffleLogger
+import com.boaxente.riffle.util.RiffleLogger
 
 data class ParsedFeed(
     val articles: List<ArticleEntity>,

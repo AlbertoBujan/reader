@@ -7,17 +7,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:455036780108:android:249b2283c75e867fd77ee9",
+        "mobilesdk_app_id": "1:455036780108:android:cd3681419197e52bd77ee9",
         "android_client_info": {
-          "package_name": "com.example.riffle"
+          "package_name": "com.boaxente.riffle"
         }
       },
       "oauth_client": [
         {
-          "client_id": "455036780108-32nf3u9hsffhg694qfnhbo08tg23mck5.apps.googleusercontent.com",
+          "client_id": "455036780108-bpctgbmehd065jblg98drduvsv3kkl82.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.riffle",
+            "package_name": "com.boaxente.riffle",
+            "certificate_hash": "79193a1e9126155c2b220bcd145cde45d6af5756"
+          }
+        },
+        {
+          "client_id": "455036780108-j3edfioq44v523r7if696t1r9rm6df9h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.boaxente.riffle",
             "certificate_hash": "6d80432bf4ccb925f27eb5902db8f65b3b42e21d"
           }
         },

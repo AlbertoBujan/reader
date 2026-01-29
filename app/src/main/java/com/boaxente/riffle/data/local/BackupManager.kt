@@ -1,8 +1,6 @@
-package com.example.riffle.data.local
+package com.boaxente.riffle.data.local
 
-import com.example.riffle.data.local.dao.FeedDao
-import com.example.riffle.data.local.entity.FolderEntity
-import com.example.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.local.dao.FeedDao
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

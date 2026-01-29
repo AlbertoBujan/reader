@@ -1,11 +1,11 @@
-package com.example.riffle.worker
+package com.boaxente.riffle.worker
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.riffle.domain.repository.FeedRepository
-import com.example.riffle.util.RiffleLogger
+import com.boaxente.riffle.domain.repository.FeedRepository
+import com.boaxente.riffle.util.RiffleLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 

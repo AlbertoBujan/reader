@@ -1,4 +1,4 @@
-package com.example.riffle.data.remote
+package com.boaxente.riffle.data.remote
 
 import okhttp3.ResponseBody
 import retrofit2.http.GET

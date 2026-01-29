@@ -1,4 +1,4 @@
-package com.example.riffle.util
+package com.boaxente.riffle.util
 
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import javax.inject.Inject

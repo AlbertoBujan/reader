@@ -1,7 +1,7 @@
-package com.example.riffle.utils
+package com.boaxente.riffle.utils
 
 import android.util.Xml
-import com.example.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.local.entity.SourceEntity
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException

@@ -1,4 +1,4 @@
-package com.example.riffle.data.remote
+package com.boaxente.riffle.data.remote
 
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.GET

@@ -1,4 +1,4 @@
-package com.example.riffle
+package com.boaxente.riffle
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Surface
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -19,37 +18,33 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
-import com.example.riffle.data.remote.AuthManager
+import com.boaxente.riffle.data.remote.AuthManager
 import javax.inject.Inject
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.riffle.ui.screen.ArticleReaderScreen
-import com.example.riffle.ui.screen.HomeScreen
-import com.example.riffle.ui.viewmodel.MainViewModel
-import com.example.riffle.ui.theme.RiffleTheme
-import com.example.riffle.util.RiffleLogger
+import com.boaxente.riffle.ui.screen.ArticleReaderScreen
+import com.boaxente.riffle.ui.screen.HomeScreen
+import com.boaxente.riffle.ui.viewmodel.MainViewModel
+import com.boaxente.riffle.ui.theme.RiffleTheme
+import com.boaxente.riffle.util.RiffleLogger
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.URLEncoder
 import android.app.DownloadManager
 import android.content.*
 import android.database.Cursor
 import android.net.Uri
-import android.os.Environment
 import androidx.core.content.FileProvider
 import java.io.File
 
 import java.nio.charset.StandardCharsets
 import com.github.javiersantos.appupdater.AppUpdaterUtils
 import com.github.javiersantos.appupdater.enums.AppUpdaterError
-import com.github.javiersantos.appupdater.enums.Display
 import com.github.javiersantos.appupdater.enums.UpdateFrom
 import com.github.javiersantos.appupdater.objects.Update
 import androidx.compose.material3.AlertDialog
@@ -57,9 +52,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
@@ -72,7 +64,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.example.riffle.worker.FeedSyncWorker
+import com.boaxente.riffle.worker.FeedSyncWorker
 import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
@@ -315,7 +307,7 @@ fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
     
     NavHost(navController = navController, startDestination = startDest) {
         composable("login") {
-            com.example.riffle.ui.screen.LoginScreen(
+            com.boaxente.riffle.ui.screen.LoginScreen(
                 authManager = authManager,
                 onLoginSuccess = {
                     navController.navigate("home") {
@@ -356,7 +348,7 @@ fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
             popEnterTransition = { slideInHorizontally(tween(300)) { it } },
             popExitTransition = { slideOutHorizontally(tween(200)) { it } }
         ) {
-            com.example.riffle.ui.screen.SearchFeedScreen(
+            com.boaxente.riffle.ui.screen.SearchFeedScreen(
                 onBack = { navController.popBackStack() },
                 viewModel = viewModel
             )

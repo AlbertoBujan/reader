@@ -1,4 +1,4 @@
-package com.example.riffle
+package com.boaxente.riffle
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory

@@ -1,6 +1,6 @@
-package com.example.riffle.domain.usecase
+package com.boaxente.riffle.domain.usecase
 
-import com.example.riffle.domain.repository.FeedRepository
+import com.boaxente.riffle.domain.repository.FeedRepository
 import javax.inject.Inject
 
 class AddSourceUseCase @Inject constructor(

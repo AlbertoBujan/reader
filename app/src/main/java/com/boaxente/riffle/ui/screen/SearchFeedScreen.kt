@@ -1,8 +1,7 @@
-package com.example.riffle.ui.screen
+package com.boaxente.riffle.ui.screen
 
 import androidx.compose.ui.res.stringArrayResource
 import kotlinx.coroutines.delay
-import androidx.activity.compose.BackHandler
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,10 +60,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.example.riffle.R
-import com.example.riffle.ui.viewmodel.MainViewModel
+import com.boaxente.riffle.R
+import com.boaxente.riffle.ui.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,11 +105,11 @@ fun SearchFeedScreen(
 
     LaunchedEffect(sourceAdditionState) {
         when (val state = sourceAdditionState) {
-            is com.example.riffle.ui.viewmodel.SourceAdditionState.Success -> {
+            is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Success -> {
                 viewModel.clearSourceAdditionState()
                 onBack()
             }
-            is com.example.riffle.ui.viewmodel.SourceAdditionState.Error -> {
+            is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Error -> {
                 dialogTitle = state.title
                 dialogMessage = state.message
                 showDialog = true
@@ -233,8 +230,8 @@ fun SearchFeedScreen(
                 ) {
                     if (query.isNotBlank() && !isSearching && feeds.isEmpty()) {
                         item {
-                            val isDirectLoading = (sourceAdditionState is com.example.riffle.ui.viewmodel.SourceAdditionState.Loading) && 
-                                (sourceAdditionState as com.example.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == query
+                            val isDirectLoading = (sourceAdditionState is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading) &&
+                                (sourceAdditionState as com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == query
                             
                             TextButton(
                                 onClick = {
@@ -261,8 +258,8 @@ fun SearchFeedScreen(
                     val displayedFeeds = if (isExpanded) feeds else feeds.take(5)
                     
                     items(displayedFeeds) { feed ->
-                        val isItemLoading = (sourceAdditionState is com.example.riffle.ui.viewmodel.SourceAdditionState.Loading) && 
-                            (sourceAdditionState as com.example.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == feed.url
+                        val isItemLoading = (sourceAdditionState is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading) &&
+                            (sourceAdditionState as com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == feed.url
                         
                         ListItem(
                             leadingContent = {
@@ -301,7 +298,7 @@ fun SearchFeedScreen(
                                         onClick = { 
                                             viewModel.addSource(feed.url, feed.siteName ?: feed.title, feed.iconUrl)
                                         },
-                                        enabled = !(sourceAdditionState is com.example.riffle.ui.viewmodel.SourceAdditionState.Loading)
+                                        enabled = !(sourceAdditionState is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading)
                                     ) {
                                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dialog_add))
                                     }

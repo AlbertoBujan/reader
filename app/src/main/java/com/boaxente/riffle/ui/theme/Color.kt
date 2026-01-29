@@ -1,4 +1,4 @@
-package com.example.riffle.ui.theme
+package com.boaxente.riffle.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

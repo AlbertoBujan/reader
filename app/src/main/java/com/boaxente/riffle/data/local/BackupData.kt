@@ -1,8 +1,8 @@
-package com.example.riffle.data.local
+package com.boaxente.riffle.data.local
 
-import com.example.riffle.data.local.entity.ArticleEntity
-import com.example.riffle.data.local.entity.FolderEntity
-import com.example.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.local.entity.ArticleEntity
+import com.boaxente.riffle.data.local.entity.FolderEntity
+import com.boaxente.riffle.data.local.entity.SourceEntity
 
 data class BackupData(
     val version: Int = 1,

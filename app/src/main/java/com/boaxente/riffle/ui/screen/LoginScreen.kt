@@ -1,4 +1,4 @@
-package com.example.riffle.ui.screen
+package com.boaxente.riffle.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,11 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.example.riffle.data.remote.AuthManager
-import com.example.riffle.util.RiffleLogger
+import com.boaxente.riffle.data.remote.AuthManager
+import com.boaxente.riffle.util.RiffleLogger
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 

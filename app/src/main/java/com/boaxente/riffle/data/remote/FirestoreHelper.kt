@@ -1,9 +1,9 @@
-package com.example.riffle.data.remote
+package com.boaxente.riffle.data.remote
 
-import com.example.riffle.data.local.dao.FeedDao
-import com.example.riffle.data.local.entity.SourceEntity
-import com.example.riffle.data.local.entity.FolderEntity
-import com.example.riffle.data.local.PreferencesManager
+import com.boaxente.riffle.data.local.dao.FeedDao
+import com.boaxente.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.local.entity.FolderEntity
+import com.boaxente.riffle.data.local.PreferencesManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -133,7 +133,7 @@ class FirestoreHelper @Inject constructor(
                     }
                     
                     if (hasNewFeeds) {
-                         val syncRequest = androidx.work.OneTimeWorkRequestBuilder<com.example.riffle.worker.FeedSyncWorker>()
+                         val syncRequest = androidx.work.OneTimeWorkRequestBuilder<com.boaxente.riffle.worker.FeedSyncWorker>()
                             .setConstraints(
                                 androidx.work.Constraints.Builder()
                                     .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)

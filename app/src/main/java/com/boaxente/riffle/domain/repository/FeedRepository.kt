@@ -1,7 +1,7 @@
-package com.example.riffle.domain.repository
+package com.boaxente.riffle.domain.repository
 
-import com.example.riffle.data.local.entity.ArticleEntity
-import com.example.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.local.entity.ArticleEntity
+import com.boaxente.riffle.data.local.entity.SourceEntity
 import kotlinx.coroutines.flow.Flow
 
 interface FeedRepository {

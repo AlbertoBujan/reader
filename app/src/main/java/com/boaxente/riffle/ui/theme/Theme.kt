@@ -1,4 +1,4 @@
-package com.example.riffle.ui.theme
+package com.boaxente.riffle.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

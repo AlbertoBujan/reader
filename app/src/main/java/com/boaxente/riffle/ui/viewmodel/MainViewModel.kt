@@ -1,23 +1,22 @@
-package com.example.riffle.ui.viewmodel
+package com.boaxente.riffle.ui.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.riffle.data.local.PreferencesManager
-import com.example.riffle.data.local.dao.FeedDao
-import com.example.riffle.data.local.entity.ArticleEntity
-import com.example.riffle.data.local.entity.ArticleWithSource
-import com.example.riffle.data.local.entity.FolderEntity
-import com.example.riffle.data.local.entity.SourceEntity
-import com.example.riffle.data.remote.ClearbitService
-import com.example.riffle.data.remote.FeedSearchService
-import com.example.riffle.domain.usecase.AddSourceUseCase
-import com.example.riffle.domain.usecase.GetAllSourcesUseCase
-import com.example.riffle.domain.usecase.GetArticlesUseCase
-import com.example.riffle.domain.usecase.MarkArticleReadUseCase
-import com.example.riffle.domain.usecase.SyncFeedsUseCase
-import com.example.riffle.worker.FeedSyncWorker
-import com.example.riffle.util.RiffleLogger
+import com.boaxente.riffle.data.local.PreferencesManager
+import com.boaxente.riffle.data.local.dao.FeedDao
+import com.boaxente.riffle.data.local.entity.ArticleEntity
+import com.boaxente.riffle.data.local.entity.ArticleWithSource
+import com.boaxente.riffle.data.local.entity.FolderEntity
+import com.boaxente.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.remote.ClearbitService
+import com.boaxente.riffle.data.remote.FeedSearchService
+import com.boaxente.riffle.domain.usecase.AddSourceUseCase
+import com.boaxente.riffle.domain.usecase.GetAllSourcesUseCase
+import com.boaxente.riffle.domain.usecase.GetArticlesUseCase
+import com.boaxente.riffle.domain.usecase.MarkArticleReadUseCase
+import com.boaxente.riffle.domain.usecase.SyncFeedsUseCase
+import com.boaxente.riffle.util.RiffleLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +34,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
-import java.net.URL
 import java.security.cert.X509Certificate
 import javax.inject.Inject
 import javax.net.ssl.SSLContext
@@ -43,7 +41,6 @@ import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import com.google.ai.client.generativeai.GenerativeModel
-import com.example.riffle.BuildConfig
 
 sealed interface FeedUiState {
     data object Loading : FeedUiState
@@ -72,13 +69,13 @@ class MainViewModel @Inject constructor(
     private val syncFeedsUseCase: SyncFeedsUseCase,
     private val markArticleReadUseCase: MarkArticleReadUseCase,
     private val feedDao: FeedDao,
-    private val feedRepository: com.example.riffle.domain.repository.FeedRepository,
+    private val feedRepository: com.boaxente.riffle.domain.repository.FeedRepository,
     private val preferencesManager: PreferencesManager,
-    private val firestoreHelper: com.example.riffle.data.remote.FirestoreHelper,
+    private val firestoreHelper: com.boaxente.riffle.data.remote.FirestoreHelper,
     private val feedSearchService: FeedSearchService,
     private val clearbitService: ClearbitService,
 
-    private val authManager: com.example.riffle.data.remote.AuthManager,
+    private val authManager: com.boaxente.riffle.data.remote.AuthManager,
     getAllSourcesUseCase: GetAllSourcesUseCase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
@@ -124,10 +121,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 authManager.signInWithGoogle(idToken)
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_login_success))
+                _messageEvent.emit(context.getString(com.boaxente.riffle.R.string.msg_login_success))
             } catch (e: Exception) {
                 RiffleLogger.recordException(e)
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_login_error, e.message))
+                _messageEvent.emit(context.getString(com.boaxente.riffle.R.string.msg_login_error, e.message))
             }
         }
     }
@@ -135,7 +132,7 @@ class MainViewModel @Inject constructor(
     fun signOut() {
         viewModelScope.launch {
             authManager.signOut()
-            _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_logout_success))
+            _messageEvent.emit(context.getString(com.boaxente.riffle.R.string.msg_logout_success))
         }
     }
 
@@ -183,7 +180,7 @@ class MainViewModel @Inject constructor(
             .setRequiresBatteryNotLow(true)
             .build()
 
-        val syncRequest = androidx.work.PeriodicWorkRequestBuilder<com.example.riffle.worker.FeedSyncWorker>(hours, java.util.concurrent.TimeUnit.HOURS)
+        val syncRequest = androidx.work.PeriodicWorkRequestBuilder<com.boaxente.riffle.worker.FeedSyncWorker>(hours, java.util.concurrent.TimeUnit.HOURS)
             .setConstraints(constraints)
             .build()
 
@@ -198,7 +195,7 @@ class MainViewModel @Inject constructor(
     fun summarizeArticle(title: String, content: String) {
         val currentKey = _geminiApiKey.value
         if (currentKey.isBlank()) {
-            _summaryState.value = context.getString(com.example.riffle.R.string.ai_error_api_key)
+            _summaryState.value = context.getString(com.boaxente.riffle.R.string.ai_error_api_key)
             return
         }
 
@@ -282,10 +279,10 @@ class MainViewModel @Inject constructor(
                 val isOverloaded = errorMsg.contains("503") || errorMsg.contains("overloaded") || errorMsg.contains("capacity")
                 
                 if (isOverloaded) {
-                    _summaryState.value = context.getString(com.example.riffle.R.string.ai_error_overloaded)
+                    _summaryState.value = context.getString(com.boaxente.riffle.R.string.ai_error_overloaded)
                 } else {
                     _summaryState.value = context.getString(
-                        com.example.riffle.R.string.ai_error_connection, 
+                        com.boaxente.riffle.R.string.ai_error_connection,
                         lastException?.localizedMessage ?: "Unknown error"
                     )
                 }
@@ -364,7 +361,7 @@ class MainViewModel @Inject constructor(
             FeedUiState.Success(filtered.take(state.limit))
         }
     }
-    .catch { emit(FeedUiState.Error(it.message ?: context.getString(com.example.riffle.R.string.msg_unknown_error))) }
+    .catch { emit(FeedUiState.Error(it.message ?: context.getString(com.boaxente.riffle.R.string.msg_unknown_error))) }
     .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -438,32 +435,32 @@ class MainViewModel @Inject constructor(
             _sourceAdditionState.value = SourceAdditionState.Loading(url)
             try {
                 addSourceUseCase(url, title, iconUrl)
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_feed_added))
+                _messageEvent.emit(context.getString(com.boaxente.riffle.R.string.msg_feed_added))
                 _sourceAdditionState.value = SourceAdditionState.Success
             } catch (e: retrofit2.HttpException) {
                 if (e.code() == 404) {
                      _sourceAdditionState.value = SourceAdditionState.Error(
-                         title = context.getString(com.example.riffle.R.string.error_feed_not_found_title),
-                         message = context.getString(com.example.riffle.R.string.error_feed_not_found_message, url)
+                         title = context.getString(com.boaxente.riffle.R.string.error_feed_not_found_title),
+                         message = context.getString(com.boaxente.riffle.R.string.error_feed_not_found_message, url)
                      )
                 } else if (e.code() in 400..599) {
                     _sourceAdditionState.value = SourceAdditionState.Error(
-                        title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
-                        message = context.getString(com.example.riffle.R.string.error_feed_http, e.code())
+                        title = context.getString(com.boaxente.riffle.R.string.error_feed_generic_title),
+                        message = context.getString(com.boaxente.riffle.R.string.error_feed_http, e.code())
                     )
                 } else {
                     _sourceAdditionState.value = SourceAdditionState.Error(
-                        title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
-                        message = e.localizedMessage ?: context.getString(com.example.riffle.R.string.msg_unknown_error)
+                        title = context.getString(com.boaxente.riffle.R.string.error_feed_generic_title),
+                        message = e.localizedMessage ?: context.getString(com.boaxente.riffle.R.string.msg_unknown_error)
                     )
                 }
             } catch (e: Exception) {
                 RiffleLogger.recordException(e)
                 e.printStackTrace()
-                _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_feed_error, e.message))
+                _messageEvent.emit(context.getString(com.boaxente.riffle.R.string.msg_feed_error, e.message))
                 _sourceAdditionState.value = SourceAdditionState.Error(
-                    title = context.getString(com.example.riffle.R.string.error_feed_generic_title),
-                    message = e.localizedMessage ?: context.getString(com.example.riffle.R.string.msg_unknown_error)
+                    title = context.getString(com.boaxente.riffle.R.string.error_feed_generic_title),
+                    message = e.localizedMessage ?: context.getString(com.boaxente.riffle.R.string.msg_unknown_error)
                 )
             }
         }

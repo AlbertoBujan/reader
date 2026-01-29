@@ -1,4 +1,4 @@
-package com.example.riffle.data.local
+package com.boaxente.riffle.data.local
 
 import android.content.Context
 import android.content.SharedPreferences

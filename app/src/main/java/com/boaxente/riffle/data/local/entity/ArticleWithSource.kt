@@ -1,4 +1,4 @@
-package com.example.riffle.data.local.entity
+package com.boaxente.riffle.data.local.entity
 
 import androidx.room.Embedded
 

@@ -1,16 +1,16 @@
-package com.example.riffle.di
+package com.boaxente.riffle.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.riffle.data.local.AppDatabase
-import com.example.riffle.data.local.dao.FeedDao
-import com.example.riffle.data.remote.AuthManager
-import com.example.riffle.data.remote.ClearbitService
-import com.example.riffle.data.remote.FeedService
-import com.example.riffle.data.remote.FeedSearchService
-import com.example.riffle.data.remote.RssParser
-import com.example.riffle.data.repository.FeedRepositoryImpl
-import com.example.riffle.domain.repository.FeedRepository
+import com.boaxente.riffle.data.local.AppDatabase
+import com.boaxente.riffle.data.local.dao.FeedDao
+import com.boaxente.riffle.data.remote.AuthManager
+import com.boaxente.riffle.data.remote.ClearbitService
+import com.boaxente.riffle.data.remote.FeedService
+import com.boaxente.riffle.data.remote.FeedSearchService
+import com.boaxente.riffle.data.remote.RssParser
+import com.boaxente.riffle.data.repository.FeedRepositoryImpl
+import com.boaxente.riffle.domain.repository.FeedRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -113,7 +113,7 @@ object AppModule {
         feedDao: FeedDao,
         feedService: FeedService,
         rssParser: RssParser,
-        firestoreHelper: com.example.riffle.data.remote.FirestoreHelper
+        firestoreHelper: com.boaxente.riffle.data.remote.FirestoreHelper
     ): FeedRepository {
         return FeedRepositoryImpl(feedDao, feedService, rssParser, firestoreHelper)
     }

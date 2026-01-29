@@ -1,9 +1,8 @@
-package com.example.riffle.data.remote
+package com.boaxente.riffle.data.remote
 
 import android.content.Context
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
-import com.example.riffle.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser

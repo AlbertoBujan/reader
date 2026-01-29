@@ -1,14 +1,13 @@
-package com.example.riffle.data.local.dao
+package com.boaxente.riffle.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
-import com.example.riffle.data.local.entity.ArticleEntity
-import com.example.riffle.data.local.entity.ArticleWithSource
-import com.example.riffle.data.local.entity.FolderEntity
-import com.example.riffle.data.local.entity.SourceEntity
+import com.boaxente.riffle.data.local.entity.ArticleEntity
+import com.boaxente.riffle.data.local.entity.ArticleWithSource
+import com.boaxente.riffle.data.local.entity.FolderEntity
+import com.boaxente.riffle.data.local.entity.SourceEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
