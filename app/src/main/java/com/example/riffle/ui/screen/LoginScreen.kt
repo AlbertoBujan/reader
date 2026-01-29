@@ -31,6 +31,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.example.riffle.data.remote.AuthManager
 import com.example.riffle.util.RiffleLogger
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -124,6 +125,8 @@ fun LoginScreen(
                                     RiffleLogger.recordException(Exception("Unexpected credential type: ${credential.type}"))
                                     snackbarHostState.showSnackbar("Login Failed: Unexpected error")
                                 }
+                            } catch (e: NoCredentialException) {
+                                android.util.Log.d("AuthDebug", "No se encontraron credenciales para auto-login")
                             } catch (e: GetCredentialException) {
                                 // User cancelled or no credentials available usually doesn't need to be logged as error for user
                                 RiffleLogger.recordException(e)
