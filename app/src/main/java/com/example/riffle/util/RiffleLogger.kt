@@ -18,6 +18,22 @@ class RiffleLogger @Inject constructor() {
     }
 
     fun recordException(t: Throwable) {
+        if (t is retrofit2.HttpException) {
+            try {
+                // Extract URL safely
+                val url = t.response()?.raw()?.request?.url?.toString()
+                if (url != null) {
+                    setCustomKey("request_url", url)
+                }
+                
+                // Extract status code
+                val code = t.code()
+                setCustomKey("status_code", code)
+            } catch (e: Exception) {
+                // Failsafe to ensure original exception is still recorded even if extraction fails
+                e.printStackTrace()
+            }
+        }
         FirebaseCrashlytics.getInstance().recordException(t)
     }
 
