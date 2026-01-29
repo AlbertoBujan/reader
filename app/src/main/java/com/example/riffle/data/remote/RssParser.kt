@@ -8,6 +8,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.example.riffle.util.RiffleLogger
 
 data class ParsedFeed(
     val articles: List<ArticleEntity>,
@@ -171,6 +172,7 @@ class RssParser {
             try {
                 return format.parse(dateStr)?.time ?: continue
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
             }
         }
         return System.currentTimeMillis()

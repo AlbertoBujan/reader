@@ -16,6 +16,8 @@ import com.example.riffle.domain.usecase.GetAllSourcesUseCase
 import com.example.riffle.domain.usecase.GetArticlesUseCase
 import com.example.riffle.domain.usecase.MarkArticleReadUseCase
 import com.example.riffle.domain.usecase.SyncFeedsUseCase
+import com.example.riffle.worker.FeedSyncWorker
+import com.example.riffle.util.RiffleLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -124,6 +126,7 @@ class MainViewModel @Inject constructor(
                 authManager.signInWithGoogle(idToken)
                 _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_login_success))
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                 _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_login_error, e.message))
             }
         }
@@ -209,6 +212,7 @@ class MainViewModel @Inject constructor(
             val cleanContent = try {
                 Jsoup.parse(content).text().take(10000)
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                 content.take(10000)
             }
             
@@ -255,6 +259,7 @@ class MainViewModel @Inject constructor(
                     
                     break // Éxito, salimos del bucle
                 } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                     lastException = e
                     val msg = e.message?.lowercase() ?: ""
                     // Detectar error de cuota (429, exhausted, quota)
@@ -323,6 +328,7 @@ class MainViewModel @Inject constructor(
             try {
                 feedDao.cleanupHugeArticles()
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                 e.printStackTrace()
             }
         }
@@ -454,6 +460,7 @@ class MainViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                 e.printStackTrace()
                 _messageEvent.emit(context.getString(com.example.riffle.R.string.msg_feed_error, e.message))
                 _sourceAdditionState.value = SourceAdditionState.Error(
@@ -510,6 +517,7 @@ class MainViewModel @Inject constructor(
                 syncFeedsUseCase()
                 updateHiddenArticles()
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                 e.printStackTrace()
             } finally {
                 _isRefreshing.value = false
@@ -554,6 +562,7 @@ class MainViewModel @Inject constructor(
                                 val suggestions = clearbitService.suggestCompanies(cleanQuery)
                                 suggestions.forEach { domainsToSearch.add(it.domain) }
                             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                                 Log.e("FeedSearch", "Clearbit lookup failed: ${e.message}")
                             }
                             // Fallback: append .com just in case
@@ -581,6 +590,7 @@ class MainViewModel @Inject constructor(
                                     ))
                                 }
                             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                                 Log.e("FeedSearch", "FeedSearch for $domain failed: ${e.message}")
                             }
                         }
@@ -588,11 +598,13 @@ class MainViewModel @Inject constructor(
                         results.distinctBy { it.url }
                         
                     } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                         Log.e("FeedSearch", "API Error: ${e.message}")
                         emptyList()
                     }
                 }
             } catch (e: Exception) {
+                RiffleLogger.recordException(e)
                 Log.e("FeedSearch", "SearchFeeds error: ${e.message}")
             } finally {
                 _isSearching.value = false
