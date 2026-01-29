@@ -139,9 +139,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun getSignInIntent(): android.content.Intent {
-        return authManager.getSignInIntent()
-    }
+
 
     // --- ZONA IA: Variables para el resumen ---
     private val _summaryState = MutableStateFlow<String?>(null)

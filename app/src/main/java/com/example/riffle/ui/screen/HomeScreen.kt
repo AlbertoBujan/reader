@@ -1,12 +1,11 @@
 package com.example.riffle.ui.screen
 
+import androidx.compose.ui.res.stringResource
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -63,8 +62,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -260,6 +259,7 @@ fun HomeScreen(
     val articleSearchQuery by viewModel.articleSearchQuery.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val context = LocalContext.current
 
     // Restore missing state variables
     val uiState by viewModel.uiState.collectAsState()
@@ -277,20 +277,7 @@ fun HomeScreen(
     val modelStatuses by viewModel.modelStatuses.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
     
-    val authLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
-                account?.idToken?.let { viewModel.signIn(it) }
-            } catch (e: Exception) {
-                RiffleLogger.recordException(e)
-                // Log or show error is handled in ViewModel messageEvent usually or we can toast here if needed
-            }
-        }
-    }
+    val credentialManager = remember { androidx.credentials.CredentialManager.create(context) }
     
     var showFolderDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -303,7 +290,6 @@ fun HomeScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     if (sourceToDelete != null) {
         val sourceTitle = sources.find { it.url == sourceToDelete }?.title ?: sourceToDelete ?: ""
@@ -419,7 +405,7 @@ fun HomeScreen(
                                     }
                                     IconButton(onClick = { viewModel.signOut() }) {
                                         Icon(
-                                            imageVector = Icons.Default.ExitToApp,
+                                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                             contentDescription = "Logout",
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -428,14 +414,39 @@ fun HomeScreen(
                             } else {
                                 OutlinedButton(
                                     onClick = { 
-                                        val intent = viewModel.getSignInIntent()
-                                        authLauncher.launch(intent)
+                                        scope.launch {
+                                            try {
+                                                val googleIdOption = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                                                    .setFilterByAuthorizedAccounts(false)
+                                                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                                                    .setAutoSelectEnabled(true)
+                                                    .build()
+
+                                                val request = androidx.credentials.GetCredentialRequest.Builder()
+                                                    .addCredentialOption(googleIdOption)
+                                                    .build()
+
+                                                val result = credentialManager.getCredential(
+                                                    request = request,
+                                                    context = context
+                                                )
+                                                
+                                                val credential = result.credential
+                                                if (credential is androidx.credentials.CustomCredential && 
+                                                    credential.type == com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                                    val googleIdTokenCredential = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credential.data)
+                                                    viewModel.signIn(googleIdTokenCredential.idToken)
+                                                }
+                                            } catch (e: Exception) {
+                                                RiffleLogger.recordException(e)
+                                            }
+                                        }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Login,
+                                        imageVector = Icons.AutoMirrored.Filled.Login,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )

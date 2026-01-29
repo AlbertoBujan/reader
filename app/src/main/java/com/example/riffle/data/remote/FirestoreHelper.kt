@@ -216,7 +216,7 @@ class FirestoreHelper @Inject constructor(
             
             if (snapshot != null && snapshot.exists()) {
                 scope.launch {
-                    val items = snapshot.get("items") as? List<String> ?: emptyList()
+                    val items = (snapshot.get("items") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                     val currentRemoteSet = items.toSet()
                     
                     // Handle additions
