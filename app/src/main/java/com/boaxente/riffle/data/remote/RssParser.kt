@@ -105,6 +105,7 @@ class RssParser {
         var description: String? = null
         var pubDateStr: String? = null
         var imageUrl: String? = null
+        var hasVideo = false
 
         while (parser.next() != XmlPullParser.END_TAG) {
             if (parser.eventType != XmlPullParser.START_TAG) {
@@ -113,16 +114,34 @@ class RssParser {
             when (parser.name) {
                 "title" -> title = cleanHtmlTags(readText(parser, "title"))
                 "link" -> link = readText(parser, "link")
-                "description" -> description = readText(parser, "description")
+                "description" -> {
+                    description = readText(parser, "description")
+                    if (description != null && (description.contains("<iframe") 
+                        || description.contains("<video") 
+                        || description.contains("<embed"))) {
+                        hasVideo = true
+                    }
+                }
                 "pubDate" -> pubDateStr = readText(parser, "pubDate")
                 "media:content" -> {
-                     imageUrl = parser.getAttributeValue(null, "url")
+                     val type = parser.getAttributeValue(null, "type")
+                     if (type != null && type.startsWith("video/")) {
+                         hasVideo = true
+                     }
+                     val url = parser.getAttributeValue(null, "url")
+                     if (imageUrl == null && url != null && (type == null || type.startsWith("image/"))) {
+                         imageUrl = url
+                     }
                      skip(parser) 
                 }
                 "enclosure" -> {
                     val type = parser.getAttributeValue(null, "type")
-                    if (type != null && type.startsWith("image/")) {
-                        imageUrl = parser.getAttributeValue(null, "url")
+                    if (type != null) {
+                        if (type.startsWith("image/")) {
+                            imageUrl = parser.getAttributeValue(null, "url")
+                        } else if (type.startsWith("video/")) {
+                            hasVideo = true
+                        }
                     }
                     skip(parser)
                 }
@@ -141,7 +160,8 @@ class RssParser {
             description = safeDesc,
             pubDate = safeDate,
             sourceUrl = sourceUrl,
-            imageUrl = imageUrl
+            imageUrl = imageUrl,
+            hasVideo = hasVideo
         )
     }
 

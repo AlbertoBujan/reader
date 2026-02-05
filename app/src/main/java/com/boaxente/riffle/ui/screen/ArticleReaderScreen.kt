@@ -12,8 +12,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -40,9 +42,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Share
@@ -54,6 +60,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -97,6 +105,20 @@ fun ArticleReaderScreen(
     val isSummarizing by viewModel.isSummarizing.collectAsState()
 
     val scrollState = rememberScrollState()
+    var previousScrollOffset by remember { mutableIntStateOf(0) }
+    var isFabVisible by remember { mutableStateOf(true) }
+
+    // Detección scroll down/up
+    LaunchedEffect(scrollState.value) {
+        val currentOffset = scrollState.value
+        if (currentOffset > previousScrollOffset) {
+            isFabVisible = false
+        } else if (currentOffset < previousScrollOffset) {
+            isFabVisible = true
+        }
+        previousScrollOffset = currentOffset
+    }
+
     val coroutineScope = rememberCoroutineScope()
 
     var tts: TextToSpeech? by remember { mutableStateOf(null) }
@@ -167,7 +189,12 @@ fun ArticleReaderScreen(
         floatingActionButton = {
             if (article != null) { // Solo mostramos botón si hay artículo
                 val noContentString = stringResource(R.string.article_no_content)
-                FloatingActionButton(
+                AnimatedVisibility(
+                    visible = isFabVisible,
+                    enter = scaleIn(),
+                    exit = scaleOut()
+                ) {
+                    FloatingActionButton(
                     onClick = {
                         // Si ya hay resumen, lo borramos (toggle), si no, lo pedimos
                         if (summary != null) {
@@ -197,6 +224,7 @@ fun ArticleReaderScreen(
                             contentDescription = stringResource(R.string.ai_summary_button_desc)
                         )
                     }
+                }
                 }
             }
         }
@@ -285,11 +313,22 @@ fun ArticleReaderScreen(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Text(
-                    text = articleWithSource?.sourceTitle ?: article!!.sourceUrl,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = articleWithSource?.sourceTitle ?: article!!.sourceUrl,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (article!!.hasVideo) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.PlayCircle,
+                            contentDescription = "Video",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider()
@@ -304,7 +343,11 @@ fun ArticleReaderScreen(
                 val cleanDescription = HtmlCompat.fromHtml(
                     noScriptDescription,
                     HtmlCompat.FROM_HTML_MODE_LEGACY
-                ).toString().replace("\uFFFC", "").trim()
+                ).toString()
+                .replace("\uFFFC", "")
+                .trim()
+                .replace(Regex("\\n{3,}"), "\n\n") // Reduce more than 2 newlines to just 2
+                .replace(Regex("(\\n\\s*\\n)+"), "\n\n") // Ensure consistent paragraph spacing
 
                 Text(
                     text = cleanDescription,

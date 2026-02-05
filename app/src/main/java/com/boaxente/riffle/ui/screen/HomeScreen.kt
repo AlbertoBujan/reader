@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material3.AlertDialog
@@ -259,6 +260,7 @@ fun HomeScreen(
     val geminiApiKey by viewModel.geminiApiKey.collectAsState()
     val modelStatuses by viewModel.modelStatuses.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
+    val feedHealthState by viewModel.feedHealthState.collectAsState()
     
     val credentialManager = remember { androidx.credentials.CredentialManager.create(context) }
     
@@ -522,6 +524,7 @@ fun HomeScreen(
                                         sources = folderSources,
                                         folderUnreadCount = folderUnread,
                                         selectedSource = selectedSource,
+                                        feedHealthState = feedHealthState,
                                         onFolderClick = { name ->
                                             viewModel.selectFolder(name)
                                         },
@@ -553,6 +556,7 @@ fun HomeScreen(
                                         SwipeableSourceItem(
                                             source = source,
                                             isSelected = selectedSource == source.url,
+                                            feedHealth = feedHealthState[source.url],
                                             onClick = {
                                                 viewModel.selectSource(source.url)
                                                 scope.launch { drawerState.close() }
@@ -1237,7 +1241,8 @@ fun FolderItem(
     onRenameSource: (SourceEntity) -> Unit,
     onRenameFolder: (String) -> Unit,
     onDeleteFolder: (String) -> Unit,
-    onDrop: (String) -> Unit
+    onDrop: (String) -> Unit,
+    feedHealthState: Map<String, com.boaxente.riffle.ui.viewmodel.FeedHealth>
 ) {
     var isOver by remember { mutableStateOf(false) }
     val isFolderSelected = selectedSource == "folder:$folderName"
@@ -1334,6 +1339,7 @@ fun FolderItem(
                         SwipeableSourceItem(
                             source = source,
                             isSelected = selectedSource == source.url,
+                            feedHealth = feedHealthState[source.url],
                             onClick = onSourceClick,
                             onDelete = { onDeleteSource(source.url) },
                             onRename = { onRenameSource(source) }
@@ -1353,6 +1359,7 @@ fun SwipeableSourceItem(
     onDelete: () -> Unit,
 
     onRename: () -> Unit,
+    feedHealth: com.boaxente.riffle.ui.viewmodel.FeedHealth? = null,
     modifier: Modifier = Modifier
 ) {
     SwipeableItem(
@@ -1361,13 +1368,13 @@ fun SwipeableSourceItem(
         modifier = modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
         shape = CircleShape
     ) {
-        SourceDrawerItemContent(source, isSelected, onClick)
+        SourceDrawerItemContent(source, isSelected, feedHealth, onClick)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: (String) -> Unit) {
+fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, feedHealth: com.boaxente.riffle.ui.viewmodel.FeedHealth?, onClick: (String) -> Unit) {
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     val haptic = LocalHapticFeedback.current
@@ -1426,6 +1433,21 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, onClick: 
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            
+            if (feedHealth != null && feedHealth != com.boaxente.riffle.ui.viewmodel.FeedHealth.UNKNOWN) {
+                Spacer(modifier = Modifier.weight(1f))
+                Canvas(modifier = Modifier.size(8.dp)) {
+                    drawCircle(
+                        color = when (feedHealth) {
+                            com.boaxente.riffle.ui.viewmodel.FeedHealth.GOOD -> Color(0xFF4CAF50) // Green
+                            com.boaxente.riffle.ui.viewmodel.FeedHealth.WARNING -> Color(0xFFFFC107) // Amber/Yellow
+                            com.boaxente.riffle.ui.viewmodel.FeedHealth.BAD -> Color(0xFFF44336) // Red
+                            com.boaxente.riffle.ui.viewmodel.FeedHealth.DEAD -> Color(0xFF616161) // Dark Gray (Black-ish but visible on dark theme)
+                            else -> Color.Transparent
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -1633,12 +1655,23 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                val context = LocalContext.current
-                Text(
-                    text = "${formatDate(article.pubDate, context)} • ${sourceName ?: article.sourceUrl}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                    val context = LocalContext.current
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${formatDate(article.pubDate, context)} • ${sourceName ?: article.sourceUrl}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (article.hasVideo) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.PlayCircle,
+                            contentDescription = "Video",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
     }

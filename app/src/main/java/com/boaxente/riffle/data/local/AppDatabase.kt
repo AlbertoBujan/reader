@@ -9,7 +9,7 @@ import com.boaxente.riffle.data.local.entity.SourceEntity
 
 @Database(
     entities = [ArticleEntity::class, SourceEntity::class, FolderEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
