@@ -121,9 +121,17 @@ interface FeedDao {
 
     @Query("UPDATE articles SET description = SUBSTR(description, 1, 100000) WHERE LENGTH(description) > 100000")
     suspend fun cleanupHugeArticles()
+
+    @Query("SELECT sourceUrl, MAX(pubDate) as lastPubDate FROM articles GROUP BY sourceUrl")
+    fun getLastArticleDates(): Flow<List<SourceLastUpdated>>
 }
 
 data class SourceUnreadCount(
     val sourceUrl: String,
     val count: Int
+)
+
+data class SourceLastUpdated(
+    val sourceUrl: String,
+    val lastPubDate: Long
 )

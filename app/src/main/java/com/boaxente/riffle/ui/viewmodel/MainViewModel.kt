@@ -62,6 +62,14 @@ data class DiscoveredFeed(
     val siteName: String? = null
 )
 
+enum class FeedHealth {
+    GOOD, // Green (<= 5 days)
+    WARNING, // Yellow (> 5 days and <= 10 days)
+    BAD, // Red (> 10 days and <= 50 days)
+    DEAD, // Black (> 50 days)
+    UNKNOWN // Gray/Empty
+}
+
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getArticlesUseCase: GetArticlesUseCase,
@@ -314,6 +322,23 @@ class MainViewModel @Inject constructor(
 
     val savedCount: StateFlow<Int> = feedDao.getSavedCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val feedHealthState: StateFlow<Map<String, FeedHealth>> = feedDao.getLastArticleDates()
+        .map { dates ->
+            val now = System.currentTimeMillis()
+            val dayInMillis = 24 * 60 * 60 * 1000L
+            dates.associate { update ->
+                val diff = now - update.lastPubDate
+                val health = when {
+                    diff <= 5 * dayInMillis -> FeedHealth.GOOD
+                    diff <= 10 * dayInMillis -> FeedHealth.WARNING
+                    diff <= 50 * dayInMillis -> FeedHealth.BAD
+                    else -> FeedHealth.DEAD
+                }
+                update.sourceUrl to health
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         // Carga inicial de artículos para ocultar
