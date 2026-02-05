@@ -12,8 +12,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -54,6 +56,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -97,6 +101,20 @@ fun ArticleReaderScreen(
     val isSummarizing by viewModel.isSummarizing.collectAsState()
 
     val scrollState = rememberScrollState()
+    var previousScrollOffset by remember { mutableIntStateOf(0) }
+    var isFabVisible by remember { mutableStateOf(true) }
+
+    // Detección scroll down/up
+    LaunchedEffect(scrollState.value) {
+        val currentOffset = scrollState.value
+        if (currentOffset > previousScrollOffset) {
+            isFabVisible = false
+        } else if (currentOffset < previousScrollOffset) {
+            isFabVisible = true
+        }
+        previousScrollOffset = currentOffset
+    }
+
     val coroutineScope = rememberCoroutineScope()
 
     var tts: TextToSpeech? by remember { mutableStateOf(null) }
@@ -167,7 +185,12 @@ fun ArticleReaderScreen(
         floatingActionButton = {
             if (article != null) { // Solo mostramos botón si hay artículo
                 val noContentString = stringResource(R.string.article_no_content)
-                FloatingActionButton(
+                AnimatedVisibility(
+                    visible = isFabVisible,
+                    enter = scaleIn(),
+                    exit = scaleOut()
+                ) {
+                    FloatingActionButton(
                     onClick = {
                         // Si ya hay resumen, lo borramos (toggle), si no, lo pedimos
                         if (summary != null) {
@@ -197,6 +220,7 @@ fun ArticleReaderScreen(
                             contentDescription = stringResource(R.string.ai_summary_button_desc)
                         )
                     }
+                }
                 }
             }
         }
@@ -304,7 +328,11 @@ fun ArticleReaderScreen(
                 val cleanDescription = HtmlCompat.fromHtml(
                     noScriptDescription,
                     HtmlCompat.FROM_HTML_MODE_LEGACY
-                ).toString().replace("\uFFFC", "").trim()
+                ).toString()
+                .replace("\uFFFC", "")
+                .trim()
+                .replace(Regex("\\n{3,}"), "\n\n") // Reduce more than 2 newlines to just 2
+                .replace(Regex("(\\n\\s*\\n)+"), "\n\n") // Ensure consistent paragraph spacing
 
                 Text(
                     text = cleanDescription,
