@@ -323,22 +323,31 @@ class MainViewModel @Inject constructor(
     val savedCount: StateFlow<Int> = feedDao.getSavedCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val feedHealthState: StateFlow<Map<String, FeedHealth>> = feedDao.getLastArticleDates()
-        .map { dates ->
-            val now = System.currentTimeMillis()
-            val dayInMillis = 24 * 60 * 60 * 1000L
-            dates.associate { update ->
-                val diff = now - update.lastPubDate
-                val health = when {
+    val feedHealthState: StateFlow<Map<String, FeedHealth>> = combine(
+        feedDao.getLastArticleDates(),
+        sources
+    ) { dates, allSources ->
+        val now = System.currentTimeMillis()
+        val dayInMillis = 24 * 60 * 60 * 1000L
+        val datesMap = dates.associate { it.sourceUrl to it.lastPubDate }
+        
+        allSources.associate { source ->
+            val lastDate = datesMap[source.url]
+            val health = if (lastDate != null) {
+                val diff = now - lastDate
+                when {
                     diff <= 5 * dayInMillis -> FeedHealth.GOOD
                     diff <= 10 * dayInMillis -> FeedHealth.WARNING
                     diff <= 50 * dayInMillis -> FeedHealth.BAD
                     else -> FeedHealth.DEAD
                 }
-                update.sourceUrl to health
+            } else {
+                FeedHealth.DEAD // No articles found -> Dead/Broken/Empty
             }
+            source.url to health
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+    }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         // Carga inicial de artículos para ocultar
