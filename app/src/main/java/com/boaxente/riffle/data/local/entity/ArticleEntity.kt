@@ -26,5 +26,6 @@ data class ArticleEntity(
     val sourceUrl: String,
     val imageUrl: String?,
     val isRead: Boolean = false,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val hasVideo: Boolean = false
 )

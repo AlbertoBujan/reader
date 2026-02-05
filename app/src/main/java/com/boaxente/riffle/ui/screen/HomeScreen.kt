@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material3.AlertDialog
@@ -1654,12 +1655,23 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                val context = LocalContext.current
-                Text(
-                    text = "${formatDate(article.pubDate, context)} • ${sourceName ?: article.sourceUrl}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                    val context = LocalContext.current
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${formatDate(article.pubDate, context)} • ${sourceName ?: article.sourceUrl}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (article.hasVideo) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.PlayCircle,
+                            contentDescription = "Video",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
     }
