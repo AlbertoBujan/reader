@@ -361,7 +361,10 @@ class MainViewModel @Inject constructor(
             FeedUiState.Success(filtered.take(state.limit))
         }
     }
-    .catch { emit(FeedUiState.Error(it.message ?: context.getString(com.boaxente.riffle.R.string.msg_unknown_error))) }
+    .catch { 
+        RiffleLogger.recordException(it)
+        emit(FeedUiState.Error(it.message ?: context.getString(com.boaxente.riffle.R.string.msg_unknown_error))) 
+    }
     .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
