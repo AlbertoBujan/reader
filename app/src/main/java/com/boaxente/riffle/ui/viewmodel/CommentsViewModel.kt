@@ -93,6 +93,15 @@ class CommentsViewModel @Inject constructor(
         }
     }
     
+    fun deleteComment(commentId: String) {
+        val articleLink = currentArticleLink ?: return
+        viewModelScope.launch {
+            commentRepository.deleteComment(articleLink, commentId).onFailure { e ->
+                _error.value = e.message
+            }
+        }
+    }
+    
     fun setReplyingTo(commentNode: CommentNode?) {
         _replyingTo.value = commentNode
     }

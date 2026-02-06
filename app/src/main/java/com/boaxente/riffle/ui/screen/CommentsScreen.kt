@@ -48,6 +48,8 @@ fun CommentsScreen(
     
     var commentText by remember { mutableStateOf("") }
     var showLoginPrompt by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var commentToDelete by remember { mutableStateOf<CommentNode?>(null) }
     
     val currentUser = FirebaseAuth.getInstance().currentUser
     val isLoggedIn = currentUser != null
@@ -199,7 +201,11 @@ fun CommentsScreen(
                                     }
                                 },
                                 onLike = { viewModel.likeComment(it.comment.id) },
-                                onDislike = { viewModel.dislikeComment(it.comment.id) }
+                                onDislike = { viewModel.dislikeComment(it.comment.id) },
+                                onDelete = { 
+                                    commentToDelete = it
+                                    showDeleteDialog = true
+                                }
                             )
                         }
                     }
@@ -222,6 +228,32 @@ fun CommentsScreen(
         )
     }
     
+    // Diálogo de confirmar borrado
+    if (showDeleteDialog && commentToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.comments_delete_title)) },
+            text = { Text(stringResource(R.string.comments_delete_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        commentToDelete?.let { viewModel.deleteComment(it.comment.id) }
+                        showDeleteDialog = false
+                        commentToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.comments_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.comments_delete_cancel))
+                }
+            }
+        )
+    }
+    
     // Mostrar error
     error?.let { errorMessage ->
         LaunchedEffect(errorMessage) {
@@ -238,6 +270,7 @@ fun CommentTree(
     onReply: (CommentNode) -> Unit,
     onLike: (CommentNode) -> Unit,
     onDislike: (CommentNode) -> Unit,
+    onDelete: (CommentNode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val lineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
@@ -248,7 +281,8 @@ fun CommentTree(
             currentUserId = currentUserId,
             onReply = { onReply(commentNode) },
             onLike = { onLike(commentNode) },
-            onDislike = { onDislike(commentNode) }
+            onDislike = { onDislike(commentNode) },
+            onDelete = { onDelete(commentNode) }
         )
         
         // Mostrar respuestas
@@ -306,7 +340,8 @@ fun CommentTree(
                             currentUserId = currentUserId,
                             onReply = onReply,
                             onLike = onLike,
-                            onDislike = onDislike
+                            onDislike = onDislike,
+                            onDelete = onDelete
                         )
                     }
                 }
@@ -321,11 +356,13 @@ fun CommentItem(
     currentUserId: String?,
     onReply: () -> Unit,
     onLike: () -> Unit,
-    onDislike: () -> Unit
+    onDislike: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val comment = commentNode.comment
     val hasLiked = currentUserId != null && comment.likedBy.contains(currentUserId)
     val hasDisliked = currentUserId != null && comment.dislikedBy.contains(currentUserId)
+    val isOwner = currentUserId != null && comment.userId == currentUserId
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -343,7 +380,7 @@ fun CommentItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     // Avatar
                     Box(
                         modifier = Modifier
@@ -449,6 +486,21 @@ fun CommentItem(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                
+                // Opción de borrado para el dueño
+                if (isOwner) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.comments_delete),
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

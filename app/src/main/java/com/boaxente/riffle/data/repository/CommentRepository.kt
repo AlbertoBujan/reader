@@ -5,6 +5,7 @@ import com.boaxente.riffle.data.model.CommentNode
 import com.boaxente.riffle.data.model.UserInteraction
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -222,6 +223,66 @@ class CommentRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    /**
+     * Elimina un comentario y todas sus respuestas recursivamente
+     */
+    suspend fun deleteComment(articleLink: String, commentId: String): Result<Unit> {
+        val currentUser = auth.currentUser ?: return Result.failure(Exception("Usuario no autenticado"))
+        val articleId = hashString(articleLink)
+        
+        val commentsCollection = firestore.collection("comments")
+            .document(articleId)
+            .collection("comments")
+            
+        return try {
+            // 1. Obtener todos los comentarios a eliminar (target + descendientes)
+            val commentsToDelete = getAllDescendants(commentsCollection, commentId).toMutableList()
+            
+            // Añadir el comentario objetivo
+            val targetDoc = commentsCollection.document(commentId).get().await()
+            if (targetDoc.exists()) {
+                targetDoc.toObject(Comment::class.java)?.copy(id = targetDoc.id)?.let {
+                    commentsToDelete.add(it)
+                }
+            }
+
+            if (commentsToDelete.isEmpty()) return Result.success(Unit)
+            
+            // 2. Ejecutar borrado en batch
+            val batch = firestore.batch()
+            commentsToDelete.forEach { comment ->
+                batch.delete(commentsCollection.document(comment.id))
+            }
+            batch.commit().await()
+             
+            // 3. Actualizar contadores de usuarios afectados
+            // Agrupar por usuario para restar el número correcto de comentarios a cada uno
+            val usersAffected = commentsToDelete.groupBy { it.userId }
+            usersAffected.forEach { (userId, userComments) ->
+                decrementUserCommentCount(userId, userComments.size)
+            }
+             
+             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    private suspend fun getAllDescendants(collection: CollectionReference, parentId: String): List<Comment> {
+        val descendants = mutableListOf<Comment>()
+        
+        val childrenSnapshot = collection.whereEqualTo("parentId", parentId).get().await()
+        val children = childrenSnapshot.documents.mapNotNull { it.toObject(Comment::class.java)?.copy(id = it.id) }
+        
+        descendants.addAll(children)
+        
+        for (child in children) {
+            descendants.addAll(getAllDescendants(collection, child.id))
+        }
+        
+        return descendants
+    }
     
     /**
      * Convierte una lista plana de comentarios en una estructura de árbol
@@ -301,6 +362,22 @@ class CommentRepository @Inject constructor(
                 .document("social")
                 .set(
                     mapOf("totalComments" to FieldValue.increment(1)),
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
+                .await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private suspend fun decrementUserCommentCount(userId: String, count: Int) {
+        try {
+            firestore.collection("users")
+                .document(userId)
+                .collection("profile")
+                .document("social")
+                .set(
+                    mapOf("totalComments" to FieldValue.increment(-count.toLong())),
                     com.google.firebase.firestore.SetOptions.merge()
                 )
                 .await()
