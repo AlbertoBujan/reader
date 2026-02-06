@@ -240,7 +240,8 @@ fun SkeletonArticleItem() {
 fun HomeScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onArticleClick: (String, Boolean) -> Unit,
-    onNavigateToFeedSearch: () -> Unit
+    onNavigateToFeedSearch: () -> Unit,
+    onNavigateToProfile: () -> Unit = {}
 ) {
     val articleSearchQuery by viewModel.articleSearchQuery.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
@@ -359,7 +360,9 @@ fun HomeScreen(
                             if (currentUser != null) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onNavigateToProfile() }
                                 ) {
                                     if (currentUser?.photoUrl != null) {
                                         AsyncImage(

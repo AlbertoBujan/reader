@@ -29,6 +29,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.boaxente.riffle.ui.screen.ArticleReaderScreen
+import com.boaxente.riffle.ui.screen.CommentsScreen
+import com.boaxente.riffle.ui.screen.UserProfileScreen
 import com.boaxente.riffle.ui.screen.HomeScreen
 import com.boaxente.riffle.ui.viewmodel.MainViewModel
 import com.boaxente.riffle.ui.theme.RiffleTheme
@@ -43,6 +45,7 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 import java.nio.charset.StandardCharsets
+import android.util.Base64
 import com.github.javiersantos.appupdater.AppUpdaterUtils
 import com.github.javiersantos.appupdater.enums.AppUpdaterError
 import com.github.javiersantos.appupdater.enums.UpdateFrom
@@ -337,6 +340,9 @@ fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
                 },
                 onNavigateToFeedSearch = {
                     navController.navigate("search_feed")
+                },
+                onNavigateToProfile = {
+                    navController.navigate("profile")
                 }
             )
         }
@@ -366,7 +372,58 @@ fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
             ArticleReaderScreen(
                 url = url,
                 onBack = { navController.popBackStack() },
+                onCommentsClick = { articleLink, articleTitle ->
+                    val encodedLink = Base64.encodeToString(articleLink.toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP)
+                    val encodedTitle = Base64.encodeToString(articleTitle.toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP)
+                    navController.navigate("comments/$encodedLink/$encodedTitle")
+                },
                 viewModel = viewModel
+            )
+        }
+        
+        composable(
+            route = "comments/{articleLink}/{articleTitle}",
+            arguments = listOf(
+                navArgument("articleLink") { type = NavType.StringType },
+                navArgument("articleTitle") { type = NavType.StringType }
+            ),
+            enterTransition = { slideInHorizontally(tween(300)) { it } },
+            exitTransition = { slideOutHorizontally(tween(300)) { it } },
+            popEnterTransition = { slideInHorizontally(tween(300)) { it } },
+            popExitTransition = { slideOutHorizontally(tween(200)) { it } }
+        ) { backStackEntry ->
+            val articleLink = try {
+                String(Base64.decode(
+                    backStackEntry.arguments?.getString("articleLink") ?: "",
+                    Base64.URL_SAFE
+                ), StandardCharsets.UTF_8)
+            } catch (e: Exception) { "" }
+            val articleTitle = try {
+                String(Base64.decode(
+                    backStackEntry.arguments?.getString("articleTitle") ?: "",
+                    Base64.URL_SAFE
+                ), StandardCharsets.UTF_8)
+            } catch (e: Exception) { "" }
+            CommentsScreen(
+                articleLink = articleLink,
+                articleTitle = articleTitle,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        
+        composable(
+            route = "profile",
+            enterTransition = { slideInHorizontally(tween(300)) { it } },
+            exitTransition = { slideOutHorizontally(tween(300)) { it } },
+            popEnterTransition = { slideInHorizontally(tween(300)) { it } },
+            popExitTransition = { slideOutHorizontally(tween(200)) { it } }
+        ) {
+            UserProfileScreen(
+                onBack = { navController.popBackStack() },
+                onArticleClick = { articleLink ->
+                    val encodedUrl = URLEncoder.encode(articleLink, StandardCharsets.UTF_8.toString())
+                    navController.navigate("reader/$encodedUrl")
+                }
             )
         }
     }

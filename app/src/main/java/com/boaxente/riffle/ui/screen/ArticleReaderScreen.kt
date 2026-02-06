@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Card
@@ -93,6 +94,7 @@ import androidx.compose.ui.res.stringResource
 fun ArticleReaderScreen(
     url: String,
     onBack: () -> Unit,
+    onCommentsClick: (articleLink: String, articleTitle: String) -> Unit,
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -162,6 +164,11 @@ fun ArticleReaderScreen(
                             context.startActivity(shareIntent)
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+                        IconButton(onClick = {
+                            onCommentsClick(article!!.link, article!!.title)
+                        }) {
+                            Icon(Icons.Default.ChatBubbleOutline, contentDescription = stringResource(R.string.comments_title))
                         }
                         IconButton(onClick = {
                             val newSavedState = !article!!.isSaved
