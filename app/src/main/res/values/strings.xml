@@ -193,4 +193,42 @@
     <!-- Dates -->
     <string name="date_today">Today</string>
     <string name="date_yesterday">Yesterday</string>
+    
+    <!-- Comments -->
+    <string name="comments_title">Comments</string>
+    <string name="comments_empty">No comments yet</string>
+    <string name="comments_empty_subtitle">Be the first to comment!</string>
+    <string name="comments_placeholder">Write a comment...</string>
+    <string name="comments_send">Send</string>
+    <string name="comments_like">Like</string>
+    <string name="comments_dislike">Dislike</string>
+    <string name="comments_reply">Reply</string>
+    <string name="comments_replying_to">Replying to %1$s</string>
+    <string name="comments_cancel_reply">Cancel reply</string>
+    <string name="comments_login_required_title">Login required</string>
+    <string name="comments_login_required_text">You need to be logged in to comment.</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_save">Save</string>
+    <string name="comments_delete">Eliminar comentario</string>
+    <string name="comments_delete_title">Eliminar comentario</string>
+    <string name="comments_delete_message">¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.</string>
+    <string name="comments_delete_confirm">Eliminar</string>
+    <string name="comments_delete_cancel">Cancelar</string>
+    
+    <!-- User Profile -->
+    <string name="profile_title">My Profile</string>
+    <string name="profile_display_name">Display Name</string>
+    <string name="profile_anonymous">Anonymous</string>
+    <string name="profile_edit_name">Edit name</string>
+    <string name="profile_name_updated">Name updated successfully</string>
+    <string name="profile_statistics">Statistics</string>
+    <string name="profile_comments">Comments</string>
+    <string name="profile_likes">Likes</string>
+    <string name="profile_dislikes">Dislikes</string>
+    <string name="profile_activity">Activity History</string>
+    <string name="profile_no_activity">No activity yet</string>
+    <plurals name="replies_count">
+        <item quantity="one">%1$d reply</item>
+        <item quantity="other">%1$d replies</item>
+    </plurals>
 </resources>
