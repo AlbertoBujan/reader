@@ -109,7 +109,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -332,8 +334,12 @@ fun HomeScreen(
         }
     }
 
+    val blurRadius by animateDpAsState(targetValue = if (showSettingsDialog) 10.dp else 0.dp, label = "blur")
+
     ModalNavigationDrawer(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .blur(blurRadius),
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
