@@ -305,25 +305,24 @@ fun CommentTree(
                                 val strokeWidth = 2.dp.toPx()
                                 val radius = 16.dp.toPx()
                                 
-                                // Dibujar línea vertical
+                                // Crear un único path para todo el conector
+                                // Esto evita que la superposición de la línea vertical y la curva 
+                                // cree un efecto de oscurecimiento (alpha blending) en la intersección
+                                val path = androidx.compose.ui.graphics.Path()
+
+                                // 1. Línea vertical
                                 // Si es el último, la línea solo baja hasta el inicio de la curva
                                 val verticalEnd = if (isLast) yPos - radius else size.height
                                 
-                                drawLine(
-                                    color = lineColor,
-                                    start = Offset(lineX, 0f),
-                                    end = Offset(lineX, verticalEnd),
-                                    strokeWidth = strokeWidth
-                                )
+                                path.moveTo(lineX, 0f)
+                                path.lineTo(lineX, verticalEnd)
                                 
-                                // Dibujar curva
-                                val path = androidx.compose.ui.graphics.Path().apply {
-                                    moveTo(lineX, yPos - radius)
-                                    quadraticBezierTo(
-                                        lineX, yPos, // Punto de control (esquina)
-                                        lineX + radius, yPos // Punto final (horizontal)
-                                    )
-                                }
+                                // 2. Curva
+                                path.moveTo(lineX, yPos - radius)
+                                path.quadraticBezierTo(
+                                    lineX, yPos, // Punto de control (esquina)
+                                    lineX + radius, yPos // Punto final (horizontal)
+                                )
                                 
                                 drawPath(
                                     path = path,
