@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.boaxente.riffle.R
 import com.boaxente.riffle.data.model.UserInteraction
 import com.boaxente.riffle.ui.viewmodel.UserProfileViewModel
@@ -90,18 +92,29 @@ fun UserProfileScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Avatar grande
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = (profile?.displayName ?: currentUser?.email ?: "?").firstOrNull()?.uppercase() ?: "?",
-                                style = MaterialTheme.typography.headlineLarge,
-                                color = MaterialTheme.colorScheme.onPrimary
+                        if (currentUser?.photoUrl != null) {
+                            AsyncImage(
+                                model = currentUser.photoUrl,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = (profile?.displayName ?: currentUser?.email ?: "?").firstOrNull()?.uppercase() ?: "?",
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))

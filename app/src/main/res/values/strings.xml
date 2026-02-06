@@ -227,4 +227,8 @@
     <string name="profile_dislikes">Dislikes</string>
     <string name="profile_activity">Activity History</string>
     <string name="profile_no_activity">No activity yet</string>
+    <plurals name="replies_count">
+        <item quantity="one">%1$d reply</item>
+        <item quantity="other">%1$d replies</item>
+    </plurals>
 </resources>

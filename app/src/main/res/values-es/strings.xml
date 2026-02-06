@@ -215,4 +215,8 @@
     <string name="profile_dislikes">No me gusta</string>
     <string name="profile_activity">Historial de actividad</string>
     <string name="profile_no_activity">Aún no hay actividad</string>
+    <plurals name="replies_count">
+        <item quantity="one">%1$d respuesta</item>
+        <item quantity="other">%1$d respuestas</item>
+    </plurals>
 </resources>

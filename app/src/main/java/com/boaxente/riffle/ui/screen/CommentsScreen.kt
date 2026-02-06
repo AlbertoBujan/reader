@@ -396,7 +396,13 @@ fun CommentTree(
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text("${commentNode.comment.replyCount} respuestas")
+                    Text(
+                        text = androidx.compose.ui.res.pluralStringResource(
+                            id = R.plurals.replies_count,
+                            count = commentNode.comment.replyCount,
+                            commentNode.comment.replyCount
+                        )
+                    )
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = null,
