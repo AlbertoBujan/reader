@@ -25,8 +25,8 @@ android {
         applicationId = "com.boaxente.riffle"
         minSdk = 24
         targetSdk = 34
-versionCode = 51
-        versionName = "2.6.31"
+versionCode = 52
+        versionName = "3.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
