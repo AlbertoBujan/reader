@@ -345,7 +345,7 @@ fun HomeScreen(
         drawerState = drawerState,
         scrimColor = Color.Black.copy(alpha = 0.2f),
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(modifier = Modifier.fillMaxWidth(0.75f)) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Spacer(Modifier.height(12.dp))
