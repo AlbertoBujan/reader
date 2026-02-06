@@ -235,13 +235,13 @@ fun CommentsScreen(
             title = { Text(stringResource(R.string.comments_delete_title)) },
             text = { Text(stringResource(R.string.comments_delete_message)) },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         commentToDelete?.let { viewModel.deleteComment(it.comment.id) }
                         showDeleteDialog = false
                         commentToDelete = null
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text(stringResource(R.string.comments_delete_confirm))
                 }

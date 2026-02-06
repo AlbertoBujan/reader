@@ -57,6 +57,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
@@ -165,10 +167,22 @@ fun ArticleReaderScreen(
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share")
                         }
+                        val commentCount by remember(article!!.link) { viewModel.getCommentCount(article!!.link) }.collectAsState(initial = 0)
                         IconButton(onClick = {
                             onCommentsClick(article!!.link, article!!.title)
                         }) {
-                            Icon(Icons.Default.ChatBubbleOutline, contentDescription = stringResource(R.string.comments_title))
+                            BadgedBox(
+                                badge = {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ) {
+                                        Text(commentCount.toString())
+                                    } 
+                                }
+                            ) {
+                                Icon(Icons.Default.ChatBubbleOutline, contentDescription = stringResource(R.string.comments_title))
+                            }
                         }
                         IconButton(onClick = {
                             val newSavedState = !article!!.isSaved

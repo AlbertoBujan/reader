@@ -84,9 +84,14 @@ class MainViewModel @Inject constructor(
     private val clearbitService: ClearbitService,
 
     private val authManager: com.boaxente.riffle.data.remote.AuthManager,
+    private val commentRepository: com.boaxente.riffle.data.repository.CommentRepository,
     getAllSourcesUseCase: GetAllSourcesUseCase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
+
+    fun getCommentCount(articleLink: String): Flow<Int> {
+        return commentRepository.getCommentCount(articleLink)
+    }
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
