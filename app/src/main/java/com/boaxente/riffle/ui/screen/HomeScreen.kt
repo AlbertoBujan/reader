@@ -336,11 +336,14 @@ fun HomeScreen(
 
     val blurRadius by animateDpAsState(targetValue = if (showSettingsDialog) 10.dp else 0.dp, label = "blur")
 
+    val drawerBlurRadius by animateDpAsState(targetValue = if (drawerState.targetValue == DrawerValue.Open) 15.dp else 0.dp, label = "drawerBlur")
+
     ModalNavigationDrawer(
         modifier = Modifier
             .fillMaxSize()
             .blur(blurRadius),
         drawerState = drawerState,
+        scrimColor = Color.Black.copy(alpha = 0.2f),
         drawerContent = {
             ModalDrawerSheet {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -611,7 +614,9 @@ fun HomeScreen(
         }
     ) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(drawerBlurRadius),
             topBar = {
                 if (isSearchActive) {
                     TopAppBar(
