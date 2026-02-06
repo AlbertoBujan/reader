@@ -586,7 +586,6 @@ fun HomeScreen(
                                 .padding(NavigationDrawerItemDefaults.ItemPadding)
                                 .clickable {
                                     showSettingsDialog = true
-                                    scope.launch { drawerState.close() }
                                 }
                                 .padding(vertical = 12.dp, horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
