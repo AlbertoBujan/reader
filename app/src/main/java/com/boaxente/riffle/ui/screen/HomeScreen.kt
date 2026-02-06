@@ -109,7 +109,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -332,11 +334,18 @@ fun HomeScreen(
         }
     }
 
+    val blurRadius by animateDpAsState(targetValue = if (showSettingsDialog) 10.dp else 0.dp, label = "blur")
+
+    val drawerBlurRadius by animateDpAsState(targetValue = if (drawerState.targetValue == DrawerValue.Open) 15.dp else 0.dp, label = "drawerBlur")
+
     ModalNavigationDrawer(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .blur(blurRadius),
         drawerState = drawerState,
+        scrimColor = Color.Black.copy(alpha = 0.2f),
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(modifier = Modifier.fillMaxWidth(0.75f)) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Spacer(Modifier.height(12.dp))
@@ -586,7 +595,6 @@ fun HomeScreen(
                                 .padding(NavigationDrawerItemDefaults.ItemPadding)
                                 .clickable {
                                     showSettingsDialog = true
-                                    scope.launch { drawerState.close() }
                                 }
                                 .padding(vertical = 12.dp, horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -606,7 +614,9 @@ fun HomeScreen(
         }
     ) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(drawerBlurRadius),
             topBar = {
                 if (isSearchActive) {
                     TopAppBar(
