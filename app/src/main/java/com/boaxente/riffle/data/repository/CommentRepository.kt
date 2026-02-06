@@ -124,6 +124,7 @@ class CommentRepository @Inject constructor(
             userId = user.uid,
             userName = displayName,
             userEmail = user.email ?: "",
+            userPhotoUrl = user.photoUrl?.toString() ?: "", // Guardar foto
             text = text,
             parentId = parentId,
             createdAt = Timestamp.now()
