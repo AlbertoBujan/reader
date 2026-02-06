@@ -32,6 +32,7 @@ data class UserInteraction(
     val articleLink: String = "",
     val type: String = "comment",  // "comment" o "reply"
     val commentText: String = "",
+    val commentId: String = "", // Added field
     val createdAt: Timestamp = Timestamp.now()
 ) {
     constructor() : this(id = "")
@@ -42,6 +43,7 @@ data class UserInteraction(
         "articleLink" to articleLink,
         "type" to type,
         "commentText" to commentText,
+        "commentId" to commentId,
         "createdAt" to createdAt
     )
 }

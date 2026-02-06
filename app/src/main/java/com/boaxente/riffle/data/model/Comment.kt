@@ -17,7 +17,8 @@ data class Comment(
     val likes: Int = 0,
     val dislikes: Int = 0,
     val likedBy: List<String> = emptyList(),
-    val dislikedBy: List<String> = emptyList()
+    val dislikedBy: List<String> = emptyList(),
+    val replyCount: Int = 0
 ) {
     // Constructor sin argumentos requerido por Firestore
     constructor() : this(id = "")
@@ -35,7 +36,8 @@ data class Comment(
         "likes" to likes,
         "dislikes" to dislikes,
         "likedBy" to likedBy,
-        "dislikedBy" to dislikedBy
+        "dislikedBy" to dislikedBy,
+        "replyCount" to replyCount
     )
 }
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,6 +46,7 @@ fun CommentsScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val replyingTo by viewModel.replyingTo.collectAsState()
     val error by viewModel.error.collectAsState()
+    val loadingRepliesFor by viewModel.loadingRepliesFor.collectAsState()
     
     var commentText by remember { mutableStateOf("") }
     var showLoginPrompt by remember { mutableStateOf(false) }
@@ -205,7 +207,9 @@ fun CommentsScreen(
                                 onDelete = { 
                                     commentToDelete = it
                                     showDeleteDialog = true
-                                }
+                                },
+                                onLoadReplies = { viewModel.loadReplies(it.comment.id) },
+                                isReplyLoading = loadingRepliesFor.contains(commentNode.comment.id)
                             )
                         }
                     }
@@ -271,6 +275,8 @@ fun CommentTree(
     onLike: (CommentNode) -> Unit,
     onDislike: (CommentNode) -> Unit,
     onDelete: (CommentNode) -> Unit,
+    onLoadReplies: (CommentNode) -> Unit,
+    isReplyLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val lineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
@@ -340,9 +346,60 @@ fun CommentTree(
                             onReply = onReply,
                             onLike = onLike,
                             onDislike = onDislike,
-                            onDelete = onDelete
+                            onDelete = onDelete,
+                            onLoadReplies = onLoadReplies,
+                            isReplyLoading = isReplyLoading
                         )
                     }
+                }
+            }
+        } else if (commentNode.comment.replyCount > 0) {
+            val lineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            // No cargadas, mostrar botón de cargar
+            // Usamos un conector similar para que visualmente parezca parte del árbol
+            
+            Box(
+                modifier = Modifier
+                    .padding(start = 44.dp, top = 8.dp) // 12 + 32
+                    .drawBehind {
+                            val lineX = -16.dp.toPx()
+                            val yPos = 12.dp.toPx() // Centrado relativo al texto
+                            val strokeWidth = 2.dp.toPx()
+                            val radius = 16.dp.toPx()
+                            
+                            val path = androidx.compose.ui.graphics.Path()
+                            
+                            // MEJOR APROXIMACIÓN: Usar la misma estructura de Box con padding y drawBehind
+                            // simulando ser el primer "hijo".
+                            
+                            path.moveTo(lineX, -12.dp.toPx()) // Desde arriba
+                            path.lineTo(lineX, yPos - radius)
+                            path.quadraticBezierTo(
+                                lineX, yPos,
+                                lineX + radius, yPos
+                            )
+                            
+                            drawPath(
+                                path = path,
+                                color = lineColor,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                            )
+                    }
+            ) {
+                 TextButton(
+                    onClick = { onLoadReplies(commentNode) },
+                    enabled = !isReplyLoading
+                ) {
+                    if (isReplyLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("${commentNode.comment.replyCount} respuestas")
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
                 }
             }
         }

@@ -31,9 +31,10 @@ class CommentRepository @Inject constructor(
         val commentsRef = firestore.collection("comments")
             .document(articleId)
             .collection("comments")
-            .orderBy("likes", Query.Direction.DESCENDING)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-        
+            .whereEqualTo("parentId", null) // Solo comentarios raíz
+            // Eliminamos orderBy de la query para evitar necesitar un índice compuesto
+            // Ordenaremos en memoria ya que la cantidad de comentarios raíz no suele ser masiva
+            
         val listener = commentsRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 // Log error pero no cerrar el flow - devolver lista vacía
@@ -46,12 +47,38 @@ class CommentRepository @Inject constructor(
                 doc.toObject(Comment::class.java)?.copy(id = doc.id)
             } ?: emptyList()
             
-            // Convertir lista plana a árbol
-            val tree = buildCommentTree(comments)
-            trySend(tree)
+            // Ya no construimos todo el árbol, solo nodos raíz con replies vacíos por ahora
+            // La UI usará replyCount para saber si hay respuestas
+            // Ordenamos en cliente: primero por likes, luego por fecha
+            val nodes = comments
+                .sortedWith(compareByDescending<Comment> { it.likes }.thenByDescending { it.createdAt })
+                .map { CommentNode(it, emptyList(), 0) }
+                
+            trySend(nodes)
         }
         
         awaitClose { listener.remove() }
+    }
+
+    suspend fun getReplies(articleLink: String, parentId: String): Result<List<Comment>> {
+        val articleId = hashString(articleLink)
+        return try {
+            val snapshot = firestore.collection("comments")
+                .document(articleId)
+                .collection("comments")
+                .whereEqualTo("parentId", parentId)
+                // Eliminamos orderBy para evitar índice compuesto. Ordenamos en memoria.
+                .get()
+                .await()
+            
+            val replies = snapshot.documents.mapNotNull { doc ->
+                 doc.toObject(Comment::class.java)?.copy(id = doc.id)
+            }.sortedBy { it.createdAt } // Orden cronológico (más antiguo primero)
+            
+            Result.success(replies)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
     
     /**
@@ -103,22 +130,40 @@ class CommentRepository @Inject constructor(
         )
         
         return try {
-            val docRef = commentsRef.add(comment.toMap()).await()
-            val newComment = comment.copy(id = docRef.id)
-            
-            // Registrar la interacción del usuario
-            saveUserInteraction(
-                articleId = articleId,
-                articleTitle = articleTitle,
-                articleLink = articleLink,
-                type = if (parentId == null) "comment" else "reply",
-                commentText = text
-            )
-            
-            // Incrementar contador de comentarios del usuario
-            incrementUserCommentCount()
-            
-            Result.success(newComment)
+            firestore.runTransaction { transaction ->
+                // 1. Crear referencia para el nuevo comentario
+                val newCommentRef = commentsRef.document()
+                val commentWithId = comment.copy(id = newCommentRef.id)
+                
+                // 2. Guardar el comentario
+                transaction.set(newCommentRef, commentWithId.toMap())
+                
+                // 3. Si es respuesta, incrementar contador del padre
+                if (parentId != null) {
+                    val parentRef = commentsRef.document(parentId)
+                    transaction.update(parentRef, "replyCount", FieldValue.increment(1))
+                }
+                
+                // Retornar el comentario para usarlo fuera (aunque id ya lo tenemos)
+                commentWithId
+            }.await().let { newComment ->
+                 // Acciones post-transacción (no críticas para la integridad de datos del comentario en sí)
+                
+                // Registrar la interacción del usuario
+                saveUserInteraction(
+                    articleId = articleId,
+                    articleTitle = articleTitle,
+                    articleLink = articleLink,
+                    type = if (parentId == null) "comment" else "reply",
+                    commentText = text,
+                    commentId = newComment.id
+                )
+                
+                // Incrementar contador de comentarios del usuario
+                incrementUserCommentCount()
+                
+                Result.success(newComment)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -254,14 +299,50 @@ class CommentRepository @Inject constructor(
             commentsToDelete.forEach { comment ->
                 batch.delete(commentsCollection.document(comment.id))
             }
-            batch.commit().await()
-             
-            // 3. Actualizar contadores de usuarios afectados
+            
+            // Si el comentario principal eliminado (target) tiene padre, decrementar contador del padre
+            // Nota: Si borramos una respuesta que tiene respuestas, borramos todo el subárbol,
+            // pero el "padre" de la respuesta original solo pierde 1 respuesta directa.
+            // targetDoc ya lo leímos arriba.
+             targetDoc.toObject(Comment::class.java)?.parentId?.let { parentId ->
+                 val parentRef = commentsCollection.document(parentId)
+                 batch.update(parentRef, "replyCount", FieldValue.increment(-1))
+             }
+
+            // 3. Actualizar contadores de usuarios afectados (DENTRO DEL BATCH para atomicidad)
             // Agrupar por usuario para restar el número correcto de comentarios a cada uno
             val usersAffected = commentsToDelete.groupBy { it.userId }
             usersAffected.forEach { (userId, userComments) ->
-                decrementUserCommentCount(userId, userComments.size)
+                val userStatsRef = firestore.collection("users")
+                    .document(userId)
+                    .collection("profile")
+                    .document("social")
+                
+                batch.set(
+                    userStatsRef, 
+                    mapOf("totalComments" to FieldValue.increment(-userComments.size.toLong())), 
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
+                
+                // 4. Buscar y borrar las interacciones asociadas a estos comentarios
+                val interactionsRef = userStatsRef.collection("interactions")
+                
+                // Buscamos las interacciones una a una (o en grupos si pudiéramos) para añadirlas al batch
+                // Esto añade lecturas pero asegura limpieza
+                for (comment in userComments) {
+                    // Query para encontrar la interacción asociada al comentario
+                    val interactionSnapshot = interactionsRef
+                        .whereEqualTo("commentId", comment.id)
+                        .get()
+                        .await()
+                        
+                    for (doc in interactionSnapshot.documents) {
+                        batch.delete(doc.reference)
+                    }
+                }
             }
+             
+            batch.commit().await()
              
              Result.success(Unit)
         } catch (e: Exception) {
@@ -327,7 +408,8 @@ class CommentRepository @Inject constructor(
         articleTitle: String,
         articleLink: String,
         type: String,
-        commentText: String
+        commentText: String,
+        commentId: String
     ) {
         val user = auth.currentUser ?: return
         val interaction = UserInteraction(
@@ -336,6 +418,7 @@ class CommentRepository @Inject constructor(
             articleLink = articleLink,
             type = type,
             commentText = commentText,
+            commentId = commentId,
             createdAt = Timestamp.now()
         )
         
