@@ -118,6 +118,15 @@ class MainViewModel @Inject constructor(
     private val _discoveredFeedHealth = MutableStateFlow<Map<String, FeedHealth>>(emptyMap())
     val discoveredFeedHealth: StateFlow<Map<String, FeedHealth>> = _discoveredFeedHealth.asStateFlow()
 
+    val sortedDiscoveredFeeds: StateFlow<List<DiscoveredFeed>> = combine(
+        _discoveredFeeds,
+        _discoveredFeedHealth
+    ) { feeds, healthMap ->
+        feeds.sortedBy { feed ->
+            healthMap[feed.url] ?: FeedHealth.UNKNOWN
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 

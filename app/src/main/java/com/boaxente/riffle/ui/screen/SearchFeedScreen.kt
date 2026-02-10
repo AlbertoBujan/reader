@@ -72,7 +72,7 @@ fun SearchFeedScreen(
 ) {
     var query by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val feeds by viewModel.discoveredFeeds.collectAsState()
+    val feeds by viewModel.sortedDiscoveredFeeds.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val focusRequester = remember { FocusRequester() }
     var isExpanded by remember { mutableStateOf(false) }
