@@ -77,6 +77,17 @@ object AppModule {
 
     @Provides
     @Singleton
+    @javax.inject.Named("search")
+    fun provideSearchOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideFeedService(client: OkHttpClient): FeedService {
         return Retrofit.Builder()
             .baseUrl("https://localhost/") // Dummy Base URL as we use dynamic @Url
@@ -87,10 +98,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideClearbitService(client: OkHttpClient): ClearbitService {
+    fun provideClearbitService(@javax.inject.Named("search") searchClient: OkHttpClient): ClearbitService {
         return Retrofit.Builder()
             .baseUrl("https://autocomplete.clearbit.com/")
-            .client(client)
+            .client(searchClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ClearbitService::class.java)
@@ -98,10 +109,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFeedSearchService(client: OkHttpClient): FeedSearchService {
+    fun provideFeedSearchService(@javax.inject.Named("search") searchClient: OkHttpClient): FeedSearchService {
         return Retrofit.Builder()
             .baseUrl("https://feedsearch.dev/")
-            .client(client)
+            .client(searchClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(FeedSearchService::class.java)

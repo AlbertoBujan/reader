@@ -19,6 +19,10 @@ import com.boaxente.riffle.domain.usecase.SyncFeedsUseCase
 import com.boaxente.riffle.util.RiffleLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +86,8 @@ class MainViewModel @Inject constructor(
     private val firestoreHelper: com.boaxente.riffle.data.remote.FirestoreHelper,
     private val feedSearchService: FeedSearchService,
     private val clearbitService: ClearbitService,
+    private val feedService: com.boaxente.riffle.data.remote.FeedService,
+    private val rssParser: com.boaxente.riffle.data.remote.RssParser,
 
     private val authManager: com.boaxente.riffle.data.remote.AuthManager,
     private val commentRepository: com.boaxente.riffle.data.repository.CommentRepository,
@@ -108,6 +114,9 @@ class MainViewModel @Inject constructor(
 
     private val _discoveredFeeds = MutableStateFlow<List<DiscoveredFeed>>(emptyList())
     val discoveredFeeds: StateFlow<List<DiscoveredFeed>> = _discoveredFeeds.asStateFlow()
+
+    private val _discoveredFeedHealth = MutableStateFlow<Map<String, FeedHealth>>(emptyMap())
+    val discoveredFeedHealth: StateFlow<Map<String, FeedHealth>> = _discoveredFeedHealth.asStateFlow()
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
@@ -577,7 +586,36 @@ class MainViewModel @Inject constructor(
 
     fun clearFeedSearch() {
         _discoveredFeeds.value = emptyList()
+        _discoveredFeedHealth.value = emptyMap()
         _isSearching.value = false
+    }
+
+    private fun probeFeedsHealth(feeds: List<DiscoveredFeed>) {
+        val savedUrls = sources.value.map { it.url }.toSet()
+        feeds.filter { it.url !in savedUrls }.forEach { feed ->
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val response = feedService.fetchFeed(feed.url)
+                    val parsed = rssParser.parse(response.byteStream(), feed.url)
+                    val latestDate = parsed.articles.maxOfOrNull { it.pubDate }
+                    if (latestDate != null) {
+                        val now = System.currentTimeMillis()
+                        val dayInMillis = 24 * 60 * 60 * 1000L
+                        val diff = now - latestDate
+                        val health = when {
+                            diff <= 5 * dayInMillis -> FeedHealth.GOOD
+                            diff <= 10 * dayInMillis -> FeedHealth.WARNING
+                            diff <= 50 * dayInMillis -> FeedHealth.BAD
+                            else -> FeedHealth.DEAD
+                        }
+                        _discoveredFeedHealth.value = _discoveredFeedHealth.value + (feed.url to health)
+                    }
+                } catch (e: Exception) {
+                    // Silently ignore - we just won't show a health indicator for this feed
+                    Log.d("FeedSearch", "Health probe failed for ${feed.url}: ${e.message}")
+                }
+            }
+        }
     }
 
     fun searchFeeds(query: String) {
@@ -587,55 +625,55 @@ class MainViewModel @Inject constructor(
             try {
                 _discoveredFeeds.value = withContext(Dispatchers.IO) {
                     try {
-                        val cleanQuery = query.trim().lowercase()
-                        val domainsToSearch = mutableSetOf<String>()
+                        withTimeout(15_000) {
+                            val cleanQuery = query.trim().lowercase()
+                            val domainsToSearch = mutableSetOf<String>()
 
-                        // 1. If it looks like a URL or has a TLD, search directly
-                        if (cleanQuery.contains(".") || cleanQuery.startsWith("http")) {
-                            domainsToSearch.add(cleanQuery)
-                        } else {
-                            // 2. Otherwise, use clearbit to find domains
-                            try {
-                                val suggestions = clearbitService.suggestCompanies(cleanQuery)
-                                suggestions.forEach { domainsToSearch.add(it.domain) }
-                            } catch (e: Exception) {
-                RiffleLogger.recordException(e)
-                                Log.e("FeedSearch", "Clearbit lookup failed: ${e.message}")
-                            }
-                            // Fallback: append .com just in case
-                            if (domainsToSearch.isEmpty()) {
-                                domainsToSearch.add("$cleanQuery.com")
-                            }
-                        }
-
-                        // 3. Search FeedSearch for collected domains
-                        // We run this for up to 3 domains to avoid spamming, though usually 1-2.
-                        val results = mutableListOf<DiscoveredFeed>()
-                        
-                        // We can run these concurrently for speed
-                        // Using async/awaitAll would be better but simple loop is fine for small count
-                         domainsToSearch.take(3).forEach { domain ->
-                            try {
-                                val searchResults = feedSearchService.search(domain)
-                                searchResults.forEach { dto ->
-                                    // Use defaults if fields missing
-                                    results.add(DiscoveredFeed(
-                                        title = dto.title.ifBlank { "Feed from $domain" },
-                                        url = dto.selfUrl ?: dto.url,
-                                        iconUrl = dto.favicon,
-                                        siteName = dto.title 
-                                    ))
+                            // 1. If it looks like a URL or has a TLD, search directly
+                            if (cleanQuery.contains(".") || cleanQuery.startsWith("http")) {
+                                domainsToSearch.add(cleanQuery)
+                            } else {
+                                // 2. Otherwise, use clearbit to find domains
+                                try {
+                                    val suggestions = clearbitService.suggestCompanies(cleanQuery)
+                                    suggestions.forEach { domainsToSearch.add(it.domain) }
+                                } catch (e: Exception) {
+                                    RiffleLogger.recordException(e)
+                                    Log.e("FeedSearch", "Clearbit lookup failed: ${e.message}")
                                 }
-                            } catch (e: Exception) {
-                RiffleLogger.recordException(e)
-                                Log.e("FeedSearch", "FeedSearch for $domain failed: ${e.message}")
+                                // Fallback: append .com just in case
+                                if (domainsToSearch.isEmpty()) {
+                                    domainsToSearch.add("$cleanQuery.com")
+                                }
                             }
+
+                            // 3. Search FeedSearch for collected domains in parallel
+                            val deferredResults = domainsToSearch.take(3).map { domain ->
+                                async {
+                                    try {
+                                        feedSearchService.search(domain).map { dto ->
+                                            DiscoveredFeed(
+                                                title = dto.title.ifBlank { "Feed from $domain" },
+                                                url = dto.selfUrl ?: dto.url,
+                                                iconUrl = dto.favicon,
+                                                siteName = dto.title
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        RiffleLogger.recordException(e)
+                                        Log.e("FeedSearch", "FeedSearch for $domain failed: ${e.message}")
+                                        emptyList()
+                                    }
+                                }
+                            }
+
+                            deferredResults.awaitAll().flatten().distinctBy { it.url }
                         }
-                        
-                        results.distinctBy { it.url }
-                        
+                    } catch (e: TimeoutCancellationException) {
+                        Log.w("FeedSearch", "Search timed out after 15s")
+                        _discoveredFeeds.value // return partial results if any
                     } catch (e: Exception) {
-                RiffleLogger.recordException(e)
+                        RiffleLogger.recordException(e)
                         Log.e("FeedSearch", "API Error: ${e.message}")
                         emptyList()
                     }
@@ -645,6 +683,11 @@ class MainViewModel @Inject constructor(
                 Log.e("FeedSearch", "SearchFeeds error: ${e.message}")
             } finally {
                 _isSearching.value = false
+                // Probe health for discovered feeds asynchronously
+                if (_discoveredFeeds.value.isNotEmpty()) {
+                    _discoveredFeedHealth.value = emptyMap()
+                    probeFeedsHealth(_discoveredFeeds.value)
+                }
             }
         }
     }
