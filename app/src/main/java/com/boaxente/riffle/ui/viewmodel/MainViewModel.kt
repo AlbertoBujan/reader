@@ -652,11 +652,12 @@ class MainViewModel @Inject constructor(
                                 async {
                                     try {
                                         feedSearchService.search(domain).map { dto ->
+                                            val feedTitle = dto.title?.takeIf { it.isNotBlank() } ?: "Feed from $domain"
                                             DiscoveredFeed(
-                                                title = dto.title.ifBlank { "Feed from $domain" },
+                                                title = feedTitle,
                                                 url = dto.selfUrl ?: dto.url,
                                                 iconUrl = dto.favicon,
-                                                siteName = dto.title
+                                                siteName = dto.title?.takeIf { it.isNotBlank() }
                                             )
                                         }
                                     } catch (e: Exception) {
