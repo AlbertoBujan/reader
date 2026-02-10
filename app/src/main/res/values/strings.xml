@@ -25,6 +25,7 @@
     <string name="article_back">Back</string>
     <string name="search_articles_placeholder">Search articles...</string>
     <string name="search_add_directly">Add "%1$s" directly</string>
+    <string name="search_already_added">Already added</string>
     
     <!-- AI Summary -->
     <string name="ai_summary_title">Smart Summary</string>

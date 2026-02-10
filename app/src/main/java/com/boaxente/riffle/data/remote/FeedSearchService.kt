@@ -11,7 +11,7 @@ interface FeedSearchService {
 
 data class FeedSearchDto(
     @SerializedName("url") val url: String,
-    @SerializedName("title") val title: String,
+    @SerializedName("title") val title: String?,
     @SerializedName("description") val description: String?,
     @SerializedName("site_url") val siteUrl: String?,
     @SerializedName("self_url") val selfUrl: String?,

@@ -72,10 +72,14 @@ fun SearchFeedScreen(
 ) {
     var query by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val feeds by viewModel.discoveredFeeds.collectAsState()
+    val feeds by viewModel.sortedDiscoveredFeeds.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val focusRequester = remember { FocusRequester() }
     var isExpanded by remember { mutableStateOf(false) }
+    val sources by viewModel.sources.collectAsState()
+    val feedHealthState by viewModel.feedHealthState.collectAsState()
+    val discoveredHealth by viewModel.discoveredFeedHealth.collectAsState()
+    val savedSourceUrls = remember(sources) { sources.map { it.url }.toSet() }
 
     // Reset expansion when search results change or new search begins
     LaunchedEffect(isSearching) {
@@ -258,19 +262,41 @@ fun SearchFeedScreen(
                     val displayedFeeds = if (isExpanded) feeds else feeds.take(5)
                     
                     items(displayedFeeds) { feed ->
+                        val isAlreadySaved = savedSourceUrls.contains(feed.url)
+                        val health = if (isAlreadySaved) feedHealthState[feed.url] else discoveredHealth[feed.url]
                         val isItemLoading = (sourceAdditionState is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading) &&
                             (sourceAdditionState as com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == feed.url
                         
                         ListItem(
                             leadingContent = {
-                                if (feed.iconUrl != null) {
-                                    AsyncImage(
-                                        model = feed.iconUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(32.dp).clip(CircleShape)
-                                    )
-                                } else {
-                                    Icon(Icons.Default.RssFeed, null)
+                                Box {
+                                    if (feed.iconUrl != null) {
+                                        AsyncImage(
+                                            model = feed.iconUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp).clip(CircleShape)
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.RssFeed, null, modifier = Modifier.size(32.dp))
+                                    }
+                                    // Health indicator dot overlaid on bottom-right of icon
+                                    // Health indicator dot overlaid on bottom-right of icon
+                                    val healthStatus = health ?: com.boaxente.riffle.ui.viewmodel.FeedHealth.UNKNOWN
+                                    androidx.compose.foundation.Canvas(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .align(Alignment.BottomEnd)
+                                    ) {
+                                        drawCircle(
+                                            color = when (healthStatus) {
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.GOOD -> Color(0xFF4CAF50)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.WARNING -> Color(0xFFFFC107)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.BAD -> Color(0xFFF44336)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.DEAD -> Color(0xFF616161)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.UNKNOWN -> Color(0xFF9E9E9E)
+                                            }
+                                        )
+                                    }
                                 }
                             },
                             headlineContent = { Text(feed.siteName ?: feed.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -283,7 +309,13 @@ fun SearchFeedScreen(
                                 ) 
                             },
                             trailingContent = {
-                                if (isItemLoading) {
+                                if (isAlreadySaved) {
+                                    Text(
+                                        text = stringResource(R.string.search_already_added),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else if (isItemLoading) {
                                     Box(
                                         modifier = Modifier.size(48.dp),
                                         contentAlignment = Alignment.Center
