@@ -108,6 +108,35 @@ fun ArticleReaderScreen(
     val summary by viewModel.summaryState.collectAsState()
     val isSummarizing by viewModel.isSummarizing.collectAsState()
 
+    // Haptic feedback logic
+    val vibrator = remember { androidx.core.content.ContextCompat.getSystemService(context, android.os.Vibrator::class.java) }
+    DisposableEffect(isSummarizing) {
+        if (isSummarizing) {
+            vibrator?.let { v ->
+                if (v.hasVibrator()) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        // Heartbeat pattern: lub-dub, lub-dub...
+                        // Timings: [delay, vibrate, pause, vibrate, pause]
+                        // Amplitudes: [0, strong, 0, weak, 0]
+                        val timings = longArrayOf(0, 100, 100, 100, 1000)
+                        val amplitudes = intArrayOf(0, 255, 0, 100, 0) 
+                        
+                        val effect = android.os.VibrationEffect.createWaveform(timings, amplitudes, 0) // 0 means repeat at index 0
+                        v.vibrate(effect)
+                    } else {
+                        // Fallback for older devices
+                        val pattern = longArrayOf(0, 100, 100, 100, 1000)
+                        @Suppress("DEPRECATION")
+                        v.vibrate(pattern, 0)
+                    }
+                }
+            }
+        }
+        onDispose {
+            vibrator?.cancel()
+        }
+    }
+
     val scrollState = rememberScrollState()
     var previousScrollOffset by remember { mutableIntStateOf(0) }
     var isFabVisible by remember { mutableStateOf(true) }
