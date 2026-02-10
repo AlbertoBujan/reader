@@ -78,6 +78,7 @@ fun SearchFeedScreen(
     var isExpanded by remember { mutableStateOf(false) }
     val sources by viewModel.sources.collectAsState()
     val feedHealthState by viewModel.feedHealthState.collectAsState()
+    val discoveredHealth by viewModel.discoveredFeedHealth.collectAsState()
     val savedSourceUrls = remember(sources) { sources.map { it.url }.toSet() }
 
     // Reset expansion when search results change or new search begins
@@ -262,7 +263,6 @@ fun SearchFeedScreen(
                     
                     items(displayedFeeds) { feed ->
                         val isAlreadySaved = savedSourceUrls.contains(feed.url)
-                        val discoveredHealth by viewModel.discoveredFeedHealth.collectAsState()
                         val health = if (isAlreadySaved) feedHealthState[feed.url] else discoveredHealth[feed.url]
                         val isItemLoading = (sourceAdditionState is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading) &&
                             (sourceAdditionState as com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == feed.url
@@ -280,22 +280,22 @@ fun SearchFeedScreen(
                                         Icon(Icons.Default.RssFeed, null, modifier = Modifier.size(32.dp))
                                     }
                                     // Health indicator dot overlaid on bottom-right of icon
-                                    if (health != null && health != com.boaxente.riffle.ui.viewmodel.FeedHealth.UNKNOWN) {
-                                        androidx.compose.foundation.Canvas(
-                                            modifier = Modifier
-                                                .size(10.dp)
-                                                .align(Alignment.BottomEnd)
-                                        ) {
-                                            drawCircle(
-                                                color = when (health) {
-                                                    com.boaxente.riffle.ui.viewmodel.FeedHealth.GOOD -> Color(0xFF4CAF50)
-                                                    com.boaxente.riffle.ui.viewmodel.FeedHealth.WARNING -> Color(0xFFFFC107)
-                                                    com.boaxente.riffle.ui.viewmodel.FeedHealth.BAD -> Color(0xFFF44336)
-                                                    com.boaxente.riffle.ui.viewmodel.FeedHealth.DEAD -> Color(0xFF616161)
-                                                    else -> Color.Transparent
-                                                }
-                                            )
-                                        }
+                                    // Health indicator dot overlaid on bottom-right of icon
+                                    val healthStatus = health ?: com.boaxente.riffle.ui.viewmodel.FeedHealth.UNKNOWN
+                                    androidx.compose.foundation.Canvas(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .align(Alignment.BottomEnd)
+                                    ) {
+                                        drawCircle(
+                                            color = when (healthStatus) {
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.GOOD -> Color(0xFF4CAF50)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.WARNING -> Color(0xFFFFC107)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.BAD -> Color(0xFFF44336)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.DEAD -> Color(0xFF616161)
+                                                com.boaxente.riffle.ui.viewmodel.FeedHealth.UNKNOWN -> Color(0xFF9E9E9E)
+                                            }
+                                        )
                                     }
                                 }
                             },

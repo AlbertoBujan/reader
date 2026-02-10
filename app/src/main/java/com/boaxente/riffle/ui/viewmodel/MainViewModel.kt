@@ -611,7 +611,8 @@ class MainViewModel @Inject constructor(
                         _discoveredFeedHealth.value = _discoveredFeedHealth.value + (feed.url to health)
                     }
                 } catch (e: Exception) {
-                    // Silently ignore - we just won't show a health indicator for this feed
+                    // Probe failed - show gray indicator as fallback
+                    _discoveredFeedHealth.value = _discoveredFeedHealth.value + (feed.url to FeedHealth.UNKNOWN)
                     Log.d("FeedSearch", "Health probe failed for ${feed.url}: ${e.message}")
                 }
             }
