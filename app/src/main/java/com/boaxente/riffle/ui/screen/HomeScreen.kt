@@ -1608,6 +1608,10 @@ fun SwipeableArticleItem(
                 }
                 else -> false
             }
+        },
+        positionalThreshold = { totalDistance ->
+            // Require 45% swipe to trigger, making it harder to trigger accidentally while scrolling
+            totalDistance * 0.45f
         }
     )
 
