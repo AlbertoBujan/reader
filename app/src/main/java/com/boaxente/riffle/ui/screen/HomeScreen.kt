@@ -1627,9 +1627,18 @@ fun SwipeableArticleItem(
         }
     }
 
+    // Directional Locking:
+    // Attempted to lock direction dynamically, but modifying enableDismissFrom... during a drag
+    // cancels the gesture in Jetpack Compose's SwipeToDismissBox.
+    // We rely on the high positionalThreshold (45%) to prevent accidental triggers.
+
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+
+
         backgroundContent = {
             SwipeActionBackground(
                 dismissState = dismissState, 
