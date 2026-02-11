@@ -98,6 +98,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.boaxente.riffle.util.RiffleLogger
+import com.boaxente.riffle.util.extractFirstImageUrl
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -1607,6 +1608,10 @@ fun SwipeableArticleItem(
                 }
                 else -> false
             }
+        },
+        positionalThreshold = { totalDistance ->
+            // Require 45% swipe to trigger, making it harder to trigger accidentally while scrolling
+            totalDistance * 0.45f
         }
     )
 
@@ -1622,9 +1627,18 @@ fun SwipeableArticleItem(
         }
     }
 
+    // Directional Locking:
+    // Attempted to lock direction dynamically, but modifying enableDismissFrom... during a drag
+    // cancels the gesture in Jetpack Compose's SwipeToDismissBox.
+    // We rely on the high positionalThreshold (45%) to prevent accidental triggers.
+
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+
+
         backgroundContent = {
             SwipeActionBackground(
                 dismissState = dismissState, 
@@ -1650,7 +1664,22 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                 .padding(16.dp)
                 .alpha(if (article.isRead && !isReadLaterView) 0.5f else 1f)
         ) {
-            Column {
+            val displayImageUrl = remember(article) {
+                article.imageUrl ?: article.description?.extractFirstImageUrl()
+            }
+            
+            if (displayImageUrl != null) {
+                AsyncImage(
+                    model = displayImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = article.title,
