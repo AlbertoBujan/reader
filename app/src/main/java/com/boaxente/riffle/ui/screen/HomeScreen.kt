@@ -98,6 +98,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.boaxente.riffle.util.RiffleLogger
+import com.boaxente.riffle.util.extractFirstImageUrl
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -1650,7 +1651,22 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                 .padding(16.dp)
                 .alpha(if (article.isRead && !isReadLaterView) 0.5f else 1f)
         ) {
-            Column {
+            val displayImageUrl = remember(article) {
+                article.imageUrl ?: article.description?.extractFirstImageUrl()
+            }
+            
+            if (displayImageUrl != null) {
+                AsyncImage(
+                    model = displayImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = article.title,

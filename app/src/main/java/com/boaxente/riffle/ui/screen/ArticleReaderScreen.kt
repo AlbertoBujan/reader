@@ -90,6 +90,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.boaxente.riffle.ui.viewmodel.MainViewModel
 import com.boaxente.riffle.R
 import androidx.compose.ui.res.stringResource
+import com.boaxente.riffle.util.extractFirstImageUrl
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,15 +120,15 @@ fun ArticleReaderScreen(
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                         // Heartbeat pattern: lub-dub, lub-dub...
                         // Timings: [delay, vibrate, pause, vibrate, pause]
-                        // Amplitudes: [0, strong, 0, weak, 0]
-                        val timings = longArrayOf(0, 100, 100, 100, 1000)
-                        val amplitudes = intArrayOf(0, 255, 0, 100, 0) 
+                        // Amplitudes: [0, subtle, 0, very subtle, 0]
+                        val timings = longArrayOf(0, 80, 100, 80, 1000)
+                        val amplitudes = intArrayOf(0, 40, 0, 20, 0) 
                         
                         val effect = android.os.VibrationEffect.createWaveform(timings, amplitudes, 0) // 0 means repeat at index 0
                         v.vibrate(effect)
                     } else {
-                        // Fallback for older devices
-                        val pattern = longArrayOf(0, 100, 100, 100, 1000)
+                        // Fallback for older devices (pattern only, cannot control amplitude)
+                        val pattern = longArrayOf(0, 50, 100, 50, 1000)
                         @Suppress("DEPRECATION")
                         v.vibrate(pattern, 0)
                     }
@@ -350,6 +353,22 @@ fun ArticleReaderScreen(
                             }
                         }
                     }
+                }
+                val displayImageUrl = remember(article) {
+                    article.imageUrl ?: article.description?.extractFirstImageUrl()
+                }
+
+                if (displayImageUrl != null) {
+                    AsyncImage(
+                        model = displayImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
                 Text(
                     text = article!!.title,
