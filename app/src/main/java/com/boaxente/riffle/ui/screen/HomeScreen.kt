@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -169,7 +170,7 @@ fun Modifier.shimmerEffect(): Modifier = composed {
         label = "shimmer_offset"
     )
 
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     // Aún más oscuros y con menos contraste para que no sea "shiny" agresivo
     val baseColor = if (isDark) Color(0xFF1A1B1E) else Color(0xFFB8B5B5) 
     val highlightColor = if (isDark) Color(0xFF2E3035) else Color(0xFF8F8B8B)
@@ -1654,7 +1655,7 @@ fun SwipeableArticleItem(
 
 @Composable
 fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, Boolean) -> Unit, isReadLaterView: Boolean = false) {
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     Card(
         onClick = { onClick(article.link, article.isRead) },
         shape = RoundedCornerShape(4.dp),
