@@ -193,19 +193,19 @@ fun Modifier.shimmerEffect(): Modifier = composed {
 @Composable
 fun SkeletonArticleItem() {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(4.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(12.dp)
         ) {
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(4.dp))
                     .shimmerEffect()
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Box(
                     modifier = Modifier
@@ -1540,8 +1540,8 @@ fun ArticleList(
 
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxSize()
     ) {
         items(articles, key = { it.link }) { article ->
@@ -1634,7 +1634,7 @@ fun SwipeableArticleItem(
 
     SwipeToDismissBox(
         state = dismissState,
-        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
         enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true,
 
@@ -1642,7 +1642,7 @@ fun SwipeableArticleItem(
         backgroundContent = {
             SwipeActionBackground(
                 dismissState = dismissState, 
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(4.dp),
                 isReadLaterView = isReadLaterView,
                 isSaved = displayedIsSaved
             )
@@ -1654,14 +1654,18 @@ fun SwipeableArticleItem(
 
 @Composable
 fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, Boolean) -> Unit, isReadLaterView: Boolean = false) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     Card(
         onClick = { onClick(article.link, article.isRead) },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(4.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = if (isDark) Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surface
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .alpha(if (article.isRead && !isReadLaterView) 0.5f else 1f)
         ) {
             val displayImageUrl = remember(article) {
@@ -1674,10 +1678,10 @@ fun ArticleItem(article: ArticleEntity, sourceName: String?, onClick: (String, B
                     contentDescription = null,
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(4.dp)),
                     contentScale = ContentScale.Crop
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
             }
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
