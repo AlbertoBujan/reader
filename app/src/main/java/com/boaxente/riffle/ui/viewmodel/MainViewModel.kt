@@ -223,7 +223,7 @@ class MainViewModel @Inject constructor(
     }
 
     // Función que llama a la IA
-    fun summarizeArticle(title: String, content: String) {
+    fun summarizeArticle(title: String, content: String, articleUrl: String? = null) {
         val currentKey = _geminiApiKey.value
         if (currentKey.isBlank()) {
             _summaryState.value = context.getString(com.boaxente.riffle.R.string.ai_error_api_key)
@@ -234,13 +234,40 @@ class MainViewModel @Inject constructor(
             _isSummarizing.value = true
             _summaryState.value = null // Limpiamos resumen anterior
 
-            // Preparar prompt una única vez
-            val cleanContent = try {
-                Jsoup.parse(content).text().take(10000)
+            // Intentar obtener el contenido completo de la web
+            val webContent = if (articleUrl != null) {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val doc = Jsoup.connect(articleUrl)
+                            .timeout(10000)
+                            .userAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                            .get()
+                        // Eliminar scripts, styles y nav para obtener solo el contenido
+                        doc.select("script, style, nav, header, footer, aside, .comments, #comments").remove()
+                        // Intentar extraer del tag <article> primero, sino del <body>
+                        val articleElement = doc.selectFirst("article")
+                        val text = (articleElement ?: doc.body())?.text() ?: ""
+                        text.ifBlank { null }
+                    } catch (e: Exception) {
+                        Log.w("MainViewModel", "Failed to fetch web content from $articleUrl: ${e.message}")
+                        null
+                    }
+                }
+            } else null
+
+            // Usar contenido web si es más largo que el RSS, sino fallback al RSS
+            val rssContent = try {
+                Jsoup.parse(content).text()
             } catch (e: Exception) {
                 RiffleLogger.recordException(e)
-                content.take(10000)
+                content
             }
+            val bestContent = if (webContent != null && webContent.length > rssContent.length) {
+                webContent
+            } else {
+                rssContent
+            }
+            val cleanContent = bestContent.take(10000)
             
             val currentLanguage = language.value
             val isEnglish = currentLanguage == "en" || (currentLanguage == "system" && java.util.Locale.getDefault().language == "en")
