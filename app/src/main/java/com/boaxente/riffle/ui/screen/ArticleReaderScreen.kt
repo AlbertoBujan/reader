@@ -256,7 +256,8 @@ fun ArticleReaderScreen(
                             // Enviamos título y contenido (o descripción si contenido es nulo)
                             viewModel.summarizeArticle(
                                 title = article!!.title,
-                                content = article!!.description ?: noContentString
+                                content = article!!.description ?: noContentString,
+                                articleUrl = article!!.link
                             )
                             coroutineScope.launch {
                                 scrollState.animateScrollTo(0)
