@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material3.AlertDialog
@@ -788,7 +789,8 @@ fun HomeScreen(
                                     onArticleClick(link, isRead)
                                 },
                                 isReadLaterView = selectedSource == "saved",
-                                onLoadMore = { viewModel.loadMore() }
+                                onLoadMore = { viewModel.loadMore() },
+                                onRefresh = { viewModel.sync() }
                             )
                         }
                     }
@@ -1497,7 +1499,8 @@ fun ArticleList(
     onShare: (ArticleEntity) -> Unit,
     onArticleClick: (String, Boolean) -> Unit,
     isReadLaterView: Boolean = false,
-    onLoadMore: () -> Unit = {}
+    onLoadMore: () -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
     val currentArticles by rememberUpdatedState(articles)
 
@@ -1567,12 +1570,24 @@ fun ArticleList(
                         .padding(bottom = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = stringResource(R.string.list_end_message),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.list_end_message),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(onClick = onRefresh) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.list_end_refresh))
+                        }
+                    }
                 }
             }
             item {
