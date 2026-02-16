@@ -6,11 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,6 +24,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -57,12 +61,23 @@ fun CommentsScreen(
     
     val currentUser = FirebaseAuth.getInstance().currentUser
     val isLoggedIn = currentUser != null
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
     
     LaunchedEffect(articleLink) {
         viewModel.loadComments(articleLink, articleTitle)
     }
     
+    // Scroll al último comentario cuando se añade uno nuevo
+    LaunchedEffect(comments.size) {
+        if (comments.isNotEmpty()) {
+            listState.animateScrollToItem(comments.size - 1)
+        }
+    }
+    
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.comments_title)) },
@@ -134,12 +149,14 @@ fun CommentsScreen(
                                 } else if (commentText.isNotBlank()) {
                                     viewModel.addComment(commentText.trim())
                                     commentText = ""
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
                                 }
                             },
                             enabled = commentText.isNotBlank() || !isLoggedIn
                         ) {
                             Icon(
-                                Icons.Default.Send,
+                                Icons.AutoMirrored.Filled.Send,
                                 contentDescription = stringResource(R.string.comments_send),
                                 tint = if (commentText.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -153,6 +170,7 @@ fun CommentsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
         ) {
             when {
                 isLoading && comments.isEmpty() -> {
@@ -189,6 +207,7 @@ fun CommentsScreen(
                 }
                 else -> {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -327,7 +346,7 @@ fun CommentTree(
                                 
                                 // 2. Curva
                                 path.moveTo(lineX, yPos - radius)
-                                path.quadraticBezierTo(
+                                path.quadraticTo(
                                     lineX, yPos, // Punto de control (esquina)
                                     lineX + radius, yPos // Punto final (horizontal)
                                 )
@@ -376,7 +395,7 @@ fun CommentTree(
                             
                             path.moveTo(lineX, -12.dp.toPx()) // Desde arriba
                             path.lineTo(lineX, yPos - radius)
-                            path.quadraticBezierTo(
+                            path.quadraticTo(
                                 lineX, yPos,
                                 lineX + radius, yPos
                             )
