@@ -230,6 +230,14 @@
     <string name="profile_activity">Activity History</string>
     <string name="profile_saved">Favorites</string>
     <string name="profile_read">Read Articles</string>
+    <string name="health_notification_title">Feed Health Alerts</string>
+    <string name="health_notification_message">The following feeds have not updated in a while.</string>
+    <string name="health_status_bad">Updated > 10 days ago</string>
+    <string name="health_status_dead">Updated > 50 days ago</string>
+    <string name="health_dismiss_7d">Dismiss (7d)</string>
+    <string name="health_close">Close</string>
+    <string name="health_all_good_title">Everything looks good!</string>
+    <string name="health_all_good_message">All your feeds are healthy and updating correctly.</string>
     <string name="profile_no_activity">No activity yet</string>
     <plurals name="replies_count">
         <item quantity="one">%1$d reply</item>

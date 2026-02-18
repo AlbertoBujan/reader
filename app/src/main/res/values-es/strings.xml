@@ -218,6 +218,15 @@
     <string name="profile_activity">Historial de actividad</string>
     <string name="profile_saved">Favoritos</string>
     <string name="profile_read">Leídos</string>
+    
+    <string name="health_notification_title">Alertas de Fuentes</string>
+    <string name="health_notification_message">Las siguientes fuentes no se han actualizado en un tiempo.</string>
+    <string name="health_status_bad">Actualizado hace > 10 días</string>
+    <string name="health_status_dead">Actualizado hace > 50 días</string>
+    <string name="health_dismiss_7d">Ocultar (7d)</string>
+    <string name="health_close">Cerrar</string>
+    <string name="health_all_good_title">¡Todo está bien!</string>
+    <string name="health_all_good_message">Todas tus fuentes están saludables y actualizándose correctamente.</string>
     <string name="profile_no_activity">Aún no hay actividad</string>
     <plurals name="replies_count">
         <item quantity="one">%1$d respuesta</item>

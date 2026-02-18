@@ -399,9 +399,50 @@ class MainViewModel @Inject constructor(
     }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    private val _dismissedHealthNotifications = MutableStateFlow<Set<String>>(emptySet())
+    
+    // Feeds that are BAD or DEAD (Red/Grey) and NOT dismissed
+    val brokenFeeds: StateFlow<List<Pair<SourceEntity, FeedHealth>>> = combine(
+        sources,
+        feedHealthState,
+        _dismissedHealthNotifications
+    ) { allSources, healthMap, dismissed ->
+        val dismissedUrls = dismissed.map { it.split("|")[0] }.toSet()
+        
+        allSources.mapNotNull { source ->
+            val health = healthMap[source.url] ?: FeedHealth.UNKNOWN
+            if ((health == FeedHealth.BAD || health == FeedHealth.DEAD) && source.url !in dismissedUrls) {
+                source to health
+            } else null
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val showHealthNotificationBadge: StateFlow<Boolean> = brokenFeeds
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun dismissHealthNotification(url: String) {
+        preferencesManager.dismissFeedHealthNotification(url)
+        loadDismissedNotifications()
+    }
+
+    private fun loadDismissedNotifications() {
+        _dismissedHealthNotifications.value = preferencesManager.getDismissedFeedHealthNotifications()
+    }
+
+
     init {
         // Carga inicial de artículos para ocultar
         updateHiddenArticles()
+        
+        // Notification cleanup
+        viewModelScope.launch {
+            // 7 days in milliseconds
+            val sevenDaysMillis = 7 * 24 * 60 * 60 * 1000L
+            preferencesManager.clearExpiredDismissals(sevenDaysMillis)
+            loadDismissedNotifications()
+        }
+
         // Sync inicial una sola vez
         viewModelScope.launch {
             try {

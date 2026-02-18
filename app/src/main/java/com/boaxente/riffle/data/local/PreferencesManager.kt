@@ -58,4 +58,37 @@ class PreferencesManager @Inject constructor(@ApplicationContext context: Contex
         sharedPreferences.edit().putLong("sync_interval", hours).apply()
         _syncInterval.value = hours
     }
+
+    // Dismissed Feed Health Notifications: Set of "url|timestamp"
+    fun getDismissedFeedHealthNotifications(): Set<String> {
+        return sharedPreferences.getStringSet("dismissed_feed_health", emptySet()) ?: emptySet()
+    }
+
+    fun dismissFeedHealthNotification(url: String) {
+        val currentSet = getDismissedFeedHealthNotifications().toMutableSet()
+        // Remove old entries for this url if any
+        currentSet.removeAll { it.startsWith("$url|") }
+        
+        // Add new entry
+        val entry = "$url|${System.currentTimeMillis()}"
+        currentSet.add(entry)
+        
+        sharedPreferences.edit().putStringSet("dismissed_feed_health", currentSet).apply()
+    }
+
+    fun clearExpiredDismissals(maxAgeMillis: Long) {
+        val currentSet = getDismissedFeedHealthNotifications().toMutableSet()
+        val now = System.currentTimeMillis()
+        val formattedSet = currentSet.filter { 
+            val parts = it.split("|")
+            if (parts.size == 2) {
+                val timestamp = parts[1].toLongOrNull() ?: 0L
+                now - timestamp < maxAgeMillis
+            } else false
+        }.toSet()
+        
+        if (formattedSet.size != currentSet.size) {
+            sharedPreferences.edit().putStringSet("dismissed_feed_health", formattedSet).apply()
+        }
+    }
 }

@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -139,6 +140,7 @@ import com.boaxente.riffle.data.local.entity.ArticleEntity
 import com.boaxente.riffle.data.local.entity.SourceEntity
 import com.boaxente.riffle.ui.viewmodel.FeedUiState
 import com.boaxente.riffle.ui.viewmodel.MainViewModel
+import com.boaxente.riffle.ui.viewmodel.FeedHealth
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -281,6 +283,19 @@ fun HomeScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    
+    // Health Notifications
+    val brokenFeeds by viewModel.brokenFeeds.collectAsState()
+    val showHealthNotificationBadge by viewModel.showHealthNotificationBadge.collectAsState()
+    var showHealthDialog by remember { mutableStateOf(false) }
+    
+    if (showHealthDialog) {
+        com.boaxente.riffle.ui.component.HealthNotificationDialog(
+            brokenFeeds = brokenFeeds,
+            onDismissRequest = { showHealthDialog = false },
+            onDismissFeedNotification = { url -> viewModel.dismissHealthNotification(url) }
+        )
+    }
 
     if (sourceToDelete != null) {
         val sourceTitle = sources.find { it.url == sourceToDelete }?.title ?: sourceToDelete ?: ""
@@ -403,6 +418,27 @@ fun HomeScreen(
                                             )
                                         }
                                     }
+                                    
+                                    // Health Notifications Bell
+                                    IconButton(onClick = { showHealthDialog = true }) {
+                                        Box {
+                                            Icon(
+                                                imageVector = Icons.Default.Notifications,
+                                                contentDescription = stringResource(R.string.health_notification_title),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (showHealthNotificationBadge) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.TopEnd)
+                                                        .size(10.dp)
+                                                        .background(MaterialTheme.colorScheme.error, CircleShape)
+                                                        .clip(CircleShape)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    
                                     IconButton(onClick = { viewModel.signOut() }) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -699,7 +735,18 @@ fun HomeScreen(
                         },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                                Box {
+                                    Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                                    if (showHealthNotificationBadge) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .size(10.dp)
+                                                .background(MaterialTheme.colorScheme.error, CircleShape)
+                                                .clip(CircleShape)
+                                        )
+                                    }
+                                }
                             }
                         },
                         actions = {
