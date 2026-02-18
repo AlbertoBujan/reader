@@ -72,6 +72,9 @@ interface FeedDao {
     @Query("UPDATE articles SET isRead = 1 WHERE isRead = 0")
     suspend fun markAllArticlesAsRead()
 
+    @Query("UPDATE articles SET isRead = 1 WHERE link IN (:links)")
+    suspend fun markArticlesAsRead(links: List<String>)
+
     @Query("UPDATE articles SET isSaved = :isSaved WHERE link = :link")
     suspend fun updateArticleSavedStatus(link: String, isSaved: Boolean)
 

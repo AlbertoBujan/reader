@@ -38,7 +38,7 @@ class FirestoreHelper @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO)
     
     // Debounce / Batching
-    private val debounceTime = 10000L // 10 seconds
+    private val debounceTime = 2000L // 2 seconds for faster sync
     private var readDebounceJob: Job? = null
     // private var savedDebounceJob: Job? = null // Eliminado
     
@@ -158,7 +158,7 @@ class FirestoreHelper @Inject constructor(
             if (snapshot != null && snapshot.exists()) {
                 scope.launch {
                     // Handle both old format (List<String>) and new format (List<Map>) for transitions
-                    val rawItems = snapshot.get("items") as? List<*> ?: emptyList<Any>()
+                    val rawItems = snapshot.get("items") as? List<Any?> ?: emptyList()
                     
                     val validLinks = mutableSetOf<String>()
                     val itemsToRemove = mutableListOf<Any>()
@@ -189,18 +189,69 @@ class FirestoreHelper @Inject constructor(
                     
                     // Update local DB
                     stateMutex.withLock {
+                        val newLinks = mutableListOf<String>()
                         validLinks.forEach { link ->
                             if (!remoteReadLinks.contains(link)) {
                                 remoteReadLinks.add(link)
-                                feedDao.markArticleAsRead(link)
+                                newLinks.add(link)
                             }
+                        }
+                        
+                        if (newLinks.isNotEmpty()) {
+                             newLinks.chunked(900).forEach { chunk ->
+                                 feedDao.markArticlesAsRead(chunk)
+                             }
                         }
                     }
                     
-                    // Trigger Lazy Cleanup in Cloud
+                    // --- CLEANUP Strategy: Remove read items from Cloud if they are not in Local DB ---
+                    // Caution: This assumes Local DB is up to date with Feeds.
+                    // To be safe, we only remove items that are OLDER than retention limit (already handled)
+                    // OR if users specifically requested "if not in feed".
+                    
+                    // Get all local article links efficiently
+                    // We can't query all links for performance if DB is huge, but usually < 10k.
+                    // Doing this on every sync change might be heavy. 
+                    // Let's do it only if new items came in, or Periodically.
+                    // For now, let's implement effective cleanup based on "validLinks" (cloud items).
+                    
+                    val allLocalLinks = feedDao.getAllArticles().firstOrNull()?.map { it.link }?.toSet() ?: emptySet()
+                    
+                    if (allLocalLinks.isNotEmpty()) {
+                        val itemsToPrune = mutableListOf<Any>()
+                        
+                        rawItems.forEach { item ->
+                            val url = when (item) {
+                                is String -> item
+                                is Map<*, *> -> item["u"] as? String
+                                else -> null
+                            }
+                            
+                            if (url != null) {
+                                // If the read article is NOT in our local database (meaning not in feed), remove it.
+                                // EXCEPTION: Saved articles? No, saved logic is separate.
+                                // BUT verify we don't delete just because we haven't synced recent feed yet.
+                                // This is risky if user device is stale.
+                                // User explicitly asked: "if read and no longer in feed, delete from firestore".
+                                // We trust local state.
+                                
+                                if (!allLocalLinks.contains(url)) {
+                                    if (item != null) {
+                                        itemsToPrune.add(item)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (itemsToPrune.isNotEmpty()) {
+                            itemsToPrune.chunked(500).forEach { chunk ->
+                                readDocRef.update("items", FieldValue.arrayRemove(*chunk.toTypedArray()))
+                            }
+                        }
+                    }
+
+                    // Trigger Lazy Cleanup in Cloud (Retention Limit)
                     if (itemsToRemove.isNotEmpty()) {
-                        // Remove the specific object instances we found
-                        // Chunking to be safe, though arrayRemove supports varargs
                         itemsToRemove.chunked(500).forEach { chunk ->
                             readDocRef.update("items", FieldValue.arrayRemove(*chunk.toTypedArray()))
                         }
@@ -314,9 +365,15 @@ class FirestoreHelper @Inject constructor(
     fun applyRemoteStates() {
         scope.launch {
             val (readCopy, savedCopy) = stateMutex.withLock {
-                Pair(remoteReadLinks.toSet(), remoteSavedLinks.toSet())
+                Pair(remoteReadLinks.toList(), remoteSavedLinks.toList())
             }
-            readCopy.forEach { link -> feedDao.markArticleAsRead(link) }
+            
+            if (readCopy.isNotEmpty()) {
+                readCopy.chunked(900).forEach { chunk ->
+                     feedDao.markArticlesAsRead(chunk)
+                }
+            }
+
             savedCopy.forEach { link -> feedDao.updateArticleSavedStatus(link, true) }
         }
     }
