@@ -11,6 +11,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.firstOrNull
 import java.io.InputStream
 
 class FeedRepositoryImpl(
@@ -90,8 +91,18 @@ class FeedRepositoryImpl(
 
     override suspend fun toggleArticleSaved(link: String, isSaved: Boolean) {
         feedDao.updateArticleSavedStatus(link, isSaved)
+        
         // Sync to cloud
-        firestoreHelper?.updateSavedStatusInCloud(link, isSaved)
+        if (isSaved) {
+            val article = feedDao.getArticleByLink(link).firstOrNull()
+            if (article != null) {
+                // Obtener título del source para backup
+                val source = feedDao.getSourceByUrl(article.sourceUrl)
+                firestoreHelper?.saveArticleToCloud(article, source?.title)
+            }
+        } else {
+            firestoreHelper?.removeSavedArticleFromCloud(link)
+        }
     }
 
     override suspend fun moveSourceToFolder(url: String, folderName: String?) {

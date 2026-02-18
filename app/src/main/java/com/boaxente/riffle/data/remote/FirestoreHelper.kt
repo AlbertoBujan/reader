@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -39,12 +40,11 @@ class FirestoreHelper @Inject constructor(
     // Debounce / Batching
     private val debounceTime = 10000L // 10 seconds
     private var readDebounceJob: Job? = null
-    private var savedDebounceJob: Job? = null
+    // private var savedDebounceJob: Job? = null // Eliminado
     
     private val readQueueAdding = mutableSetOf<String>()
     
-    private val savedQueueAdding = mutableSetOf<String>()
-    private val savedQueueRemoving = mutableSetOf<String>()
+    // Batches de guardado eliminados en favor de actualizaciones directas de documentos
     
     private val queueMutex = Mutex()
 
@@ -60,7 +60,7 @@ class FirestoreHelper @Inject constructor(
                 // User logged in, start listeners
                 startFeedsListener(user.uid)
                 startReadStatesListener(user.uid)
-                startSavedStatesListener(user.uid)
+                startSavedArticlesListener(user.uid)
                 startSettingsListener(user.uid)
             } else {
                 // User logged out, remove listeners
@@ -210,31 +210,77 @@ class FirestoreHelper @Inject constructor(
         }
     }
 
-    private fun startSavedStatesListener(userId: String) {
-        // Optimized: Single document for all saved states
-        val savedDocRef = firestore.collection("users").document(userId).collection("sync").document("saved")
+    // Modificado: Escuchar colección de artículos guardados completos
+    private fun startSavedArticlesListener(userId: String) {
+        val savedCollectionRef = firestore.collection("users").document(userId).collection("saved_articles")
         
-        savedStatesListener = savedDocRef.addSnapshotListener { snapshot, e ->
+        savedStatesListener = savedCollectionRef.addSnapshotListener { snapshot, e ->
             if (e != null) return@addSnapshotListener
             
-            if (snapshot != null && snapshot.exists()) {
+            if (snapshot != null) {
                 scope.launch {
-                    val items = (snapshot.get("items") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-                    val currentRemoteSet = items.toSet()
+                    val remoteSavedLinks = mutableSetOf<String>()
                     
-                    stateMutex.withLock {
-                        // Handle additions
-                        currentRemoteSet.forEach { link ->
-                            if (!remoteSavedLinks.contains(link)) {
-                                remoteSavedLinks.add(link)
-                                feedDao.updateArticleSavedStatus(link, true)
+                    snapshot.documents.forEach { doc ->
+                        val link = doc.getString("link")
+                        if (link != null) {
+                            remoteSavedLinks.add(link)
+                            
+                            val timestamp = doc.getLong("pubDate") ?: System.currentTimeMillis()
+                            val srcUrl = doc.getString("sourceUrl") ?: ""
+                            
+                            // Mapear documento a ArticleEntity
+                            val article = com.boaxente.riffle.data.local.entity.ArticleEntity(
+                                link = link,
+                                title = doc.getString("title") ?: "",
+                                description = doc.getString("description"),
+                                pubDate = timestamp,
+                                sourceUrl = srcUrl, 
+                                imageUrl = doc.getString("imageUrl"),
+                                isRead = doc.getBoolean("isRead") ?: false, 
+                                isSaved = true,
+                                hasVideo = doc.getBoolean("hasVideo") ?: false
+                            )
+                            
+                            // Insertar/Actualizar en local
+                            // Usamos firstOrNull() suspendiendo para evitar bloqueos
+                            val existing = feedDao.getArticleByLink(link).firstOrNull()
+                            
+                            if (existing == null) {
+                                try {
+                                    // Verificar source para evitar error FK
+                                    val sourceExists = feedDao.getSourceByUrl(srcUrl)
+                                    if (sourceExists == null && srcUrl.isNotEmpty()) {
+                                         // Crear source placeholder
+                                         val placeholderSource = com.boaxente.riffle.data.local.entity.SourceEntity(
+                                             url = srcUrl,
+                                             title = doc.getString("sourceTitle") ?: "Unknown Source",
+                                             iconUrl = null
+                                         )
+                                         feedDao.insertSource(placeholderSource)
+                                    }
+                                    
+                                    // Insertar artículo completo
+                                    if (srcUrl.isNotEmpty()) {
+                                        feedDao.insertArticles(listOf(article))
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            } else {
+                                // Ya existe, asegurar isSaved=true
+                                if (!existing.isSaved) {
+                                    feedDao.updateArticleSavedStatus(link, true)
+                                }
                             }
                         }
-                        
-                        val toRemove = remoteSavedLinks.minus(currentRemoteSet)
-                        toRemove.forEach { link ->
-                            remoteSavedLinks.remove(link)
-                            feedDao.updateArticleSavedStatus(link, false)
+                    }
+                    
+                    // Sincronizar borrados: Desmarcar los que ya no están en la colección remota
+                    val localSaved = feedDao.getSavedArticlesList()
+                    localSaved.forEach { localArticle ->
+                        if (!remoteSavedLinks.contains(localArticle.link)) {
+                            feedDao.updateArticleSavedStatus(localArticle.link, false)
                         }
                     }
                 }
@@ -339,53 +385,35 @@ class FirestoreHelper @Inject constructor(
         }
     }
     
-    fun updateSavedStatusInCloud(articleLink: String, isSaved: Boolean) {
+    fun saveArticleToCloud(article: com.boaxente.riffle.data.local.entity.ArticleEntity, sourceTitle: String?) {
         val user = auth.currentUser ?: return
-        scope.launch {
-            queueMutex.withLock {
-                if (isSaved) {
-                    savedQueueAdding.add(articleLink)
-                    savedQueueRemoving.remove(articleLink)
-                } else {
-                    savedQueueRemoving.add(articleLink)
-                    savedQueueAdding.remove(articleLink)
-                }
-            }
-            scheduleSavedFlush(user.uid)
-        }
+        val docId = hashString(article.link)
+        
+        val data = hashMapOf(
+            "link" to article.link,
+            "title" to article.title,
+            "description" to article.description,
+            "pubDate" to article.pubDate,
+            "sourceUrl" to article.sourceUrl,
+            "sourceTitle" to sourceTitle, // Guardamos titulo del source para reconstruirlo si falta
+            "imageUrl" to article.imageUrl,
+            "isRead" to article.isRead,
+            "hasVideo" to article.hasVideo,
+            "savedAt" to System.currentTimeMillis()
+        )
+        
+        firestore.collection("users").document(user.uid).collection("saved_articles")
+            .document(docId)
+            .set(data, SetOptions.merge())
     }
     
-    private fun scheduleSavedFlush(userId: String) {
-        if (savedDebounceJob?.isActive == true) return
+    fun removeSavedArticleFromCloud(link: String) {
+        val user = auth.currentUser ?: return
+        val docId = hashString(link)
         
-        savedDebounceJob = scope.launch {
-            delay(debounceTime)
-            flushSavedQueue(userId)
-        }
-    }
-    
-    private suspend fun flushSavedQueue(userId: String) {
-        val (toAdd, toRemove) = queueMutex.withLock {
-            val add = savedQueueAdding.toList()
-            val remove = savedQueueRemoving.toList()
-            savedQueueAdding.clear()
-            savedQueueRemoving.clear()
-            Pair(add, remove)
-        }
-        
-        val userRef = firestore.collection("users").document(userId).collection("sync").document("saved")
-        
-        if (toAdd.isNotEmpty()) {
-             toAdd.chunked(500).forEach { chunk ->
-                 userRef.set(mapOf("items" to FieldValue.arrayUnion(*chunk.toTypedArray())), SetOptions.merge())
-             }
-        }
-        
-        if (toRemove.isNotEmpty()) {
-             toRemove.chunked(500).forEach { chunk ->
-                 userRef.update("items", FieldValue.arrayRemove(*chunk.toTypedArray()))
-             }
-        }
+        firestore.collection("users").document(user.uid).collection("saved_articles")
+            .document(docId)
+            .delete()
     }
 
     fun updateSourceFolderInCloud(url: String, folderName: String?) {
