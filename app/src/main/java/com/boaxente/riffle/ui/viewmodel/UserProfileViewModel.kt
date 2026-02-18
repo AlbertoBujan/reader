@@ -14,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class UserProfileViewModel @Inject constructor(
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val firestoreHelper: com.boaxente.riffle.data.remote.FirestoreHelper
 ) : ViewModel() {
     
     private val _profile = MutableStateFlow<UserProfile?>(null)
@@ -22,6 +23,9 @@ class UserProfileViewModel @Inject constructor(
     
     private val _interactions = MutableStateFlow<List<UserInteraction>>(emptyList())
     val interactions: StateFlow<List<UserInteraction>> = _interactions.asStateFlow()
+    
+    val readStats = firestoreHelper.readCount
+    val savedStats = firestoreHelper.savedCount
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()

@@ -8,7 +8,7 @@
     <string name="nav_search_feeds">Buscar Feeds</string>
     <string name="title_all_feeds">Todos</string>
     <string name="nav_all_feeds">Todos los Feeds</string>
-    <string name="nav_read_later">Leer más tarde</string>
+    <string name="nav_read_later">Favoritos</string>
     <string name="nav_uncategorized">Sin categoría</string>
     <string name="nav_settings">Ajustes</string>
     <string name="nav_menu">Menú</string>
@@ -73,8 +73,8 @@
     <string name="settings_sync_interval_hour">%1$d hora</string>
 
     <!-- Toasts / Messages -->
-    <string name="msg_removed_read_later">Eliminado de Leer más tarde</string>
-    <string name="msg_added_read_later">Añadido a Leer más tarde</string>
+    <string name="msg_removed_read_later">Eliminado de Favoritos</string>
+    <string name="msg_added_read_later">Añadido a Favoritos</string>
     <string name="msg_feed_added">Feed añadido correctamente</string>
     <string name="msg_feed_error">Error al añadir feed: %1$s</string>
     <string name="msg_unknown_error">Error desconocido</string>
@@ -216,6 +216,8 @@
     <string name="profile_likes">Me gusta</string>
     <string name="profile_dislikes">No me gusta</string>
     <string name="profile_activity">Historial de actividad</string>
+    <string name="profile_saved">Favoritos</string>
+    <string name="profile_read">Leídos</string>
     <string name="profile_no_activity">Aún no hay actividad</string>
     <plurals name="replies_count">
         <item quantity="one">%1$d respuesta</item>

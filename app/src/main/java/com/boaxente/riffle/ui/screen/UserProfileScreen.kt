@@ -208,6 +208,32 @@ fun UserProfileScreen(
                 }
             }
             
+            // Estadísticas Personales (Leídos / Guardados)
+            if (currentUser != null) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val readCount by viewModel.readStats.collectAsState(initial = 0)
+                        val savedCount by viewModel.savedStats.collectAsState(initial = 0)
+                        
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Bookmark,
+                            value = savedCount.toString(),
+                            label = stringResource(R.string.profile_saved)
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.DoneAll,
+                            value = readCount.toString(),
+                            label = stringResource(R.string.profile_read)
+                        )
+                    }
+                }
+            }
+            
             // Historial de interacciones
             item {
                 Text(

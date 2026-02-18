@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -52,6 +53,13 @@ class FirestoreHelper @Inject constructor(
     private val remoteReadLinks = HashSet<String>()
     private val remoteSavedLinks = HashSet<String>()
     private val stateMutex = Mutex()
+    
+    // Stats for User Profile
+    private val _readCount = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val readCount = _readCount.asStateFlow()
+    
+    private val _savedCount = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val savedCount = _savedCount.asStateFlow()
 
     fun startSync() {
         auth.addAuthStateListener { firebaseAuth ->
@@ -192,16 +200,21 @@ class FirestoreHelper @Inject constructor(
                         val newLinks = mutableListOf<String>()
                         validLinks.forEach { link ->
                             if (!remoteReadLinks.contains(link)) {
-                                remoteReadLinks.add(link)
                                 newLinks.add(link)
                             }
                         }
+                        
+                        // Synchronize cache with truth from cloud
+                        remoteReadLinks.clear()
+                        remoteReadLinks.addAll(validLinks)
                         
                         if (newLinks.isNotEmpty()) {
                              newLinks.chunked(900).forEach { chunk ->
                                  feedDao.markArticlesAsRead(chunk)
                              }
                         }
+                        
+                        _readCount.value = remoteReadLinks.size
                     }
                     
                     // --- CLEANUP Strategy: Remove read items from Cloud if they are not in Local DB ---
@@ -270,12 +283,12 @@ class FirestoreHelper @Inject constructor(
             
             if (snapshot != null) {
                 scope.launch {
-                    val remoteSavedLinks = mutableSetOf<String>()
+                    val currentSavedLinks = mutableSetOf<String>()
                     
                     snapshot.documents.forEach { doc ->
                         val link = doc.getString("link")
                         if (link != null) {
-                            remoteSavedLinks.add(link)
+                            currentSavedLinks.add(link)
                             
                             val timestamp = doc.getLong("pubDate") ?: System.currentTimeMillis()
                             val srcUrl = doc.getString("sourceUrl") ?: ""
@@ -330,9 +343,15 @@ class FirestoreHelper @Inject constructor(
                     // Sincronizar borrados: Desmarcar los que ya no están en la colección remota
                     val localSaved = feedDao.getSavedArticlesList()
                     localSaved.forEach { localArticle ->
-                        if (!remoteSavedLinks.contains(localArticle.link)) {
+                        if (!currentSavedLinks.contains(localArticle.link)) {
                             feedDao.updateArticleSavedStatus(localArticle.link, false)
                         }
+                    }
+                    
+                    stateMutex.withLock {
+                        this@FirestoreHelper.remoteSavedLinks.clear()
+                        this@FirestoreHelper.remoteSavedLinks.addAll(currentSavedLinks)
+                        _savedCount.value = this@FirestoreHelper.remoteSavedLinks.size
                     }
                 }
             }
