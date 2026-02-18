@@ -57,6 +57,7 @@ fun FeedPreviewScreen(
     onBack: () -> Unit,
     onArticleClick: (String, Boolean) -> Unit, // link, isVideo (not used here really)
     onAddFeed: () -> Unit,
+    onGoHome: () -> Unit,
     viewModel: MainViewModel
 ) {
     val articles by viewModel.previewArticles.collectAsState()
@@ -162,7 +163,7 @@ fun FeedPreviewScreen(
             if (sourceAdditionState is com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Success) {
                  LaunchedEffect(Unit) {
                      viewModel.clearSourceAdditionState()
-                     onBack() // Go back to search (or home?)
+                     onGoHome()
                  }
             }
         }

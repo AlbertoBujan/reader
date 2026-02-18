@@ -339,6 +339,7 @@ fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
                      navController.navigate("reader/$encodedUrl")
                 },
                 onNavigateToFeedSearch = {
+                    viewModel.clearFeedSearch()
                     navController.navigate("search_feed")
                 },
                 onNavigateToProfile = {
@@ -398,6 +399,11 @@ fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
                 },
                 onAddFeed = {
                     viewModel.addSource(url, title, icon)
+                },
+                onGoHome = {
+                    navController.popBackStack("home", inclusive = false)
+                    // TODO: Open sidebar?
+                    viewModel.setRequestOpenDrawer(true)
                 },
                 viewModel = viewModel
             )

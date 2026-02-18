@@ -73,7 +73,7 @@ fun SearchFeedScreen(
     onNavigateToPreview: (String, String?, String?) -> Unit,
     viewModel: MainViewModel
 ) {
-    var query by remember { mutableStateOf("") }
+    val query by viewModel.feedSearchQuery.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     val feeds by viewModel.sortedDiscoveredFeeds.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
@@ -95,11 +95,8 @@ fun SearchFeedScreen(
         focusRequester.requestFocus()
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.clearFeedSearch()
-        }
-    }
+    // Search state is now persistent in ViewModel and manually cleared when entering from Home
+    // DisposableEffect removed to allow navigating back from Preview without losing results
     
     // Clear results when leaving screen? Maybe not necessary but good practice to clear text field
     // But we are using local state for query.
@@ -150,7 +147,7 @@ fun SearchFeedScreen(
                 title = {
                     TextField(
                         value = query,
-                        onValueChange = { query = it },
+                        onValueChange = { viewModel.setFeedSearchQuery(it) },
                         placeholder = { Text(stringResource(R.string.nav_search_feeds)) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -169,7 +166,7 @@ fun SearchFeedScreen(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         trailingIcon = {
                             if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
+                                IconButton(onClick = { viewModel.setFeedSearchQuery("") }) {
                                     Icon(Icons.Default.Close, contentDescription = "Clear")
                                 }
                             }

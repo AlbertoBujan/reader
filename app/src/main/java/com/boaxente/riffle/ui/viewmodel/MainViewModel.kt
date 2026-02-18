@@ -662,7 +662,22 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private val _feedSearchQuery = MutableStateFlow("")
+    val feedSearchQuery: StateFlow<String> = _feedSearchQuery.asStateFlow()
+
+    private val _requestOpenDrawer = MutableStateFlow(false)
+    val requestOpenDrawer: StateFlow<Boolean> = _requestOpenDrawer.asStateFlow()
+
+    fun setFeedSearchQuery(query: String) {
+        _feedSearchQuery.value = query
+    }
+
+    fun setRequestOpenDrawer(open: Boolean) {
+        _requestOpenDrawer.value = open
+    }
+
     fun clearFeedSearch() {
+        _feedSearchQuery.value = ""
         _discoveredFeeds.value = emptyList()
         _discoveredFeedHealth.value = emptyMap()
         _isSearching.value = false

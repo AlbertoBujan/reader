@@ -353,6 +353,14 @@ fun HomeScreen(
         }
     }
 
+    val requestOpenDrawer by viewModel.requestOpenDrawer.collectAsState()
+    LaunchedEffect(requestOpenDrawer) {
+        if (requestOpenDrawer) {
+            drawerState.open()
+            viewModel.setRequestOpenDrawer(false)
+        }
+    }
+
     val blurRadius by animateDpAsState(targetValue = if (showSettingsDialog) 10.dp else 0.dp, label = "blur")
 
     val drawerBlurRadius by animateDpAsState(targetValue = if (drawerState.targetValue == DrawerValue.Open) 15.dp else 0.dp, label = "drawerBlur")
