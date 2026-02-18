@@ -145,64 +145,15 @@ fun FeedPreviewScreen(
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(articles) { article ->
-                        Card(
-                            onClick = { onArticleClick(article.link, false) },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(modifier = Modifier.padding(12.dp)) {
-                                if (article.imageUrl != null) {
-                                    AsyncImage(
-                                        model = article.imageUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(80.dp)
-                                            .clip(RoundedCornerShape(8.dp)),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                }
-                                
-                                Column {
-                                    Text(
-                                        text = article.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    if (article.pubDate != null) {
-                                        val date = Date(article.pubDate)
-                                        val format = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
-                                        Text(
-                                            text = format.format(date),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    if (article.description != null) {
-                                        val cleanDesc = androidx.core.text.HtmlCompat.fromHtml(
-                                            article.description,
-                                            androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY
-                                        ).toString().trim()
-                                        
-                                        Text(
-                                            text = cleanDesc,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        ArticleItem(
+                            article = article,
+                            sourceName = feedTitle,
+                            onClick = { link, _ -> onArticleClick(link, false) }
+                        )
                     }
                 }
             }
