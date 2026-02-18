@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.boaxente.riffle.ui.viewmodel.MainViewModel
+import com.boaxente.riffle.data.local.entity.ArticleWithSource
 import com.boaxente.riffle.R
 import androidx.compose.ui.res.stringResource
 import com.boaxente.riffle.util.extractFirstImageUrl
@@ -98,13 +99,25 @@ import androidx.compose.ui.layout.ContentScale
 @Composable
 fun ArticleReaderScreen(
     url: String,
+    isPreview: Boolean = false,
+    sourceTitle: String? = null,
     onBack: () -> Unit,
     onCommentsClick: (articleLink: String, articleTitle: String) -> Unit,
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    // Fetch article with source title directly from DB
-    val articleWithSource by viewModel.getArticleWithSource(url).collectAsState(initial = null)
+    
+    // Fetch article depending on mode
+    val articleWithSource by if (isPreview) {
+        remember(url) {
+            val art = viewModel.getPreviewArticle(url)
+            val aws = art?.let { ArticleWithSource(it, sourceTitle ?: "") }
+            mutableStateOf(aws)
+        }
+    } else {
+        viewModel.getArticleWithSource(url).collectAsState(initial = null)
+    }
+    
     val article = articleWithSource?.article
 
     // 2. OBTENEMOS LOS ESTADOS DE LA IA (LO NUEVO)
@@ -199,34 +212,37 @@ fun ArticleReaderScreen(
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share")
                         }
-                        val commentCount by remember(article!!.link) { viewModel.getCommentCount(article!!.link) }.collectAsState(initial = 0)
-                        IconButton(onClick = {
-                            onCommentsClick(article!!.link, article!!.title)
-                        }) {
-                            BadgedBox(
-                                badge = {
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ) {
-                                        Text(commentCount.toString())
-                                    } 
+                        
+                        if (!isPreview) {
+                            val commentCount by remember(article!!.link) { viewModel.getCommentCount(article!!.link) }.collectAsState(initial = 0)
+                            IconButton(onClick = {
+                                onCommentsClick(article!!.link, article!!.title)
+                            }) {
+                                BadgedBox(
+                                    badge = {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        ) {
+                                            Text(commentCount.toString())
+                                        } 
+                                    }
+                                ) {
+                                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = stringResource(R.string.comments_title))
                                 }
-                            ) {
-                                Icon(Icons.Default.ChatBubbleOutline, contentDescription = stringResource(R.string.comments_title))
                             }
-                        }
-                        IconButton(onClick = {
-                            val newSavedState = !article!!.isSaved
-                            viewModel.toggleSaveArticle(article!!.link, article!!.isSaved)
-                            val message = if (newSavedState) context.getString(R.string.msg_added_read_later) else context.getString(R.string.msg_removed_read_later)
-                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        }) {
-                            Icon(
-                                imageVector = if (article!!.isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                contentDescription = stringResource(R.string.nav_read_later),
-                                tint = if (article!!.isSaved) Color(0xFFFFD600) else LocalContentColor.current
-                            )
+                            IconButton(onClick = {
+                                val newSavedState = !article!!.isSaved
+                                viewModel.toggleSaveArticle(article!!.link, article!!.isSaved)
+                                val message = if (newSavedState) context.getString(R.string.msg_added_read_later) else context.getString(R.string.msg_removed_read_later)
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(
+                                    imageVector = if (article!!.isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                    contentDescription = stringResource(R.string.nav_read_later),
+                                    tint = if (article!!.isSaved) Color(0xFFFFD600) else LocalContentColor.current
+                                )
+                            }
                         }
                     }
                     IconButton(onClick = {

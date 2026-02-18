@@ -356,21 +356,74 @@ fun RiffleApp(viewModel: MainViewModel, authManager: AuthManager) {
         ) {
             com.boaxente.riffle.ui.screen.SearchFeedScreen(
                 onBack = { navController.popBackStack() },
+                onNavigateToPreview = { url, title, icon ->
+                    val encodedUrl = Base64.encodeToString(url.toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP)
+                    val encodedTitle = if (title != null) Base64.encodeToString(title.toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP) else "null"
+                    val encodedIcon = if (icon != null) Base64.encodeToString(icon.toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP) else "null"
+                    navController.navigate("feed_preview/$encodedUrl/$encodedTitle/$encodedIcon")
+                },
+                viewModel = viewModel
+            )
+        }
+
+        composable(
+            route = "feed_preview/{feedUrl}/{feedTitle}/{feedIconUrl}",
+            arguments = listOf(
+                navArgument("feedUrl") { type = NavType.StringType },
+                navArgument("feedTitle") { type = NavType.StringType },
+                navArgument("feedIconUrl") { type = NavType.StringType }
+            ),
+            enterTransition = { slideInHorizontally(tween(300)) { it } },
+            exitTransition = { slideOutHorizontally(tween(300)) { it } },
+            popEnterTransition = { slideInHorizontally(tween(300)) { it } },
+            popExitTransition = { slideOutHorizontally(tween(200)) { it } }
+        ) { backStackEntry ->
+            val encodedUrl = backStackEntry.arguments?.getString("feedUrl") ?: ""
+            val encodedTitle = backStackEntry.arguments?.getString("feedTitle") ?: "null"
+            val encodedIcon = backStackEntry.arguments?.getString("feedIconUrl") ?: "null"
+
+            val url = String(Base64.decode(encodedUrl, Base64.URL_SAFE), StandardCharsets.UTF_8)
+            val title = if (encodedTitle != "null") String(Base64.decode(encodedTitle, Base64.URL_SAFE), StandardCharsets.UTF_8) else null
+            val icon = if (encodedIcon != "null") String(Base64.decode(encodedIcon, Base64.URL_SAFE), StandardCharsets.UTF_8) else null
+
+            com.boaxente.riffle.ui.screen.FeedPreviewScreen(
+                feedUrl = url,
+                feedTitle = title,
+                feedIconUrl = icon,
+                onBack = { navController.popBackStack() },
+                onArticleClick = { link, _ ->
+                     val encodedArticleUrl = URLEncoder.encode(link, StandardCharsets.UTF_8.toString())
+                     val encodedSourceTitle = if (title != null) Base64.encodeToString(title.toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP) else ""
+                     navController.navigate("reader/$encodedArticleUrl?isPreview=true&sourceTitle=$encodedSourceTitle")
+                },
+                onAddFeed = {
+                    viewModel.addSource(url, title, icon)
+                },
                 viewModel = viewModel
             )
         }
         
         composable(
-            route = "reader/{url}",
-            arguments = listOf(navArgument("url") { type = NavType.StringType }),
+            route = "reader/{url}?isPreview={isPreview}&sourceTitle={sourceTitle}",
+            arguments = listOf(
+                navArgument("url") { type = NavType.StringType },
+                navArgument("isPreview") { defaultValue = false; type = NavType.BoolType },
+                navArgument("sourceTitle") { defaultValue = ""; type = NavType.StringType }
+            ),
             enterTransition = { slideInHorizontally(tween(300)) { it } },
             exitTransition = { slideOutHorizontally(tween(300)) { it } },
             popEnterTransition = { slideInHorizontally(tween(300)) { it } },
             popExitTransition = { slideOutHorizontally(tween(200)) { it } }
         ) { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
+            val isPreview = backStackEntry.arguments?.getBoolean("isPreview") ?: false
+            val sourceTitleArg = backStackEntry.arguments?.getString("sourceTitle") ?: ""
+            val sourceTitle = if (sourceTitleArg.isNotEmpty()) String(Base64.decode(sourceTitleArg, Base64.URL_SAFE), StandardCharsets.UTF_8) else null
+            
             ArticleReaderScreen(
                 url = url,
+                isPreview = isPreview,
+                sourceTitle = sourceTitle,
                 onBack = { navController.popBackStack() },
                 onCommentsClick = { articleLink, articleTitle ->
                     val encodedLink = Base64.encodeToString(articleLink.toByteArray(StandardCharsets.UTF_8), Base64.URL_SAFE or Base64.NO_WRAP)

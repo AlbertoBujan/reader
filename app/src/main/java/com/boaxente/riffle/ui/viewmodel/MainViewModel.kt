@@ -45,6 +45,7 @@ import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import com.google.ai.client.generativeai.GenerativeModel
+import com.boaxente.riffle.util.extractFirstImageUrl
 
 sealed interface FeedUiState {
     data object Loading : FeedUiState
@@ -774,6 +775,63 @@ class MainViewModel @Inject constructor(
 
 
 
+    // --- Feed Preview Logic ---
+    private val _previewFeedUrl = MutableStateFlow<String?>(null)
+    val previewFeedUrl: StateFlow<String?> = _previewFeedUrl.asStateFlow()
+
+    private val _previewArticles = MutableStateFlow<List<ArticleEntity>>(emptyList())
+    val previewArticles: StateFlow<List<ArticleEntity>> = _previewArticles.asStateFlow()
+
+    private val _isPreviewLoading = MutableStateFlow(false)
+    val isPreviewLoading: StateFlow<Boolean> = _isPreviewLoading.asStateFlow()
+
+    fun loadFeedPreview(url: String) {
+        viewModelScope.launch {
+            _isPreviewLoading.value = true
+            _previewFeedUrl.value = url
+            _previewArticles.value = emptyList()
+            try {
+                val articles = withContext(Dispatchers.IO) {
+                    try {
+                        val response = feedService.fetchFeed(url)
+                        val parsed = rssParser.parse(response.byteStream(), url)
+                        // Mapear a ArticleEntity pero sin guardar en DB
+                        parsed.articles.map { item ->
+                             ArticleEntity(
+                                link = item.link,
+                                title = item.title,
+                                description = item.description,
+                                imageUrl = item.imageUrl ?: item.description?.extractFirstImageUrl(),
+                                pubDate = item.pubDate,
+                                sourceUrl = url,
+                                isRead = false,
+                                isSaved = false
+                             )
+                        }
+                    } catch (e: Exception) {
+                        RiffleLogger.recordException(e)
+                        Log.e("FeedPreview", "Error fetching/parsing feed: ${e.message}")
+                        emptyList()
+                    }
+                }
+                _previewArticles.value = articles
+            } finally {
+                _isPreviewLoading.value = false
+            }
+        }
+    }
+
+    fun clearFeedPreview() {
+        _previewFeedUrl.value = null
+        _previewArticles.value = emptyList()
+        _isPreviewLoading.value = false
+    }
+
+    fun getPreviewArticle(link: String): ArticleEntity? {
+        return _previewArticles.value.find { it.link == link }
+    }
+
+    
     private fun createTrustAllSslSocketFactory(): SSLSocketFactory {
         val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}

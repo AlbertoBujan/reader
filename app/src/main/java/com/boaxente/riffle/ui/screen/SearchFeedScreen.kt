@@ -1,6 +1,8 @@
 package com.boaxente.riffle.ui.screen
 
+
 import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.foundation.clickable
 import kotlinx.coroutines.delay
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -68,6 +70,7 @@ import com.boaxente.riffle.ui.viewmodel.MainViewModel
 @Composable
 fun SearchFeedScreen(
     onBack: () -> Unit,
+    onNavigateToPreview: (String, String?, String?) -> Unit,
     viewModel: MainViewModel
 ) {
     var query by remember { mutableStateOf("") }
@@ -268,6 +271,9 @@ fun SearchFeedScreen(
                             (sourceAdditionState as com.boaxente.riffle.ui.viewmodel.SourceAdditionState.Loading).targetUrl == feed.url
                         
                         ListItem(
+                            modifier = Modifier.clickable {
+                                onNavigateToPreview(feed.url, feed.title, feed.iconUrl)
+                            },
                             leadingContent = {
                                 Box {
                                     if (feed.iconUrl != null) {
