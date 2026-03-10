@@ -98,6 +98,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.boaxente.riffle.util.RiffleLogger
@@ -339,6 +340,22 @@ fun HomeScreen(
     BackHandler(enabled = isSearchActive) {
          isSearchActive = false
          viewModel.setArticleSearchQuery("")
+    }
+
+    DisposableEffect(isSearchActive) {
+        onDispose {
+            if (isSearchActive) {
+                focusRequester.freeFocus()
+                // You can also use LocalFocusManager here if passed down, but hiding keyboard is usually enough
+            }
+        }
+    }
+    
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    DisposableEffect(Unit) {
+        onDispose {
+            focusManager.clearFocus(force = true)
+        }
     }
 
     // Manejo del botón atrás de Android (Drawer)
@@ -1463,22 +1480,12 @@ fun SourceDrawerItemContent(source: SourceEntity, isSelected: Boolean, feedHealt
                     drawRoundRect(
                          color = Color(0xFFAAAAAA).copy(alpha = 0.5f),
                          size = size,
-                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2)
+                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f)
                     )
                 }
-            ) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        startTransfer(
-                            DragAndDropTransferData(
-                                clipData = ClipData.newPlainText("sourceUrl", source.url)
-                            )
-                        )
-                    },
-                    onDrag = { _, _ -> },
-                    onDragEnd = { },
-                    onDragCancel = { }
+            ) { offset -> // This is the transferData lambda that takes an Offset
+                DragAndDropTransferData(
+                    clipData = ClipData.newPlainText("sourceUrl", source.url)
                 )
             }
     ) {

@@ -13,21 +13,21 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FeedDao {
 
-    @Query("SELECT * FROM articles ORDER BY pubDate DESC")
+    @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 400")
     fun getAllArticles(): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC")
+    @Query("SELECT * FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC LIMIT 400")
     fun getArticlesBySource(sourceUrl: String): Flow<List<ArticleEntity>>
 
     @Query("""
         SELECT articles.* FROM articles 
         INNER JOIN sources ON articles.sourceUrl = sources.url 
         WHERE sources.folderName = :folderName 
-        ORDER BY pubDate DESC
+        ORDER BY pubDate DESC LIMIT 400
     """)
     fun getArticlesByFolder(folderName: String): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC")
+    @Query("SELECT * FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC LIMIT 400")
     fun getSavedArticles(): Flow<List<ArticleEntity>>
 
     @Query("""

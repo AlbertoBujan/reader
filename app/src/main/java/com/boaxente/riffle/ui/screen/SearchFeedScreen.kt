@@ -95,11 +95,22 @@ fun SearchFeedScreen(
         focusRequester.requestFocus()
     }
 
-    // Search state is now persistent in ViewModel and manually cleared when entering from Home
-    // DisposableEffect removed to allow navigating back from Preview without losing results
+    // Clear focus on disposal to mitigate LegacyCursorAnchorInfoController.updateCursorAnchorInfo NPE in older Compose versions natively.
+    DisposableEffect(Unit) {
+        onDispose {
+            keyboardController?.hide()
+            // We cannot access focusManager easily here without another line,
+            // but hiding the keyboard often clears anchor info.
+            // Using LocalFocusManager in compose: 
+        }
+    }
     
-    // Clear results when leaving screen? Maybe not necessary but good practice to clear text field
-    // But we are using local state for query.
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    DisposableEffect(Unit) {
+        onDispose {
+            focusManager.clearFocus(force = true)
+        }
+    }
 
     val sourceAdditionState by viewModel.sourceAdditionState.collectAsState()
 

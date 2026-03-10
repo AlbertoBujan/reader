@@ -76,6 +76,14 @@ fun CommentsScreen(
         }
     }
     
+    // Clear focus on exit to prevent NPE in compose TextFields on Android 14
+    DisposableEffect(Unit) {
+        onDispose {
+            keyboardController?.hide()
+            focusManager.clearFocus(force = true)
+        }
+    }
+    
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
