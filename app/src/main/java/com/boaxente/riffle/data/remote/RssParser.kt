@@ -13,7 +13,8 @@ import com.boaxente.riffle.util.RiffleLogger
 data class ParsedFeed(
     val articles: List<ArticleEntity>,
     val imageUrl: String? = null,
-    val siteUrl: String? = null
+    val siteUrl: String? = null,
+    val title: String? = null
 )
 
 class RssParser {
@@ -36,6 +37,7 @@ class RssParser {
         var entries = listOf<ArticleEntity>()
         var imageUrl: String? = null
         var siteUrl: String? = null
+        var title: String? = null
 
         // Flexible root tag check
         if (parser.name == "rss") {
@@ -46,6 +48,7 @@ class RssParser {
                      entries = result.articles
                      imageUrl = result.imageUrl
                      siteUrl = result.siteUrl
+                     title = result.title
                 } else {
                     skip(parser)
                 }
@@ -55,11 +58,13 @@ class RssParser {
              val result = readChannel(parser, sourceUrl) // Reusing readChannel/readEntry logic best effort
              entries = result.articles
              imageUrl = result.imageUrl
+             siteUrl = result.siteUrl
+             title = result.title
         } else {
             // Try to proceed if possible or throw
         }
 
-        return ParsedFeed(entries, imageUrl, siteUrl)
+        return ParsedFeed(entries, imageUrl, siteUrl, title)
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
@@ -67,6 +72,7 @@ class RssParser {
         val entries = mutableListOf<ArticleEntity>()
         var imageUrl: String? = null
         var siteUrl: String? = null
+        var title: String? = null
         
         while (parser.next() != XmlPullParser.END_TAG) {
             if (parser.eventType != XmlPullParser.START_TAG) {
@@ -76,10 +82,11 @@ class RssParser {
                 "item" -> entries.add(readEntry(parser, sourceUrl))
                 "image" -> imageUrl = readImage(parser)
                 "link" -> siteUrl = readText(parser, "link")
+                "title" -> title = cleanHtmlTags(readText(parser, "title"))
                 else -> skip(parser)
             }
         }
-        return ParsedFeed(entries, imageUrl, siteUrl)
+        return ParsedFeed(entries, imageUrl, siteUrl, title)
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
