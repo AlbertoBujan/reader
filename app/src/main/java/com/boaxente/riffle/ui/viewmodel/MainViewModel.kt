@@ -85,7 +85,7 @@ class MainViewModel @Inject constructor(
     private val feedRepository: com.boaxente.riffle.domain.repository.FeedRepository,
     private val preferencesManager: PreferencesManager,
     private val firestoreHelper: com.boaxente.riffle.data.remote.FirestoreHelper,
-    private val feedSearchService: FeedSearchService,
+    private val feedDiscovery: com.boaxente.riffle.util.FeedDiscovery,
     private val clearbitService: ClearbitService,
     private val feedService: com.boaxente.riffle.data.remote.FeedService,
     private val rssParser: com.boaxente.riffle.data.remote.RssParser,
@@ -691,6 +691,18 @@ class MainViewModel @Inject constructor(
                     val response = feedService.fetchFeed(feed.url)
                     val parsed = rssParser.parse(response.byteStream(), feed.url)
                     val latestDate = parsed.articles.maxOfOrNull { it.pubDate }
+                    
+                    if (!parsed.title.isNullOrBlank() && parsed.title != feed.title) {
+                        val currentFeeds = _discoveredFeeds.value.toMutableList()
+                        val index = currentFeeds.indexOfFirst { it.url == feed.url }
+                        if (index != -1) {
+                            val targetSiteUrl = parsed.siteUrl ?: "https://${try { java.net.URL(feed.url).host } catch(e: Exception) { feed.url }}"
+                            val newIconUrl = "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=$targetSiteUrl&size=64"
+                            currentFeeds[index] = currentFeeds[index].copy(title = parsed.title, siteName = parsed.title, iconUrl = newIconUrl)
+                            _discoveredFeeds.value = currentFeeds
+                        }
+                    }
+
                     if (latestDate != null) {
                         val now = System.currentTimeMillis()
                         val dayInMillis = 24 * 60 * 60 * 1000L
@@ -702,6 +714,8 @@ class MainViewModel @Inject constructor(
                             else -> FeedHealth.DEAD
                         }
                         _discoveredFeedHealth.value = _discoveredFeedHealth.value + (feed.url to health)
+                    } else {
+                        _discoveredFeedHealth.value = _discoveredFeedHealth.value + (feed.url to FeedHealth.WARNING)
                     }
                 } catch (e: Exception) {
                     // Probe failed - show gray indicator as fallback
@@ -719,15 +733,13 @@ class MainViewModel @Inject constructor(
             try {
                 _discoveredFeeds.value = withContext(Dispatchers.IO) {
                     try {
-                        withTimeout(15_000) {
+                        withTimeout(20_000) {
                             val cleanQuery = query.trim().lowercase()
                             val domainsToSearch = mutableSetOf<String>()
 
-                            // 1. If it looks like a URL or has a TLD, search directly
                             if (cleanQuery.contains(".") || cleanQuery.startsWith("http")) {
                                 domainsToSearch.add(cleanQuery)
                             } else {
-                                // 2. Otherwise, use clearbit to find domains
                                 try {
                                     val suggestions = clearbitService.suggestCompanies(cleanQuery)
                                     suggestions.forEach { domainsToSearch.add(it.domain) }
@@ -735,38 +747,39 @@ class MainViewModel @Inject constructor(
                                     RiffleLogger.recordException(e)
                                     Log.e("FeedSearch", "Clearbit lookup failed: ${e.message}")
                                 }
-                                // Fallback: append .com just in case
                                 if (domainsToSearch.isEmpty()) {
                                     domainsToSearch.add("$cleanQuery.com")
+                                    domainsToSearch.add("$cleanQuery.es")
                                 }
                             }
 
-                            // 3. Search FeedSearch for collected domains in parallel
                             val deferredResults = domainsToSearch.take(3).map { domain ->
                                 async {
                                     try {
-                                        feedSearchService.search(domain).map { dto ->
-                                            val feedTitle = dto.title?.takeIf { it.isNotBlank() } ?: "Feed from $domain"
+                                        feedDiscovery.discoverFeeds(domain).map { url ->
+                                            val host = try { 
+                                                java.net.URL(url).host 
+                                            } catch (e: Exception) { 
+                                                url 
+                                            }
                                             DiscoveredFeed(
-                                                title = feedTitle,
-                                                url = dto.selfUrl ?: dto.url,
-                                                iconUrl = dto.favicon,
-                                                siteName = dto.title?.takeIf { it.isNotBlank() }
+                                                title = host,
+                                                url = url,
+                                                iconUrl = "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://$host&size=64",
+                                                siteName = host
                                             )
                                         }
                                     } catch (e: Exception) {
-                                        RiffleLogger.recordException(e)
-                                        Log.e("FeedSearch", "FeedSearch for $domain failed: ${e.message}")
                                         emptyList()
                                     }
                                 }
                             }
-
+                            
                             deferredResults.awaitAll().flatten().distinctBy { it.url }
                         }
                     } catch (e: TimeoutCancellationException) {
-                        Log.w("FeedSearch", "Search timed out after 15s")
-                        _discoveredFeeds.value // return partial results if any
+                        Log.w("FeedSearch", "Search timed out after 20s")
+                        emptyList()
                     } catch (e: Exception) {
                         RiffleLogger.recordException(e)
                         Log.e("FeedSearch", "API Error: ${e.message}")
