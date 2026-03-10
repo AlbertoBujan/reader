@@ -19,12 +19,12 @@ plugins {
 
 android {
     namespace = "com.boaxente.riffle"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.boaxente.riffle"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
 versionCode = 61
         versionName = "3.0.7"
 
