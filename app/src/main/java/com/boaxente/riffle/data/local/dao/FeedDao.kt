@@ -13,21 +13,21 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FeedDao {
 
-    @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 400")
+    @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 3000")
     fun getAllArticles(): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC LIMIT 400")
+    @Query("SELECT * FROM articles WHERE sourceUrl = :sourceUrl ORDER BY pubDate DESC LIMIT 3000")
     fun getArticlesBySource(sourceUrl: String): Flow<List<ArticleEntity>>
 
     @Query("""
         SELECT articles.* FROM articles 
         INNER JOIN sources ON articles.sourceUrl = sources.url 
         WHERE sources.folderName = :folderName 
-        ORDER BY pubDate DESC LIMIT 400
+        ORDER BY pubDate DESC LIMIT 3000
     """)
     fun getArticlesByFolder(folderName: String): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC LIMIT 400")
+    @Query("SELECT * FROM articles WHERE isSaved = 1 ORDER BY pubDate DESC LIMIT 3000")
     fun getSavedArticles(): Flow<List<ArticleEntity>>
 
     @Query("""
@@ -44,7 +44,7 @@ interface FeedDao {
     @Query("SELECT link FROM articles WHERE isRead = 1")
     suspend fun getReadArticleLinks(): List<String>
 
-    @Query("SELECT sourceUrl, COUNT(*) as count FROM articles WHERE isRead = 0 GROUP BY sourceUrl")
+    @Query("SELECT sourceUrl, COUNT(*) as count FROM articles WHERE isRead = 0 AND link IN (SELECT link FROM articles ORDER BY pubDate DESC LIMIT 3000) GROUP BY sourceUrl")
     fun getUnreadCountsBySource(): Flow<List<SourceUnreadCount>>
 
     @Query("SELECT COUNT(*) FROM articles WHERE isSaved = 1")
